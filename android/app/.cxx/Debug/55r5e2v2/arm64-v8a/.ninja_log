@@ -1,0 +1,6 @@
+# ninja log v5
+10	85	0	E:/Chaton/android/app/.cxx/Debug/55r5e2v2/arm64-v8a/CMakeFiles/cmake.verify_globs	ef4cd59ebbbb6ffd
+82	7411	8019805474137884	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/a80393569083f3c3f8f1f622d95f64b6/generated/source/codegen/jni/react/renderer/components/safeareacontext/States.cpp.o	480aa7671ee78378
+54	8720	8019805487406775	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/217e4cc1e05aba821e91d8309b508380/source/codegen/jni/react/renderer/components/safeareacontext/EventEmitters.cpp.o	6440a56756a3d963
+126	9803	8019805498218997	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/0a205a0b1b6504eafc42f82f27ac40b2/android/build/generated/source/codegen/jni/safeareacontext-generated.cpp.o	c114442c76eeb0c4
+3	10737	8019805507479318	CMakeFiles/appmodules.dir/OnLoad.cpp.o	241a8f62e7449026

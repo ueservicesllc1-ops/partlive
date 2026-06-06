@@ -1,0 +1,4 @@
+E:/Chaton/android/app/.cxx/Debug/6z624l2e/armeabi-v7a/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir
+E:/Chaton/android/app/.cxx/Debug/6z624l2e/armeabi-v7a/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir
+E:/Chaton/android/app/.cxx/Debug/6z624l2e/armeabi-v7a/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/edit_cache.dir
+E:/Chaton/android/app/.cxx/Debug/6z624l2e/armeabi-v7a/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/rebuild_cache.dir

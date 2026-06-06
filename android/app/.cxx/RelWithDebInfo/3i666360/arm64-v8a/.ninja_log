@@ -1,0 +1,9 @@
+# ninja log v5
+85	12100	8020246582374804	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/0a205a0b1b6504eafc42f82f27ac40b2/android/build/generated/source/codegen/jni/safeareacontext-generated.cpp.o	b24f8e3d7154e17b
+20	52	0	E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/CMakeFiles/cmake.verify_globs	d4e669eed24e77a4
+74	9592	8020246557259005	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/217e4cc1e05aba821e91d8309b508380/source/codegen/jni/react/renderer/components/safeareacontext/States.cpp.o	6185bdbad58d7d1d
+52	9987	8020246561297287	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/846aa45a0bfbec314bd55c089732cdc8/codegen/jni/react/renderer/components/safeareacontext/EventEmitters.cpp.o	77f42f478a47d321
+11	14074	8020246602239205	CMakeFiles/appmodules.dir/OnLoad.cpp.o	5d077f826d3d00f9
+52	1079	8024076370957996	build.ninja	6dce04fc379e31d2
+2	43	0	E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/CMakeFiles/cmake.verify_globs	d4e669eed24e77a4
+0	19	0	clean	9e7b3e0f18d3d6e8
