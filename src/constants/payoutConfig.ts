@@ -1,0 +1,6 @@
+export const PAYOUT_CONFIG = {
+  MIN_PAYOUT_DIAMONDS: 10000,
+  DIAMONDS_TO_USD_RATE: 0.005, // 10,000 diamonds = $50 USD
+  PAYOUT_FEE_USD: 0,
+  PAYOUTS_ENABLED: true,
+};

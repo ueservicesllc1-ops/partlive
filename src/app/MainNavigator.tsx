@@ -22,6 +22,11 @@ import { HostApplicationScreen } from '../screens/host/HostApplicationScreen';
 import { HostEarningsScreen } from '../screens/host/HostEarningsScreen';
 import { HostActivityScreen } from '../screens/host/HostActivityScreen';
 import { HostRulesScreen } from '../screens/host/HostRulesScreen';
+import { HostPayoutsScreen } from '../screens/host/HostPayoutsScreen';
+import { RequestPayoutScreen } from '../screens/host/RequestPayoutScreen';
+import { PayoutMethodsScreen } from '../screens/host/PayoutMethodsScreen';
+import { AddPayoutMethodScreen } from '../screens/host/AddPayoutMethodScreen';
+import { PayoutDetailsScreen } from '../screens/host/PayoutDetailsScreen';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -59,6 +64,12 @@ export const MainNavigator = () => {
       <Stack.Screen name={MAIN_ROUTES.HOST_EARNINGS} component={HostEarningsScreen} />
       <Stack.Screen name={MAIN_ROUTES.HOST_ACTIVITY} component={HostActivityScreen} />
       <Stack.Screen name={MAIN_ROUTES.HOST_RULES} component={HostRulesScreen} />
+
+      <Stack.Screen name={MAIN_ROUTES.HOST_PAYOUTS} component={HostPayoutsScreen} />
+      <Stack.Screen name={MAIN_ROUTES.REQUEST_PAYOUT} component={RequestPayoutScreen} />
+      <Stack.Screen name={MAIN_ROUTES.PAYOUT_METHODS} component={PayoutMethodsScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADD_PAYOUT_METHOD} component={AddPayoutMethodScreen} />
+      <Stack.Screen name={MAIN_ROUTES.PAYOUT_DETAILS} component={PayoutDetailsScreen} />
     </Stack.Navigator>
   );
 };

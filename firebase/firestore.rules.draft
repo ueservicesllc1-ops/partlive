@@ -200,6 +200,11 @@ service cloud.firestore {
       allow update, delete: if false; // Solo admin
     }
 
+    match /hostPayoutMethods/{methodId} {
+      allow read: if isAuthenticated() && resource.data.hostId == request.auth.uid;
+      allow write: if false; // Solo backend
+    }
+
     match /moderationLogs/{logId} {
       allow read, write: if false; // Solo backend/admins
     }

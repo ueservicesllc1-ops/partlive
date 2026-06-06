@@ -18,6 +18,7 @@ export const FirestoreCollections = {
   MISSIONS: 'missions',
   HOST_APPLICATIONS: 'hostApplications',
   HOST_PAYOUTS: 'hostPayouts',
+  HOST_PAYOUT_METHODS: 'hostPayoutMethods',
   HOST_STATS: 'hostStats',
   HOST_ACTIVITIES: 'hostActivities',
   HOST_RULES: 'hostRules',

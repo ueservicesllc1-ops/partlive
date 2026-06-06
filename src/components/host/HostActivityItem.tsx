@@ -15,7 +15,9 @@ const ACTIVITY_ICONS: Record<HostActivityType, string> = {
   gift_received: '🎁',
   ranking_update: '🏆',
   payout_requested: '💸',
+  payout_approved: '💸',
   payout_paid: '✅',
+  payout_rejected: '❌',
   warning: '⚠️',
   system: '🔔',
 };
@@ -28,7 +30,9 @@ const ACTIVITY_COLORS: Record<HostActivityType, string> = {
   gift_received: colors.gold,
   ranking_update: colors.accent,
   payout_requested: colors.warning,
+  payout_approved: colors.success,
   payout_paid: colors.success,
+  payout_rejected: colors.error,
   warning: colors.error,
   system: colors.primary,
 };

@@ -20,3 +20,4 @@ export * from './uploadsService';
 export * from './liveMessagesService';
 export * from './liveViewersService';
 export * from './liveGiftEventsService';
+export * from './payoutsService';

@@ -13,6 +13,7 @@ import { colors, spacing, textPresets } from '../../theme';
 import { useHostDashboard } from '../../hooks/useHostDashboard';
 import { HostEarningsCard } from '../../components/host/HostEarningsCard';
 import { HostActivityList } from '../../components/host/HostActivityList';
+import { PayoutSummaryCard } from '../../components/payouts';
 
 export const HostEarningsScreen = ({ navigation }: any) => {
   const { stats, activities, loading } = useHostDashboard();
@@ -38,12 +39,29 @@ export const HostEarningsScreen = ({ navigation }: any) => {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Earnings summary */}
-          <HostEarningsCard stats={stats} />
+          {/* Payout Summary with USD and balances */}
+          <PayoutSummaryCard stats={stats} />
+
+          {/* Action buttons */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => navigation.navigate('HostPayouts')}
+            >
+              <Text style={styles.actionBtnText}>Historial de Retiros</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.primaryActionBtn]}
+              onPress={() => navigation.navigate('RequestPayout')}
+            >
+              <Text style={[styles.actionBtnText, styles.primaryActionBtnText]}>Retirar Fondos</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Total gifts info */}
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>Total de regalos recibidos</Text>
+            <Text style={styles.infoTitle}>Total de Regalos Recibidos</Text>
             <Text style={styles.infoBig}>{(stats?.totalGiftsReceived ?? 0).toLocaleString()}</Text>
           </View>
 
@@ -92,6 +110,34 @@ const styles = StyleSheet.create({
   headerRight: { width: 40 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scrollContent: { paddingBottom: spacing.xxl },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+  },
+  actionBtn: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  actionBtnText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  primaryActionBtn: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '1A',
+  },
+  primaryActionBtnText: {
+    color: colors.primary,
+  },
   infoCard: {
     backgroundColor: colors.surface,
     borderRadius: 16,

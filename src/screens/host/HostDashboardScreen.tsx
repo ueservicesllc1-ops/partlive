@@ -141,8 +141,8 @@ export const HostDashboardScreen = ({ navigation }: any) => {
               onStartLive={() => navigation.navigate(MAIN_ROUTES.START_LIVE)}
               onCreateRoom={() => navigation.navigate(MAIN_ROUTES.CREATE_ROOM)}
               onViewEarnings={() => navigation.navigate(MAIN_ROUTES.HOST_EARNINGS)}
-              onViewActivity={() => navigation.navigate(MAIN_ROUTES.HOST_ACTIVITY)}
-              onViewRules={() => navigation.navigate(MAIN_ROUTES.HOST_RULES)}
+              onViewPayouts={() => navigation.navigate(MAIN_ROUTES.HOST_PAYOUTS)}
+              onViewPayoutMethods={() => navigation.navigate(MAIN_ROUTES.PAYOUT_METHODS)}
             />
 
             <HostEarningsCard stats={stats} />

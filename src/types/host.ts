@@ -54,6 +54,8 @@ export type HostActivityType =
   | 'gift_received'
   | 'ranking_update'
   | 'payout_requested'
+  | 'payout_approved'
+  | 'payout_rejected'
   | 'payout_paid'
   | 'warning'
   | 'system';
@@ -81,17 +83,6 @@ export interface HostRule {
 }
 
 // ─── Host Payout ──────────────────────────────────────────────────────────────
-export interface HostPayout {
-  id: string;
-  hostId: string;
-  amount: number;
-  currency: string;
-  diamondsConverted: number;
-  status: 'pending' | 'approved' | 'paid' | 'rejected';
-  payoutMethod?: string;
-  payoutDetailsMasked?: string;
-  createdAt: any; // Firestore Timestamp
-  updatedAt: any; // Firestore Timestamp
-  reviewedBy?: string;
-  paidAt?: any; // Firestore Timestamp
-}
+import { HostPayout } from './payout';
+export type { HostPayout };
+

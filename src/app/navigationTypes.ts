@@ -46,6 +46,12 @@ export type MainStackParamList = {
   HostRules: undefined;
   HostEarnings: undefined;
   HostActivity: undefined;
+
+  HostPayouts: undefined;
+  RequestPayout: undefined;
+  PayoutMethods: undefined;
+  AddPayoutMethod: undefined;
+  PayoutDetails: { payoutId: string; initialPayout?: any };
 };
 
 // Root Stack

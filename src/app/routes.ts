@@ -40,6 +40,12 @@ export const MAIN_ROUTES = {
   HOST_RULES: 'HostRules' as const,
   HOST_EARNINGS: 'HostEarnings' as const,
   HOST_ACTIVITY: 'HostActivity' as const,
+
+  HOST_PAYOUTS: 'HostPayouts' as const,
+  REQUEST_PAYOUT: 'RequestPayout' as const,
+  PAYOUT_METHODS: 'PayoutMethods' as const,
+  ADD_PAYOUT_METHOD: 'AddPayoutMethod' as const,
+  PAYOUT_DETAILS: 'PayoutDetails' as const,
 };
 
 export const ROOT_ROUTES = {
