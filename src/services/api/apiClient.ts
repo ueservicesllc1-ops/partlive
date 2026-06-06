@@ -1,9 +1,8 @@
 import auth from '@react-native-firebase/auth';
 import { Platform } from 'react-native';
 
-// For Android emulator/tablet to connect to localhost on PC via adb reverse, localhost is fine.
-// If not using adb reverse on real device, you'd need the local IP address (e.g., 192.168.1.X)
-export const API_BASE_URL = 'http://localhost:4000/api';
+// Production backend on Railway
+export const API_BASE_URL = 'https://partlive-production.up.railway.app/api';
 
 export const getAuthToken = async (): Promise<string | null> => {
   const user = auth().currentUser;
