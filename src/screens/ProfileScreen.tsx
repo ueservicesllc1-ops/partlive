@@ -7,6 +7,7 @@ import { ProfileHeader } from '../components/profile/ProfileHeader';
 import { ProfileStats } from '../components/profile/ProfileStats';
 import { WalletSummary } from '../components/profile/WalletSummary';
 import { BadgesList } from '../components/profile/BadgesList';
+import { UserSocialStats } from '../components/social/UserSocialStats';
 import { MAIN_ROUTES } from '../app/routes';
 
 export const ProfileScreen = ({ navigation }: any) => {
@@ -37,21 +38,50 @@ export const ProfileScreen = ({ navigation }: any) => {
           onEditPress={() => navigation.navigate('EditProfile')}
         />
 
-        <ProfileStats
-          followers={userProfile.followersCount}
-          following={userProfile.followingCount}
-          gifts={userProfile.totalGiftsReceived || 0}
-          rooms={userProfile.roomsJoinedCount || 0}
+        <UserSocialStats
+          followersCount={userProfile.followersCount}
+          followingCount={userProfile.followingCount}
+          friendsCount={userProfile.friendsCount || 0}
+          onPressFollowers={() =>
+            navigation.navigate(MAIN_ROUTES.SEARCH, {
+              screen: 'SocialList',
+              params: { userId: userProfile.uid, listType: 'followers' },
+            })
+          }
+          onPressFollowing={() =>
+            navigation.navigate(MAIN_ROUTES.SEARCH, {
+              screen: 'SocialList',
+              params: { userId: userProfile.uid, listType: 'following' },
+            })
+          }
+          onPressFriends={() =>
+            navigation.navigate(MAIN_ROUTES.SEARCH, {
+              screen: 'SocialList',
+              params: { userId: userProfile.uid, listType: 'friends' },
+            })
+          }
         />
 
         <TouchableOpacity onPress={() => navigation.navigate(MAIN_ROUTES.WALLET)}>
           <WalletSummary
-            coins={userWallet ? userWallet.coins : userProfile.coins}
-            diamonds={userWallet ? userWallet.diamonds : userProfile.diamonds}
+            beans={userWallet ? userWallet.beans : (userProfile.beans || 0)}
+            diamonds={userWallet ? userWallet.diamonds : (userProfile.diamonds || 0)}
           />
         </TouchableOpacity>
 
         <BadgesList badges={userProfile.badges || []} />
+
+        {/* Rank/XP Progression Card */}
+        <View style={styles.xpCard}>
+          <Text style={styles.xpTitle}>Progreso de Rango (Lvl {userProfile.rankLevel || userProfile.level || 1})</Text>
+          <Text style={styles.xpLabel}>{userProfile.rank || 'Novato'}</Text>
+          <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarFill, { width: `${Math.min(((userProfile.xp || 0) / (userProfile.nextRankXp || 100)) * 100, 100)}%` }]} />
+          </View>
+          <Text style={styles.xpText}>
+            ⚡ {userProfile.xp || 0} / {userProfile.nextRankXp || 100} XP para el siguiente rango
+          </Text>
+        </View>
 
         {/* Host badge (if approved host) */}
         {userProfile.isHost && (
@@ -63,6 +93,34 @@ export const ProfileScreen = ({ navigation }: any) => {
         )}
 
         <View style={styles.actionsContainer}>
+          <Button
+            title="🎯 Mis Misiones Diarias"
+            variant="outline"
+            size="large"
+            onPress={() => navigation.navigate(MAIN_ROUTES.MISSIONS)}
+            style={styles.missionsButton}
+          />
+
+          <Button
+            title="🛡️ Configuración de Privacidad"
+            variant="outline"
+            size="large"
+            onPress={() =>
+              navigation.navigate(MAIN_ROUTES.SEARCH, {
+                screen: 'PrivacySettings',
+              })
+            }
+            style={styles.missionsButton}
+          />
+
+          <Button
+            title="🔔 Preferencias de Notificaciones"
+            variant="outline"
+            size="large"
+            onPress={() => navigation.navigate(MAIN_ROUTES.NOTIFICATION_SETTINGS)}
+            style={styles.notificationsBtn}
+          />
+
           {userProfile.isHost ? (
             <Button
               title="Dashboard de Host"
@@ -128,6 +186,51 @@ const styles = StyleSheet.create({
   },
   hostDashBtn: {
     backgroundColor: colors.primary,
+  },
+  missionsButton: {
+    borderColor: colors.primary,
+  },
+  notificationsBtn: {
+    borderColor: colors.primary,
+    marginTop: 4,
+  },
+  xpCard: {
+    backgroundColor: '#1E1B30',
+    borderRadius: 16,
+    padding: spacing.md,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: '#292440',
+  },
+  xpTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  xpLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginTop: 4,
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: colors.background,
+    borderRadius: 4,
+    marginTop: spacing.sm,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 4,
+  },
+  xpText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 6,
   },
   hostBadgeRow: {
     paddingHorizontal: spacing.xl,

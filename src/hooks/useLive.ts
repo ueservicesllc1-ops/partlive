@@ -30,6 +30,7 @@ import {
   listenToLiveGiftEvents,
 } from '../services/firebase/firestore/liveGiftEventsService';
 import { Gift } from '../types';
+import { listenToBlockedUsers } from '../services/firebase/firestore/blocksService';
 
 export const useLive = (liveId: string) => {
   const { userProfile } = useAuth();
@@ -42,6 +43,18 @@ export const useLive = (liveId: string) => {
   const [joined, setJoined] = useState<boolean>(false);
   const [liked, setLiked] = useState<boolean>(false);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+
+  // Listen to blocked users list in real-time
+  useEffect(() => {
+    if (!userProfile) {
+      setBlockedUserIds([]);
+      return;
+    }
+    const unsubscribe = listenToBlockedUsers(userProfile.uid, (ids) => {
+      setBlockedUserIds(ids);
+    });
+    return () => unsubscribe();
+  }, [userProfile]);
 
   // Get current user viewer document
   const currentViewer = useMemo(() => {

@@ -69,10 +69,10 @@ export const HostActivityItem: React.FC<Props> = ({ activity }) => {
         ) : null}
         <Text style={styles.date}>{formatDate(activity.createdAt)}</Text>
       </View>
-      {activity.diamondsDelta !== undefined && (
+      {activity.beansDelta !== undefined && (
         <View style={styles.deltaWrapper}>
-          <Text style={[styles.delta, { color: activity.diamondsDelta >= 0 ? colors.success : colors.error }]}>
-            {activity.diamondsDelta >= 0 ? '+' : ''}{activity.diamondsDelta} 💎
+          <Text style={[styles.delta, { color: activity.beansDelta >= 0 ? colors.success : colors.error }]}>
+            {activity.beansDelta >= 0 ? '+' : ''}{activity.beansDelta} 🫘
           </Text>
         </View>
       )}

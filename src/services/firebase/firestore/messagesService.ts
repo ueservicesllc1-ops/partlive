@@ -1,6 +1,6 @@
 import firestore from '@react-native-firebase/firestore';
 import { getRoomMessagesPath } from '../../../constants/firestoreCollections';
-import { ChatMessage, GiftEvent } from '../../../types';
+import { ChatMessage, GiftEvent, ReportReason } from '../../../types';
 import { nowServerTimestamp } from '../../../utils/firestoreDates';
 import { createReport } from './reportsService';
 
@@ -173,10 +173,10 @@ export const reportRoomMessage = async (
   description?: string
 ): Promise<string> => {
   // Map string to valid Report['reason'] enum
-  let mappedReason: 'spam' | 'abuse' | 'harassment' | 'sexual_content' | 'violence' | 'scam' | 'other' = 'other';
+  let mappedReason: ReportReason = 'other';
   const lower = reason.toLowerCase();
   if (lower.includes('spam')) mappedReason = 'spam';
-  else if (lower.includes('abuso')) mappedReason = 'abuse';
+  else if (lower.includes('abuso')) mappedReason = 'harassment';
   else if (lower.includes('acoso')) mappedReason = 'harassment';
   else if (lower.includes('scam')) mappedReason = 'scam';
 

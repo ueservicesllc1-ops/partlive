@@ -11,18 +11,18 @@ import { WalletTransactionList } from '../../components/wallet/WalletTransaction
 import { DevWalletTools } from '../../components/wallet/DevWalletTools';
 import { ScreenLoading } from '../../components/ScreenLoading';
 import { ScreenError } from '../../components/ScreenError';
-import { CoinPackage } from '../../types';
+import { DiamondPackage } from '../../types';
 
 export const WalletScreen = ({ navigation }: any) => {
   const {
     wallet,
     transactions,
-    coinPackages,
+    diamondPackages,
     loading,
     error,
     refresh,
-    devCreditCoins,
     devCreditDiamonds,
+    devCreditBeans,
   } = useWallet();
 
   const {
@@ -30,9 +30,9 @@ export const WalletScreen = ({ navigation }: any) => {
     purchasing,
     purchaseStatus,
     buyPackage,
-  } = useInAppPurchases(coinPackages);
+  } = useInAppPurchases(diamondPackages);
 
-  const handlePackagePress = (pkg: CoinPackage) => {
+  const handlePackagePress = (pkg: DiamondPackage) => {
     buyPackage(pkg);
   };
 
@@ -65,28 +65,28 @@ export const WalletScreen = ({ navigation }: any) => {
       >
         {/* Balances */}
         <WalletBalanceCard
-          coins={wallet?.coins || 0}
           diamonds={wallet?.diamonds || 0}
+          beans={wallet?.beans || 0}
         />
 
         {/* Development Tools */}
         <DevWalletTools
-          onCreditCoins={devCreditCoins}
+          onCreditBeans={devCreditBeans}
           onCreditDiamonds={devCreditDiamonds}
           loading={loading}
         />
 
         {/* Stats */}
         <WalletStatsCard
-          lifetimeCoinsPurchased={wallet?.lifetimeCoinsPurchased || 0}
-          lifetimeCoinsSpent={wallet?.lifetimeCoinsSpent || 0}
-          lifetimeDiamondsEarned={wallet?.lifetimeDiamondsEarned || 0}
-          lifetimeDiamondsWithdrawn={wallet?.lifetimeDiamondsWithdrawn || 0}
+          lifetimeDiamondsPurchased={wallet?.lifetimeDiamondsPurchased || 0}
+          lifetimeDiamondsSpent={wallet?.lifetimeDiamondsSpent || 0}
+          lifetimeBeansEarned={wallet?.lifetimeBeansEarned || 0}
+          lifetimeBeansWithdrawn={wallet?.lifetimeBeansWithdrawn || 0}
         />
 
-        {/* Coin Packages Grid */}
+        {/* Diamond Packages Grid */}
         <CoinPackagesGrid
-          packages={coinPackages}
+          packages={diamondPackages}
           onPackagePress={handlePackagePress}
           iapProducts={iapProducts}
         />

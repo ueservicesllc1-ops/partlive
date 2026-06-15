@@ -35,7 +35,7 @@ import {
   sendUserJoinedMessage,
   sendUserLeftMessage,
 } from '../services/firebase/firestore/roomSystemMessages';
-import { blockUser } from '../services/firebase/firestore/blocksService';
+import { blockUser, listenToBlockedUsers } from '../services/firebase/firestore/blocksService';
 
 export const useRoom = (roomId: string) => {
   const { userProfile } = useAuth();
@@ -47,6 +47,18 @@ export const useRoom = (roomId: string) => {
   const [error, setError] = useState<string | null>(null);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
+
+  // Listen to blocked users list in real-time
+  useEffect(() => {
+    if (!userProfile) {
+      setBlockedUserIds([]);
+      return;
+    }
+    const unsubscribe = listenToBlockedUsers(userProfile.uid, (ids) => {
+      setBlockedUserIds(ids);
+    });
+    return () => unsubscribe();
+  }, [userProfile]);
 
   // Get current member inside this room
   const currentMember = useMemo(() => {

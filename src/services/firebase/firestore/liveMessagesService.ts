@@ -83,8 +83,8 @@ export const sendLiveGiftMessage = async (
     quantity: number;
     receiverName: string;
     giftIconUrl?: string;
-    totalCoins?: number;
     totalDiamonds?: number;
+    totalBeans?: number;
   }
 ): Promise<string> => {
   const ref = await firestore().collection(getLiveMessagesPath(liveId)).add({
@@ -182,6 +182,8 @@ export const deleteOwnLiveMessage = async (
   }
 };
 
+import { ReportReason } from '../../../types';
+
 /**
  * Report live chat message.
  */
@@ -192,10 +194,10 @@ export const reportLiveMessage = async (
   reason: string,
   description?: string
 ): Promise<string> => {
-  let mappedReason: 'spam' | 'abuse' | 'harassment' | 'sexual_content' | 'violence' | 'scam' | 'other' = 'other';
+  let mappedReason: ReportReason = 'other';
   const lower = reason.toLowerCase();
   if (lower.includes('spam')) mappedReason = 'spam';
-  else if (lower.includes('abuso')) mappedReason = 'abuse';
+  else if (lower.includes('abuso')) mappedReason = 'harassment';
   else if (lower.includes('acoso')) mappedReason = 'harassment';
   else if (lower.includes('scam')) mappedReason = 'scam';
 

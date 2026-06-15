@@ -1,6 +1,7 @@
 export const PAYOUT_CONFIG = {
-  MIN_PAYOUT_DIAMONDS: 10000,
-  DIAMONDS_TO_USD_RATE: 0.005, // 10,000 diamonds = $50 USD
-  PAYOUT_FEE_USD: 0,
-  PAYOUTS_ENABLED: true,
+  BEANS_TO_USD_RATE: 0.003, // 1000 Beans = $3 USD
+  MIN_PAYOUT_USD: 20, // Min withdrawal of $20 USD
+  MIN_PAYOUT_BEANS: Math.ceil(20 / 0.003), // ~6667 Beans
+  FIRST_PAYOUT_WAIT_DAYS: 15, // A host must be approved for 15 days before first payout
+  PAYOUTS_MANUAL_MODE: true, // Requires admin review and manual processing
 };

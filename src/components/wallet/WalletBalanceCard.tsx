@@ -4,26 +4,13 @@ import { colors, textPresets, spacing } from '../../theme';
 import { formatCoins } from '../../utils/formatNumbers';
 
 interface WalletBalanceCardProps {
-  coins: number;
   diamonds: number;
+  beans: number;
 }
 
-export const WalletBalanceCard: React.FC<WalletBalanceCardProps> = ({ coins, diamonds }) => {
+export const WalletBalanceCard: React.FC<WalletBalanceCardProps> = ({ diamonds, beans }) => {
   return (
     <View style={styles.container}>
-      {/* Coins Box */}
-      <View style={styles.box}>
-        <View style={styles.header}>
-          <Text style={styles.emoji}>🪙</Text>
-          <Text style={styles.label}>Monedas</Text>
-        </View>
-        <Text style={styles.amount}>{formatCoins(coins)}</Text>
-        <Text style={styles.subtext}>Usadas para enviar regalos</Text>
-      </View>
-
-      {/* Divider */}
-      <View style={styles.divider} />
-
       {/* Diamonds Box */}
       <View style={styles.box}>
         <View style={styles.header}>
@@ -31,6 +18,19 @@ export const WalletBalanceCard: React.FC<WalletBalanceCardProps> = ({ coins, dia
           <Text style={styles.label}>Diamantes</Text>
         </View>
         <Text style={styles.amount}>{formatCoins(diamonds)}</Text>
+        <Text style={styles.subtext}>Usados para enviar regalos</Text>
+      </View>
+
+      {/* Divider */}
+      <View style={styles.divider} />
+
+      {/* Beans Box */}
+      <View style={styles.box}>
+        <View style={styles.header}>
+          <Text style={styles.emoji}>🫘</Text>
+          <Text style={styles.label}>Beans</Text>
+        </View>
+        <Text style={styles.amount}>{formatCoins(beans)}</Text>
         <Text style={styles.subtext}>Recibidos de regalos</Text>
       </View>
     </View>

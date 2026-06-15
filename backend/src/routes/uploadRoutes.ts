@@ -17,11 +17,11 @@ import {
 export const uploadRoutes = Router();
 
 const PresignBodySchema = z.object({
-  fileType: z.enum(['profile_photo', 'room_cover', 'live_thumbnail', 'gift_asset', 'banner', 'video']),
+  fileType: z.enum(['profile_photo', 'room_cover', 'live_thumbnail', 'gift_asset', 'banner', 'video', 'kyc_id_document', 'kyc_selfie']),
   contentType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm', 'application/json', 'image/gif']),
   originalFileName: z.string().min(1),
   sizeBytes: z.number().optional(),
-  relatedType: z.enum(['user', 'room', 'live', 'gift', 'banner', 'video']).optional(),
+  relatedType: z.enum(['user', 'room', 'live', 'gift', 'banner', 'video', 'verification']).optional(),
   relatedId: z.string().optional(),
 });
 
@@ -32,6 +32,8 @@ const MAX_SIZES: Record<string, number> = {
   gift_asset: 20 * 1024 * 1024,
   banner: 8 * 1024 * 1024,
   video: 200 * 1024 * 1024,
+  kyc_id_document: 10 * 1024 * 1024,
+  kyc_selfie: 10 * 1024 * 1024,
 };
 
 uploadRoutes.post('/presign', requireAuth, async (req: AuthRequest, res: any) => {

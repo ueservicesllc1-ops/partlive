@@ -1,6 +1,7 @@
 import firestore from '@react-native-firebase/firestore';
 import { FirestoreCollections } from '../../../constants/firestoreCollections';
 import { nowServerTimestamp } from '../../../utils/firestoreDates';
+import { buildKaraokeSongKeywords } from '../../../utils/karaokeSearch';
 
 const GIFTS = [
   { id: 'gift_rose', name: 'Rose', priceCoins: 10, valueDiamonds: 5, rarity: 'common', iconUrl: '🌹' },
@@ -63,6 +64,7 @@ export const seedInitialData = async () => {
       const ref = firestore().collection(FirestoreCollections.GAMES).doc(gm.id);
       batch.set(ref, {
         title: gm.title,
+        titleLowercase: gm.title.trim().toLowerCase(),
         slug: gm.slug,
         category: gm.category,
         minPlayers: gm.minPlayers,
@@ -152,6 +154,7 @@ export const seedInitialData = async () => {
       for (const room of mockRoomsData) {
         await roomCollection.add({
           ...room,
+          titleLowercase: room.title.trim().toLowerCase(),
           hostIds: [room.ownerId],
           moderatorIds: [],
           createdAt: timestamp,
@@ -175,10 +178,89 @@ export const seedInitialData = async () => {
       for (const live of mockLivesData) {
         await liveCollection.add({
           ...live,
+          titleLowercase: live.title.trim().toLowerCase(),
           createdAt: timestamp,
           updatedAt: timestamp
         });
       }
+    }
+
+    // Seed Karaoke Songs
+    console.log('Seeding mock karaoke songs...');
+    const mockSongsData = [
+      {
+        id: 'song_amazing_grace',
+        title: 'Amazing Grace',
+        artist: 'John Newton',
+        language: 'en',
+        genre: 'Gospel',
+        durationSeconds: 180,
+        coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150',
+        audioUrl: '',
+        instrumentalUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+        lyricsText: 'Amazing grace! How sweet the sound\nThat saved a wretch like me!\nI once was lost, but now am found;\nWas blind, but now I see.',
+        lyricsLrcUrl: '',
+        sourceType: 'public_domain' as const,
+        sourceUrl: '',
+        uploadedBy: 'system',
+        status: 'active' as const,
+        isFeatured: true,
+        playCount: 0,
+        tags: ['classic', 'gospel', 'traditional'],
+      },
+      {
+        id: 'song_cielito_lindo',
+        title: 'Cielito Lindo',
+        artist: 'Quirino Mendoza y Cortés',
+        language: 'es',
+        genre: 'Traditional',
+        durationSeconds: 210,
+        coverUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=150',
+        audioUrl: '',
+        instrumentalUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+        lyricsText: 'Ay, ay, ay, ay, canta y no llores\nPorque cantando se alegran\nCielito lindo, los corazones.',
+        lyricsLrcUrl: '',
+        sourceType: 'public_domain' as const,
+        sourceUrl: '',
+        uploadedBy: 'system',
+        status: 'active' as const,
+        isFeatured: true,
+        playCount: 0,
+        tags: ['mexico', 'mariachi', 'folclor'],
+      },
+      {
+        id: 'song_demo_pop_beat',
+        title: 'Demo Pop Beat',
+        artist: 'PartyLive Studio',
+        language: 'es',
+        genre: 'Pop',
+        durationSeconds: 120,
+        coverUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=150',
+        audioUrl: '',
+        instrumentalUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+        lyricsText: 'Un, dos, tres, canta con el ritmo\nDeja que tu voz sea el algoritmo\nBaila y disfruta sin ningún abismo\nPartyLiveApp te lleva al optimismo!',
+        lyricsLrcUrl: '',
+        sourceType: 'licensed' as const,
+        sourceUrl: '',
+        uploadedBy: 'system',
+        status: 'active' as const,
+        isFeatured: true,
+        playCount: 0,
+        tags: ['pop', 'demo', 'dance'],
+      }
+    ];
+
+    const songsCollection = firestore().collection(FirestoreCollections.KARAOKE_SONGS);
+    for (const song of mockSongsData) {
+      const keywords = buildKaraokeSongKeywords(song);
+      await songsCollection.doc(song.id).set({
+        ...song,
+        titleLowercase: song.title.toLowerCase(),
+        artistLowercase: song.artist.toLowerCase(),
+        searchKeywords: keywords,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }, { merge: true });
     }
 
     console.log('Seed completed successfully!');

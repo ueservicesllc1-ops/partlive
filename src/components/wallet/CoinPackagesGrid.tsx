@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { CoinPackage } from '../../types';
+import { DiamondPackage } from '../../types';
 import { CoinPackageCard } from './CoinPackageCard';
 import { colors, spacing, textPresets } from '../../theme';
 
 interface CoinPackagesGridProps {
-  packages: CoinPackage[];
-  onPackagePress: (pkg: CoinPackage) => void;
+  packages: DiamondPackage[];
+  onPackagePress: (pkg: DiamondPackage) => void;
   iapProducts?: Record<string, any>;
 }
 
@@ -17,7 +17,7 @@ export const CoinPackagesGrid: React.FC<CoinPackagesGridProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Comprar Monedas</Text>
+      <Text style={styles.title}>Comprar Diamantes</Text>
       
       {packages.length === 0 ? (
         <Text style={styles.emptyText}>No hay paquetes disponibles.</Text>
@@ -25,7 +25,7 @@ export const CoinPackagesGrid: React.FC<CoinPackagesGridProps> = ({
         <View style={styles.grid}>
           {packages.map(pkg => {
             const iapProd = iapProducts[pkg.googlePlayProductId];
-            const isPopular = pkg.googlePlayProductId === 'coins_1200' || pkg.googlePlayProductId === 'coins_2800';
+            const isPopular = pkg.googlePlayProductId === 'diamonds_1200' || pkg.googlePlayProductId === 'diamonds_2800';
             return (
               <CoinPackageCard 
                 key={pkg.id} 

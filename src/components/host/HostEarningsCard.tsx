@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, spacing, textPresets } from '../../theme';
 import { HostStats } from '../../types';
+import { useAuth } from '../../store/AuthContext';
 
 interface Props {
   stats: HostStats | null;
@@ -9,19 +10,20 @@ interface Props {
 }
 
 export const HostEarningsCard: React.FC<Props> = ({ stats, onRequestPayout }) => {
-  const available = stats?.availableDiamonds ?? 0;
-  const pending = stats?.pendingDiamonds ?? 0;
-  const locked = stats?.lockedDiamonds ?? 0;
-  const total = stats?.totalDiamondsEarned ?? 0;
+  const { userWallet } = useAuth();
+  const available = userWallet?.beans ?? 0;
+  const pending = userWallet?.pendingBeans ?? 0;
+  const locked = userWallet?.lockedBeans ?? 0;
+  const total = stats?.totalBeansEarned ?? 0;
 
   return (
     <View style={styles.card}>
       {/* Total headline */}
       <View style={styles.headline}>
-        <Text style={styles.diamondEmoji}>💎</Text>
+        <Text style={styles.diamondEmoji}>🫘</Text>
         <View>
           <Text style={styles.totalValue}>{total.toLocaleString()}</Text>
-          <Text style={styles.totalLabel}>Diamonds ganados</Text>
+          <Text style={styles.totalLabel}>Beans ganados acumulados</Text>
         </View>
       </View>
 
@@ -49,18 +51,23 @@ export const HostEarningsCard: React.FC<Props> = ({ stats, onRequestPayout }) =>
       {/* Payout notice */}
       <View style={styles.noticeBox}>
         <Text style={styles.noticeText}>
-          💡 Los retiros estarán disponibles próximamente. Los diamonds no son dinero hasta que el sistema de payouts esté activo.
+          💡 El retiro de beans se realiza en dólares americanos (1,000 Beans = $3 USD). El retiro mínimo es de $20 USD.
         </Text>
       </View>
 
-      {/* Disabled payout button */}
+      {/* Payout button */}
       <TouchableOpacity
-        style={styles.payoutButton}
+        style={[
+          styles.payoutButton,
+          (!stats?.eligibleForPayout) && styles.disabledPayoutBtn
+        ]}
         onPress={onRequestPayout}
-        disabled={true}
-        accessibilityLabel="Solicitar retiro — próximamente"
+        disabled={!stats?.eligibleForPayout}
+        accessibilityLabel="Solicitar retiro"
       >
-        <Text style={styles.payoutButtonText}>Solicitar Retiro (Próximamente)</Text>
+        <Text style={styles.payoutButtonText}>
+          {stats?.eligibleForPayout ? 'Solicitar Retiro de Beans' : 'No cumples requisitos de retiro'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -150,5 +157,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textMuted,
+  },
+  disabledPayoutBtn: {
+    opacity: 0.5,
+    backgroundColor: colors.border,
   },
 });

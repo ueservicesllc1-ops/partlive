@@ -10,6 +10,17 @@ interface LiveEndedStateProps {
 }
 
 export const LiveEndedState: React.FC<LiveEndedStateProps> = ({ live, onClose }) => {
+  const getDurationInMinutes = () => {
+    if (!live || !live.startedAt) return 0;
+    const end = live.endedAt 
+      ? (typeof live.endedAt.toDate === 'function' ? live.endedAt.toDate() : new Date(live.endedAt)) 
+      : new Date();
+    const start = typeof live.startedAt.toDate === 'function' ? live.startedAt.toDate() : new Date(live.startedAt);
+    const diffMs = end.getTime() - start.getTime();
+    if (isNaN(diffMs) || diffMs <= 0) return 0;
+    return Math.round(diffMs / 60000);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -29,6 +40,10 @@ export const LiveEndedState: React.FC<LiveEndedStateProps> = ({ live, onClose })
                 <Text style={styles.statLabel}>Espectadores</Text>
               </View>
               <View style={styles.statBox}>
+                <Text style={styles.statVal}>{live.peakViewersCount || live.viewersCount || 0}</Text>
+                <Text style={styles.statLabel}>Pico Espectadores</Text>
+              </View>
+              <View style={styles.statBox}>
                 <Text style={styles.statVal}>{live.likesCount || 0}</Text>
                 <Text style={styles.statLabel}>Likes</Text>
               </View>
@@ -39,6 +54,10 @@ export const LiveEndedState: React.FC<LiveEndedStateProps> = ({ live, onClose })
               <View style={styles.statBox}>
                 <Text style={styles.statVal}>💎 {live.diamondsEarned || 0}</Text>
                 <Text style={styles.statLabel}>Diamantes</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statVal}>⏱ {getDurationInMinutes()} min</Text>
+                <Text style={styles.statLabel}>Duración</Text>
               </View>
             </View>
           </>

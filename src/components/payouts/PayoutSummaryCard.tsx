@@ -4,14 +4,17 @@ import { colors, spacing, textPresets } from '../../theme';
 import { HostStats } from '../../types/host';
 import { calculatePayoutPreview, formatPayoutAmountUsd } from '../../utils/payoutStatus';
 
+import { useAuth } from '../../store/AuthContext';
+
 interface PayoutSummaryCardProps {
   stats: HostStats | null;
 }
 
 export const PayoutSummaryCard: React.FC<PayoutSummaryCardProps> = ({ stats }) => {
-  const available = stats?.availableDiamonds ?? 0;
-  const locked = stats?.lockedDiamonds ?? 0;
-  const total = stats?.totalDiamondsEarned ?? 0;
+  const { userWallet } = useAuth();
+  const available = userWallet?.beans ?? 0;
+  const locked = userWallet?.lockedBeans ?? 0;
+  const total = stats?.totalBeansEarned ?? 0;
 
   const { amountUsd: availableUsd } = calculatePayoutPreview(available);
   const { amountUsd: lockedUsd } = calculatePayoutPreview(locked);
@@ -19,9 +22,9 @@ export const PayoutSummaryCard: React.FC<PayoutSummaryCardProps> = ({ stats }) =
   return (
     <View style={styles.container}>
       <View style={styles.mainSection}>
-        <Text style={styles.title}>Diamantes Disponibles</Text>
+        <Text style={styles.title}>Beans Disponibles</Text>
         <View style={styles.balanceContainer}>
-          <Text style={styles.diamondEmoji}>💎</Text>
+          <Text style={styles.diamondEmoji}>🫘</Text>
           <Text style={styles.diamonds}>{available.toLocaleString()}</Text>
         </View>
         <Text style={styles.usdValue}>≈ {formatPayoutAmountUsd(availableUsd)}</Text>
@@ -32,13 +35,13 @@ export const PayoutSummaryCard: React.FC<PayoutSummaryCardProps> = ({ stats }) =
       <View style={styles.statsRow}>
         <View style={styles.statCol}>
           <Text style={styles.statLabel}>En Proceso</Text>
-          <Text style={styles.statVal}>💎 {locked.toLocaleString()}</Text>
+          <Text style={styles.statVal}>🫘 {locked.toLocaleString()}</Text>
           <Text style={styles.statSubVal}>~ {formatPayoutAmountUsd(lockedUsd)}</Text>
         </View>
         <View style={styles.verticalDivider} />
         <View style={styles.statCol}>
           <Text style={styles.statLabel}>Total Acumulado</Text>
-          <Text style={styles.statVal}>💎 {total.toLocaleString()}</Text>
+          <Text style={styles.statVal}>🫘 {total.toLocaleString()}</Text>
           <Text style={styles.statSubVal}>Acumulado total</Text>
         </View>
       </View>

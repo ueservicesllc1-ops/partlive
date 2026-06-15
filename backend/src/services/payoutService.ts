@@ -2,6 +2,7 @@ import * as admin from 'firebase-admin';
 import { db } from '../config/firebase';
 import { PAYOUT_CONFIG } from '../config/payoutConfig';
 import { ensureHostStats, createHostActivity } from './hostAdminService';
+import { checkPayoutFraud } from './fraudService';
 
 const HOST_PAYOUT_METHODS = 'hostPayoutMethods';
 const HOST_PAYOUTS = 'hostPayouts';
@@ -39,6 +40,12 @@ const getMaskedDetails = (type: string, details: any): string => {
       return `Payoneer: ${maskedLocal}@${domain}`;
     }
     return 'Payoneer: ***';
+  } else if (type === 'binance' && details.binanceId) {
+    const bid = details.binanceId.toString();
+    return bid.length > 4 ? 'Binance: ' + '*'.repeat(bid.length - 4) + bid.substring(bid.length - 4) : 'Binance: ****';
+  } else if (type === 'payphone' && details.payphonePhone) {
+    const phone = details.payphonePhone.toString();
+    return phone.length > 4 ? 'PayPhone: ' + '*'.repeat(phone.length - 4) + phone.substring(phone.length - 4) : 'PayPhone: ****';
   }
   return 'Detalles Guardados';
 };
@@ -157,13 +164,13 @@ export const deletePayoutMethod = async (hostId: string, methodId: string) => {
 
 // ─── Payout Request & Workflows ────────────────────────────────────────────────
 
-export const requestHostPayout = async (hostId: string, diamondsConverted: number, payoutMethodId: string) => {
+export const requestHostPayout = async (hostId: string, beansConverted: number, payoutMethodId: string) => {
   if (!PAYOUT_CONFIG.PAYOUTS_ENABLED) {
     throw new Error('El sistema de retiros está desactivado temporalmente.');
   }
 
-  if (diamondsConverted < PAYOUT_CONFIG.MIN_PAYOUT_DIAMONDS) {
-    throw new Error(`El retiro mínimo es de ${PAYOUT_CONFIG.MIN_PAYOUT_DIAMONDS} diamantes.`);
+  if (beansConverted < PAYOUT_CONFIG.MIN_PAYOUT_BEANS) {
+    throw new Error(`El retiro mínimo es de ${PAYOUT_CONFIG.MIN_PAYOUT_BEANS} beans ($20 USD).`);
   }
 
   // 1. Get and verify payout method
@@ -175,21 +182,54 @@ export const requestHostPayout = async (hostId: string, diamondsConverted: numbe
     throw new Error('Método de pago inválido o no autorizado.');
   }
 
-  const amountUsd = diamondsConverted * PAYOUT_CONFIG.DIAMONDS_TO_USD_RATE;
-  const netAmountUsd = amountUsd - PAYOUT_CONFIG.PAYOUT_FEE_USD;
+  // 2. Anti-fraud check
+  await checkPayoutFraud(hostId, beansConverted);
+
+  // 3. User verification and wait time checks
+  const userSnap = await db.collection(USERS).doc(hostId).get();
+  if (!userSnap.exists) throw new Error('Usuario no encontrado.');
+  const user = userSnap.data()!;
+  
+  if (user.role !== 'host' && user.role !== 'agency') {
+    throw new Error('Solo los hosts o agencias aprobadas pueden retirar.');
+  }
+  if (!user.isKycVerified && !user.isVerified) {
+    throw new Error('Tu cuenta debe estar verificada (KYC) para solicitar retiros.');
+  }
+
+  // Wait time check: 15 days since approved/created
+  const createdAt = user.createdAt ? (user.createdAt.toMillis ? user.createdAt.toMillis() : new Date(user.createdAt).getTime()) : Date.now();
+  const accountAgeDays = (Date.now() - createdAt) / (1000 * 60 * 60 * 24);
+  if (accountAgeDays < PAYOUT_CONFIG.FIRST_PAYOUT_WAIT_DAYS) {
+    throw new Error(`Debes ser host aprobado durante al menos ${PAYOUT_CONFIG.FIRST_PAYOUT_WAIT_DAYS} días antes de tu primer retiro.`);
+  }
+
+  // 4. HostStats checklist verification
+  const statsRef = db.collection(HOST_STATS).doc(hostId);
+  const statsSnap = await statsRef.get();
+  if (!statsSnap.exists) {
+    throw new Error('Estadísticas de host no encontradas. No elegible para retiro.');
+  }
+  const stats = statsSnap.data()!;
+  if (!stats.eligibleForPayout) {
+    throw new Error('No cumples los requisitos mínimos de actividad/viewers mensuales para retirar.');
+  }
+
+  const amountUsd = beansConverted * PAYOUT_CONFIG.BEANS_TO_USD_RATE;
+  const feeUsd = PAYOUT_CONFIG.PAYOUT_FEE_USD;
+  const netAmountUsd = amountUsd - feeUsd;
 
   const payoutRef = db.collection(HOST_PAYOUTS).doc();
   const txRef = db.collection(WALLET_TRANSACTIONS).doc();
   const walletRef = db.collection(WALLETS).doc(hostId);
   const userRef = db.collection(USERS).doc(hostId);
-  const statsRef = db.collection(HOST_STATS).doc(hostId);
 
   await ensureHostStats(hostId);
 
   let newBalance = 0;
 
   await db.runTransaction(async (transaction) => {
-    // A. Check balance in wallet
+    // Check balance in wallet
     const walletSnap = await transaction.get(walletRef);
     if (!walletSnap.exists) throw new Error('Billetera no encontrada.');
 
@@ -198,64 +238,59 @@ export const requestHostPayout = async (hostId: string, diamondsConverted: numbe
       throw new Error('Tu billetera está bloqueada o suspendida.');
     }
 
-    const currentDiamonds = walletData.diamonds || 0;
-    if (currentDiamonds < diamondsConverted) {
-      throw new Error('Saldo de diamantes insuficiente.');
+    const currentBeans = walletData.beans || 0;
+    if (currentBeans < beansConverted) {
+      throw new Error('Saldo de beans insuficiente.');
     }
 
-    // B. Calculate new balances
-    newBalance = currentDiamonds - diamondsConverted;
-    const newLocked = (walletData.lockedDiamonds || 0) + diamondsConverted;
+    // Calculate new balances
+    newBalance = currentBeans - beansConverted;
+    const newLocked = (walletData.lockedBeans || 0) + beansConverted;
 
-    // C. Update Wallet
+    // Update Wallet
     transaction.update(walletRef, {
-      diamonds: newBalance,
-      lockedDiamonds: newLocked,
+      beans: newBalance,
+      lockedBeans: newLocked,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // D. Update User cache
+    // Update User cache
     transaction.update(userRef, {
-      diamonds: newBalance,
+      beans: newBalance,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // E. Update HostStats
-    transaction.update(statsRef, {
-      availableDiamonds: newBalance,
-      lockedDiamonds: newLocked,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    // F. Create HostPayout document
+    // Create HostPayout document
     const payoutData = {
       id: payoutRef.id,
       hostId,
-      amount: amountUsd,
-      diamondsConverted,
+      amountBeans: beansConverted,
+      conversionRate: PAYOUT_CONFIG.BEANS_TO_USD_RATE,
+      amountUsd,
+      feeUsd,
+      netAmountUsd,
       status: 'pending',
+      fraudReviewStatus: 'pending',
       payoutMethodId,
       payoutMethodType: methodData.type,
       payoutMethodLabel: methodData.label,
       payoutDetailsMasked: methodData.maskedDetails,
-      fee: PAYOUT_CONFIG.PAYOUT_FEE_USD,
-      netAmount: netAmountUsd,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
     transaction.set(payoutRef, payoutData);
 
-    // G. Create pending walletTransaction for transparency
+    // Create pending walletTransaction for transparency
     const txData = {
       id: txRef.id,
       userId: hostId,
-      type: 'withdrawal',
+      type: 'payout_requested',
       direction: 'debit',
-      currencyType: 'diamonds',
-      amount: diamondsConverted,
+      currencyType: 'beans',
+      amount: beansConverted,
       balanceAfter: newBalance,
       status: 'pending',
-      description: `Retiro de diamantes a ${methodData.label}`,
+      description: `Retiro de beans a ${methodData.label}`,
       metadata: {
         payoutId: payoutRef.id,
         methodType: methodData.type,
@@ -267,14 +302,21 @@ export const requestHostPayout = async (hostId: string, diamondsConverted: numbe
     transaction.set(txRef, txData);
   });
 
-  // Create Activity log (outside transaction to avoid lock contention if it takes too long)
+  // Create Activity log
   await createHostActivity({
     hostId,
     type: 'payout_requested',
     title: 'Retiro Solicitado',
-    description: `Solicitud de retiro creada por $${amountUsd} USD (${diamondsConverted} diamantes)`,
-    diamondsDelta: -diamondsConverted,
-  });
+    description: `Solicitud de retiro creada por $${amountUsd} USD (${beansConverted} beans)`,
+  }).catch(() => {});
+
+  // Track payout request in analytics
+  try {
+    const { recordPayoutRequested } = await import('./analyticsService');
+    await recordPayoutRequested(hostId, netAmountUsd, beansConverted);
+  } catch (anErr) {
+    console.error('Failed to track payout request in analytics:', anErr);
+  }
 
   const finalPayoutSnap = await payoutRef.get();
   return finalPayoutSnap.data();
@@ -302,28 +344,21 @@ export const cancelPayout = async (payoutId: string, hostId: string) => {
     if (!walletSnap.exists) throw new Error('Billetera no encontrada.');
 
     const walletData = walletSnap.data()!;
-    const diamondsConverted = payoutData.diamondsConverted;
+    const beansConverted = payoutData.amountBeans;
 
-    const newBalance = (walletData.diamonds || 0) + diamondsConverted;
-    const newLocked = Math.max(0, (walletData.lockedDiamonds || 0) - diamondsConverted);
+    const newBalance = (walletData.beans || 0) + beansConverted;
+    const newLocked = Math.max(0, (walletData.lockedBeans || 0) - beansConverted);
 
     // Update Wallet
     transaction.update(walletRef, {
-      diamonds: newBalance,
-      lockedDiamonds: newLocked,
+      beans: newBalance,
+      lockedBeans: newLocked,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     // Update User
     transaction.update(userRef, {
-      diamonds: newBalance,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    // Update HostStats
-    transaction.update(statsRef, {
-      availableDiamonds: newBalance,
-      lockedDiamonds: newLocked,
+      beans: newBalance,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -354,7 +389,7 @@ export const cancelPayout = async (payoutId: string, hostId: string) => {
     type: 'system',
     title: 'Retiro Cancelado',
     description: `Cancelaste el retiro de ${payoutId.substring(0, 8)}`,
-  });
+  }).catch(() => {});
 
   return { success: true };
 };
@@ -373,6 +408,7 @@ export const approvePayout = async (payoutId: string, adminId: string, adminNote
 
   await payoutRef.update({
     status: 'approved',
+    fraudReviewStatus: 'passed',
     reviewedBy: adminId,
     adminNotes: adminNotes || 'Solicitud aprobada para pago.',
     processedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -383,8 +419,24 @@ export const approvePayout = async (payoutId: string, adminId: string, adminNote
     hostId: payoutData.hostId,
     type: 'payout_approved',
     title: 'Retiro Aprobado',
-    description: `Tu retiro de $${payoutData.amount} USD ha sido aprobado y está en proceso de pago.`,
-  });
+    description: `Tu retiro de $${payoutData.amountUsd} USD ha sido aprobado y está en proceso de pago.`,
+  }).catch(() => {});
+
+  // Trigger push and in-app notification
+  try {
+    const { createNotificationAndPush } = await import('./notificationService');
+    await createNotificationAndPush({
+      userId: payoutData.hostId,
+      type: 'payout_update',
+      channel: 'both',
+      title: 'Retiro Aprobado 💸',
+      body: `Tu solicitud de retiro por $${payoutData.amountUsd} USD ha sido aprobada por administración.`,
+      actionType: 'open_payout',
+      actionValue: payoutId,
+    });
+  } catch (err) {
+    console.error('Failed to send payout approved notification:', err);
+  }
 
   return { id: payoutId, status: 'approved' };
 };
@@ -402,7 +454,6 @@ export const rejectPayout = async (payoutId: string, adminId: string, adminNotes
   const hostId = payoutData.hostId;
   const walletRef = db.collection(WALLETS).doc(hostId);
   const userRef = db.collection(USERS).doc(hostId);
-  const statsRef = db.collection(HOST_STATS).doc(hostId);
 
   await ensureHostStats(hostId);
 
@@ -411,34 +462,28 @@ export const rejectPayout = async (payoutId: string, adminId: string, adminNotes
     if (!walletSnap.exists) throw new Error('Billetera no encontrada.');
 
     const walletData = walletSnap.data()!;
-    const diamondsConverted = payoutData.diamondsConverted;
+    const beansConverted = payoutData.amountBeans;
 
-    const newBalance = (walletData.diamonds || 0) + diamondsConverted;
-    const newLocked = Math.max(0, (walletData.lockedDiamonds || 0) - diamondsConverted);
+    const newBalance = (walletData.beans || 0) + beansConverted;
+    const newLocked = Math.max(0, (walletData.lockedBeans || 0) - beansConverted);
 
     // Update Wallet
     transaction.update(walletRef, {
-      diamonds: newBalance,
-      lockedDiamonds: newLocked,
+      beans: newBalance,
+      lockedBeans: newLocked,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     // Update User
     transaction.update(userRef, {
-      diamonds: newBalance,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    // Update HostStats
-    transaction.update(statsRef, {
-      availableDiamonds: newBalance,
-      lockedDiamonds: newLocked,
+      beans: newBalance,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     // Update Payout Status
     transaction.update(payoutRef, {
       status: 'rejected',
+      fraudReviewStatus: 'failed',
       reviewedBy: adminId,
       adminNotes: adminNotes || 'Rechazado por el administrador.',
       rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -466,7 +511,23 @@ export const rejectPayout = async (payoutId: string, adminId: string, adminNotes
     type: 'payout_rejected',
     title: 'Retiro Rechazado',
     description: `Rechazado: ${adminNotes || 'No cumple los requisitos de retiro.'}`,
-  });
+  }).catch(() => {});
+
+  // Trigger push and in-app notification
+  try {
+    const { createNotificationAndPush } = await import('./notificationService');
+    await createNotificationAndPush({
+      userId: hostId,
+      type: 'payout_update',
+      channel: 'both',
+      title: 'Retiro Rechazado ❌',
+      body: `Tu solicitud de retiro por $${payoutData.amountUsd} USD ha sido rechazada. Revisa las notas de administración.`,
+      actionType: 'open_payout',
+      actionValue: payoutId,
+    });
+  } catch (err) {
+    console.error('Failed to send payout rejected notification:', err);
+  }
 
   return { id: payoutId, status: 'rejected' };
 };
@@ -483,7 +544,6 @@ export const markPayoutAsPaid = async (payoutId: string, adminId: string, adminN
 
   const hostId = payoutData.hostId;
   const walletRef = db.collection(WALLETS).doc(hostId);
-  const statsRef = db.collection(HOST_STATS).doc(hostId);
 
   await ensureHostStats(hostId);
 
@@ -492,21 +552,15 @@ export const markPayoutAsPaid = async (payoutId: string, adminId: string, adminN
     if (!walletSnap.exists) throw new Error('Billetera no encontrada.');
 
     const walletData = walletSnap.data()!;
-    const diamondsConverted = payoutData.diamondsConverted;
+    const beansConverted = payoutData.amountBeans;
 
-    const newLocked = Math.max(0, (walletData.lockedDiamonds || 0) - diamondsConverted);
-    const newWithdrawn = (walletData.lifetimeDiamondsWithdrawn || 0) + diamondsConverted;
+    const newLocked = Math.max(0, (walletData.lockedBeans || 0) - beansConverted);
+    const newWithdrawn = (walletData.lifetimeBeansWithdrawn || 0) + beansConverted;
 
     // Update Wallet
     transaction.update(walletRef, {
-      lockedDiamonds: newLocked,
-      lifetimeDiamondsWithdrawn: newWithdrawn,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    // Update HostStats
-    transaction.update(statsRef, {
-      lockedDiamonds: newLocked,
+      lockedBeans: newLocked,
+      lifetimeBeansWithdrawn: newWithdrawn,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -538,8 +592,32 @@ export const markPayoutAsPaid = async (payoutId: string, adminId: string, adminN
     hostId,
     type: 'payout_paid',
     title: 'Retiro Pagado',
-    description: `Se han transferido $${payoutData.amount} USD a tu cuenta.`,
-  });
+    description: `Se han transferido $${payoutData.amountUsd} USD a tu cuenta.`,
+  }).catch(() => {});
+
+  // Trigger push and in-app notification
+  try {
+    const { createNotificationAndPush } = await import('./notificationService');
+    await createNotificationAndPush({
+      userId: hostId,
+      type: 'payout_update',
+      channel: 'both',
+      title: 'Retiro Transferido 🎉',
+      body: `¡Éxito! Tu retiro por $${payoutData.amountUsd} USD (${payoutData.amountBeans.toLocaleString()} beans) ha sido transferido.`,
+      actionType: 'open_payout',
+      actionValue: payoutId,
+    });
+  } catch (err) {
+    console.error('Failed to send payout paid notification:', err);
+  }
+
+  // Track payout paid in analytics
+  try {
+    const { recordPayoutPaid } = await import('./analyticsService');
+    await recordPayoutPaid(hostId, payoutData.netAmountUsd || payoutData.amountUsd, payoutData.amountBeans);
+  } catch (anErr) {
+    console.error('Failed to track payout paid in analytics:', anErr);
+  }
 
   return { id: payoutId, status: 'paid' };
 };

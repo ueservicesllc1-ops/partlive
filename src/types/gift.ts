@@ -3,9 +3,10 @@ export interface Gift {
   name: string;
   iconUrl?: string;
   animationUrl?: string;
-  priceCoins: number;
-  valueDiamonds: number;
+  priceDiamonds: number;
+  beansValue: number;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  category?: string; // e.g. "popular", "premium", "interactive"
   isActive: boolean;
   createdAt: any; // Firestore Timestamp
   updatedAt: any; // Firestore Timestamp

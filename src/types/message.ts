@@ -29,8 +29,9 @@ export interface GiftEvent {
   roomId?: string;
   liveId?: string;
   quantity: number;
-  totalCoins: number;
+  totalCoins?: number;
   totalDiamonds: number;
+  totalBeans?: number;
   createdAt: any; // Firestore Timestamp
 }
 

@@ -69,12 +69,13 @@ export const createLive = async (
   const liveRef = db.collection(FirestoreCollections.LIVES).doc();
   const liveId = liveRef.id;
 
-  const liveData: Omit<LiveStream, 'id'> = {
+  const liveData: any = {
     hostId: hostProfile.uid,
     hostName: hostProfile.displayName || hostProfile.name || 'Host',
     hostUsername: hostProfile.username || '',
     hostPhotoURL: hostProfile.photoURL || '',
     title: data.title || 'Live Stream sin título',
+    titleLowercase: (data.title || 'Live Stream sin título').trim().toLowerCase(),
     description: data.description || '',
     category: data.category || 'Popular',
     thumbnailUrl: data.thumbnailUrl || '',
@@ -116,6 +117,24 @@ export const createLive = async (
   batch.set(db.collection(getLiveViewersPath(liveId)).doc(hostProfile.uid), hostViewer);
   await batch.commit();
 
+  // Log social activity
+  try {
+    await firestore().collection('socialActivities').add({
+      userId: hostProfile.uid,
+      username: hostProfile.username || hostProfile.displayName || '',
+      userPhotoURL: hostProfile.photoURL || '',
+      type: 'start_live',
+      title: 'Inició un Live 🔴',
+      description: `${hostProfile.displayName || 'Host'} inició un live: ${data.title || ''}`,
+      actionType: 'open_live',
+      actionValue: liveId,
+      visibility: 'public',
+      createdAt: firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (err) {
+    console.error('Failed to log live social activity:', err);
+  }
+
   return liveId;
 };
 
@@ -123,10 +142,16 @@ export const createLive = async (
  * Generic live stream update.
  */
 export const updateLive = async (id: string, data: Partial<LiveStream>): Promise<void> => {
-  await firestore().collection(FirestoreCollections.LIVES).doc(id).update({
+  const updates: any = {
     ...data,
     updatedAt: firestore.FieldValue.serverTimestamp(),
-  });
+  };
+
+  if (data.title !== undefined) {
+    updates.titleLowercase = data.title.trim().toLowerCase();
+  }
+
+  await firestore().collection(FirestoreCollections.LIVES).doc(id).update(updates);
 };
 
 /**
@@ -186,6 +211,10 @@ export const joinLive = async (
   const viewerSnap = await viewerRef.get();
 
   if (viewerSnap.exists()) {
+    const viewerData = viewerSnap.data() as LiveViewer;
+    if (viewerData.isBannedFromLive) {
+      throw new Error('Has sido expulsado o baneado de este live.');
+    }
     // Already in stream, update activity
     await viewerRef.update({
       lastActiveAt: firestore.FieldValue.serverTimestamp(),

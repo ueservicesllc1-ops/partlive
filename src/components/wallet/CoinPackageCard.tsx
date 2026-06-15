@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { CoinPackage } from '../../types';
+import { DiamondPackage } from '../../types';
 import { colors, spacing, textPresets } from '../../theme';
 import { formatCoins } from '../../utils/formatNumbers';
 
 interface CoinPackageCardProps {
-  pkg: CoinPackage;
-  onPress: (pkg: CoinPackage) => void;
+  pkg: DiamondPackage;
+  onPress: (pkg: DiamondPackage) => void;
   localizedPrice?: string;
   isPopular?: boolean;
 }
@@ -33,16 +33,16 @@ export const CoinPackageCard: React.FC<CoinPackageCardProps> = ({
         </View>
       )}
 
-      {/* Icon & Coins */}
+      {/* Icon & Diamonds */}
       <View style={styles.coinWrapper}>
-        <Text style={styles.coinEmoji}>🪙</Text>
-        <Text style={styles.coinsAmount}>{formatCoins(pkg.coins)}</Text>
+        <Text style={styles.coinEmoji}>💎</Text>
+        <Text style={styles.coinsAmount}>{formatCoins(pkg.diamonds)}</Text>
       </View>
 
       {/* Bonus Badge */}
-      {pkg.bonusCoins > 0 && (
+      {pkg.bonusDiamonds > 0 && (
         <View style={styles.bonusBadge}>
-          <Text style={styles.bonusText}>+{pkg.bonusCoins} Bonus</Text>
+          <Text style={styles.bonusText}>+{pkg.bonusDiamonds} Bonus</Text>
         </View>
       )}
 

@@ -1,3 +1,10 @@
+E:\Chaton\node_modules\@react-native-community\datetimepicker\android\build\generated\source\codegen\jni\CMakeLists.txt
+E:\Chaton\node_modules\@react-native-google-signin\google-signin\android\build\generated\source\codegen\jni\CMakeLists.txt
+E:\Chaton\node_modules\react-native-config\android\build\generated\source\codegen\jni\CMakeLists.txt
+E:\Chaton\node_modules\react-native-get-random-values\android\build\generated\source\codegen\jni\CMakeLists.txt
+E:\Chaton\node_modules\react-native-image-picker\android\build\generated\source\codegen\jni\CMakeLists.txt
+E:\Chaton\node_modules\react-native-nitro-modules\android\build\generated\source\codegen\jni\CMakeLists.txt
+E:\Chaton\node_modules\react-native-pager-view\android\build\generated\source\codegen\jni\CMakeLists.txt
 E:\Chaton\node_modules\react-native-safe-area-context\android\src\main\jni\CMakeLists.txt
 E:\Chaton\node_modules\react-native-screens\android\src\main\jni\CMakeLists.txt
 E:\Chaton\node_modules\react-native\ReactAndroid\cmake-utils\default-app-setup\CMakeLists.txt

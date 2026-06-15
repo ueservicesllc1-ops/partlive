@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { LoadingState, ErrorState, ConfirmDialog } from '@/components/ui/Extras';
 import { api } from '@/services/apiClient';
 import { useAdminAuth } from '@/components/auth/AdminAuthProvider';
+import { moderationAdminApi } from '@/services/moderationAdminApi';
 
 export default function UserDetailPage() {
   const params = useParams();
@@ -32,11 +33,21 @@ export default function UserDetailPage() {
   // Modals
   const [walletModal, setWalletModal] = useState(false);
   const [roleModal, setRoleModal] = useState(false);
-  const [confirmSuspend, setConfirmSuspend] = useState(false);
+  
+  // Moderation Modals
+  const [warnModal, setWarnModal] = useState(false);
+  const [suspendModal, setSuspendModal] = useState(false);
+  const [banModal, setBanModal] = useState(false);
+  const [unbanConfirm, setUnbanConfirm] = useState(false);
+  const [lockWalletConfirm, setLockWalletConfirm] = useState(false);
+  const [unlockWalletConfirm, setUnlockWalletConfirm] = useState(false);
 
-  // Wallet adjustment form
+  // Forms
   const [walletForm, setWalletForm] = useState({ currencyType: 'coins', amount: '', direction: 'credit', reason: '' });
   const [newRole, setNewRole] = useState('user');
+  
+  const [modReason, setModReason] = useState('');
+  const [suspendDuration, setSuspendDuration] = useState('24');
 
   const fetchData = async () => {
     setLoading(true);
@@ -68,25 +79,81 @@ export default function UserDetailPage() {
 
   useEffect(() => { if (userId) fetchData(); }, [userId]);
 
+  // Moderation handlers
+  const handleWarn = async () => {
+    if (!modReason.trim()) return alert('Por favor ingresa un motivo');
+    setActionLoading('warn');
+    try {
+      await moderationAdminApi.warnUser(userId, modReason);
+      setWarnModal(false);
+      setModReason('');
+      await fetchData();
+    } catch (err: any) { alert(err.message); }
+    finally { setActionLoading(null); }
+  };
+
   const handleSuspend = async () => {
+    if (!modReason.trim()) return alert('Por favor ingresa un motivo');
     setActionLoading('suspend');
     try {
-      await api.post(`/api/admin/users/${userId}/suspend`, { reason: 'Suspendido por administración' });
-      setConfirmSuspend(false);
+      await moderationAdminApi.suspendUser(userId, modReason, parseInt(suspendDuration) || 24);
+      setSuspendModal(false);
+      setModReason('');
       await fetchData();
     } catch (err: any) { alert(err.message); }
     finally { setActionLoading(null); }
   };
 
-  const handleReactivate = async () => {
-    setActionLoading('reactivate');
+  const handleBan = async () => {
+    if (!modReason.trim()) return alert('Por favor ingresa un motivo');
+    setActionLoading('ban');
     try {
-      await api.post(`/api/admin/users/${userId}/reactivate`);
+      await moderationAdminApi.banUser(userId, modReason);
+      setBanModal(false);
+      setModReason('');
       await fetchData();
     } catch (err: any) { alert(err.message); }
     finally { setActionLoading(null); }
   };
 
+  const handleUnban = async () => {
+    setActionLoading('unban');
+    try {
+      // If user status was suspended, calling unsuspend clears it. Otherwise call unban.
+      if (user.status === 'suspended') {
+        await moderationAdminApi.unsuspendUser(userId, 'Removido por administración');
+      } else {
+        await moderationAdminApi.unbanUser(userId, 'Removido por administración');
+      }
+      setUnbanConfirm(false);
+      await fetchData();
+    } catch (err: any) { alert(err.message); }
+    finally { setActionLoading(null); }
+  };
+
+  const handleLockWallet = async () => {
+    if (!modReason.trim()) return alert('Por favor ingresa un motivo');
+    setActionLoading('lock-wallet');
+    try {
+      await moderationAdminApi.lockWallet(userId, modReason);
+      setLockWalletConfirm(false);
+      setModReason('');
+      await fetchData();
+    } catch (err: any) { alert(err.message); }
+    finally { setActionLoading(null); }
+  };
+
+  const handleUnlockWallet = async () => {
+    setActionLoading('unlock-wallet');
+    try {
+      await moderationAdminApi.unlockWallet(userId, 'Desbloqueado por administración');
+      setUnlockWalletConfirm(false);
+      await fetchData();
+    } catch (err: any) { alert(err.message); }
+    finally { setActionLoading(null); }
+  };
+
+  // Wallet adjust
   const handleWalletAdjustment = async () => {
     setActionLoading('wallet');
     try {
@@ -132,23 +199,15 @@ export default function UserDetailPage() {
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-bold text-white">{user.displayName || '—'}</h2>
               {user.isVerified && <Badge variant="info">✓ Verificado</Badge>}
-              <Badge variant={user.status === 'suspended' ? 'danger' : 'success'}>{user.status || 'active'}</Badge>
+              <Badge variant={user.status === 'banned' ? 'danger' : user.status === 'suspended' ? 'warning' : 'success'}>
+                {user.status || 'active'}
+              </Badge>
               <Badge variant={user.role === 'admin' ? 'violet' : user.role === 'host' ? 'warning' : 'muted'}>{user.role || 'user'}</Badge>
             </div>
             <p className="text-sm text-gray-400 mt-1">@{user.username || 'N/A'} • {user.email}</p>
           </div>
 
-          {/* Actions */}
           <div className="flex flex-wrap gap-2">
-            {user.status !== 'suspended' ? (
-              <Button variant="danger" size="sm" onClick={() => setConfirmSuspend(true)} isLoading={actionLoading === 'suspend'}>
-                Suspender
-              </Button>
-            ) : (
-              <Button variant="success" size="sm" onClick={handleReactivate} isLoading={actionLoading === 'reactivate'}>
-                Reactivar
-              </Button>
-            )}
             <Button variant="secondary" size="sm" onClick={() => setWalletModal(true)}>💰 Ajustar Wallet</Button>
             {isAdmin && (
               <Button variant="secondary" size="sm" onClick={() => { setNewRole(user.role || 'user'); setRoleModal(true); }}>
@@ -158,7 +217,41 @@ export default function UserDetailPage() {
           </div>
         </Card>
 
-        {/* Wallet */}
+        {/* Moderation Action Panel */}
+        <Card className="border border-gray-800 bg-gray-900/40">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">Panel de Moderación y Sanciones</h3>
+          <div className="flex flex-wrap gap-3">
+            {user.status === 'active' || user.status === 'warning' ? (
+              <>
+                <Button variant="secondary" size="sm" onClick={() => setWarnModal(true)}>
+                  ⚠️ Advertir Usuario
+                </Button>
+                <Button variant="warning" size="sm" onClick={() => setSuspendModal(true)}>
+                  🚫 Suspender Cuenta
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => setBanModal(true)}>
+                  ❌ Banear Cuenta
+                </Button>
+              </>
+            ) : (
+              <Button variant="success" size="sm" onClick={() => setUnbanConfirm(true)}>
+                ✅ Reactivar Cuenta / Quitar Bloqueo
+              </Button>
+            )}
+
+            {wallet?.status !== 'locked' ? (
+              <Button variant="danger" size="sm" onClick={() => setLockWalletConfirm(true)}>
+                🔒 Bloquear Wallet
+              </Button>
+            ) : (
+              <Button variant="success" size="sm" onClick={() => setUnlockWalletConfirm(true)}>
+                🔓 Desbloquear Wallet
+              </Button>
+            )}
+          </div>
+        </Card>
+
+        {/* Wallet stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { label: 'Coins', value: wallet?.coins ?? 0, icon: '🪙', color: 'text-amber-400' },
@@ -253,16 +346,99 @@ export default function UserDetailPage() {
         </div>
       </Modal>
 
-      {/* Confirm Suspend */}
+      {/* Warn Modal */}
+      <Modal isOpen={warnModal} onClose={() => setWarnModal(false)} title="Advertir Usuario">
+        <div className="space-y-4">
+          <Textarea
+            label="Motivo de la advertencia"
+            placeholder="Especifica el motivo..."
+            value={modReason}
+            onChange={e => setModReason(e.target.value)}
+            rows={3}
+          />
+          <Button variant="primary" className="w-full" onClick={handleWarn} isLoading={actionLoading === 'warn'}>
+            Enviar Advertencia
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Suspend Modal */}
+      <Modal isOpen={suspendModal} onClose={() => setSuspendModal(false)} title="Suspender Cuenta">
+        <div className="space-y-4">
+          <Input
+            label="Duración (en horas)"
+            type="number"
+            value={suspendDuration}
+            onChange={e => setSuspendDuration(e.target.value)}
+            min="1"
+          />
+          <Textarea
+            label="Motivo de la suspensión"
+            placeholder="Especifica el motivo..."
+            value={modReason}
+            onChange={e => setModReason(e.target.value)}
+            rows={3}
+          />
+          <Button variant="warning" className="w-full" onClick={handleSuspend} isLoading={actionLoading === 'suspend'}>
+            Confirmar Suspensión
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Ban Modal */}
+      <Modal isOpen={banModal} onClose={() => setBanModal(false)} title="Banear Cuenta">
+        <div className="space-y-4">
+          <Textarea
+            label="Motivo del baneo permanente"
+            placeholder="Especifica el motivo..."
+            value={modReason}
+            onChange={e => setModReason(e.target.value)}
+            rows={3}
+          />
+          <Button variant="danger" className="w-full" onClick={handleBan} isLoading={actionLoading === 'ban'}>
+            Confirmar Baneo Permanente
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Wallet Lock Modal */}
+      <Modal isOpen={lockWalletConfirm} onClose={() => setLockWalletConfirm(false)} title="Bloquear Wallet">
+        <div className="space-y-4">
+          <Textarea
+            label="Motivo del bloqueo de wallet"
+            placeholder="Especifica el motivo..."
+            value={modReason}
+            onChange={e => setModReason(e.target.value)}
+            rows={3}
+          />
+          <Button variant="danger" className="w-full" onClick={handleLockWallet} isLoading={actionLoading === 'lock-wallet'}>
+            Bloquear Wallet
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Confirm Unban */}
       <ConfirmDialog
-        isOpen={confirmSuspend}
-        onClose={() => setConfirmSuspend(false)}
-        onConfirm={handleSuspend}
-        title="Suspender Usuario"
-        message={`¿Confirmas suspender la cuenta de ${user.displayName || user.email}? El usuario no podrá acceder a la plataforma.`}
-        confirmLabel="Suspender"
-        variant="danger"
-        isLoading={actionLoading === 'suspend'}
+        isOpen={unbanConfirm}
+        onClose={() => setUnbanConfirm(false)}
+        onConfirm={handleUnban}
+        title="Quitar Restricción de Cuenta"
+        message={`¿Confirmas reactivar la cuenta de ${user.displayName || user.email}? El usuario recuperará su acceso activo.`}
+        confirmLabel="Reactivar"
+        variant="primary"
+        isLoading={actionLoading === 'unban'}
+      />
+
+      {/* Confirm Wallet Unlock */}
+      <ConfirmDialog
+        isOpen={unlockWalletConfirm}
+        onClose={() => setUnlockWalletConfirm(false)}
+        onConfirm={handleUnlockWallet}
+        title="Desbloquear Wallet"
+        message={`¿Confirmas desbloquear la wallet del usuario ${user.displayName || user.email}? El usuario podrá volver a realizar compras y retiros.`}
+        confirmLabel="Desbloquear"
+        variant="primary"
+        isLoading={actionLoading === 'unlock-wallet'}
       />
     </AdminLayout>
   );

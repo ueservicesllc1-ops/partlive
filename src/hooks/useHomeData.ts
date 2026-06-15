@@ -23,7 +23,7 @@ export const useHomeData = () => {
     try {
       // Future: Promise.all([ roomsService.getPopularRooms(), ... ])
       // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise<void>(resolve => setTimeout(resolve, 800));
 
       // Fetch remote data (null for now to trigger fallback)
       const remoteBanners = null;

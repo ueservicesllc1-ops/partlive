@@ -18,22 +18,25 @@ import { PAYOUT_CONFIG } from '../../constants/payoutConfig';
 import { PayoutMethodCard, PayoutConversionPreview } from '../../components/payouts';
 import { HostPayoutMethod } from '../../types/payout';
 
+import { useWallet } from '../../hooks/useWallet';
+
 export const RequestPayoutScreen = ({ navigation }: any) => {
   const { stats } = useHostDashboard();
+  const { wallet } = useWallet();
   const { payoutMethods, requestWithdrawal, loading } = usePayouts();
   
-  const [diamondsStr, setDiamondsStr] = useState('');
+  const [beansStr, setBeansStr] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<HostPayoutMethod | null>(
     payoutMethods.find(m => m.isDefault) || payoutMethods[0] || null
   );
   
   const [showMethodSelector, setShowMethodSelector] = useState(false);
 
-  const availableDiamonds = stats?.availableDiamonds ?? 0;
-  const diamonds = parseInt(diamondsStr) || 0;
+  const availableBeans = wallet?.beans ?? 0;
+  const beans = parseInt(beansStr) || 0;
 
   const handleSetMax = () => {
-    setDiamondsStr(availableDiamonds.toString());
+    setBeansStr(availableBeans.toString());
   };
 
   const handleRequest = async () => {
@@ -42,26 +45,26 @@ export const RequestPayoutScreen = ({ navigation }: any) => {
       return;
     }
 
-    if (diamonds < PAYOUT_CONFIG.MIN_PAYOUT_DIAMONDS) {
-      Alert.alert('Monto insuficiente', `El monto mínimo a retirar es de ${PAYOUT_CONFIG.MIN_PAYOUT_DIAMONDS.toLocaleString()} diamantes.`);
+    if (beans < PAYOUT_CONFIG.MIN_PAYOUT_BEANS) {
+      Alert.alert('Monto insuficiente', `El monto mínimo a retirar es de ${PAYOUT_CONFIG.MIN_PAYOUT_BEANS.toLocaleString()} beans.`);
       return;
     }
 
-    if (diamonds > availableDiamonds) {
-      Alert.alert('Saldo insuficiente', 'No tienes suficientes diamantes en tu balance disponible.');
+    if (beans > availableBeans) {
+      Alert.alert('Saldo insuficiente', 'No tienes suficientes beans en tu balance disponible.');
       return;
     }
 
     Alert.alert(
       'Confirmar Retiro',
-      `¿Deseas enviar una solicitud para retirar ${diamonds.toLocaleString()} diamantes? Se bloquearán en tu balance hasta ser procesados.`,
+      `¿Deseas enviar una solicitud para retirar ${beans.toLocaleString()} beans? Se bloquearán en tu balance hasta ser procesados.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Confirmar',
           onPress: async () => {
             try {
-              await requestWithdrawal(diamonds, selectedMethod.id);
+              await requestWithdrawal(beans, selectedMethod.id);
               Alert.alert('Solicitud Creada', 'Tu solicitud de retiro fue enviada correctamente.', [
                 { text: 'OK', onPress: () => navigation.navigate('HostPayouts') }
               ]);
@@ -91,23 +94,23 @@ export const RequestPayoutScreen = ({ navigation }: any) => {
         <View style={styles.balanceBox}>
           <Text style={styles.balanceLabel}>Tu Balance Disponible</Text>
           <View style={styles.balanceRow}>
-            <Text style={styles.diamondEmoji}>💎</Text>
-            <Text style={styles.balanceVal}>{availableDiamonds.toLocaleString()}</Text>
+            <Text style={styles.diamondEmoji}>🫘</Text>
+            <Text style={styles.balanceVal}>{availableBeans.toLocaleString()}</Text>
           </View>
-          <Text style={styles.minLabel}>Mínimo requerido: {PAYOUT_CONFIG.MIN_PAYOUT_DIAMONDS.toLocaleString()} 💎</Text>
+          <Text style={styles.minLabel}>Mínimo requerido: {PAYOUT_CONFIG.MIN_PAYOUT_BEANS.toLocaleString()} 🫘</Text>
         </View>
 
         {/* Amount Input */}
         <View style={styles.inputCard}>
-          <Text style={styles.sectionTitle}>Cantidad de Diamantes a Retirar</Text>
+          <Text style={styles.sectionTitle}>Cantidad de Beans a Retirar</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
               placeholder="Ej. 10000"
               placeholderTextColor={colors.textDark}
               keyboardType="number-pad"
-              value={diamondsStr}
-              onChangeText={setDiamondsStr}
+              value={beansStr}
+              onChangeText={setBeansStr}
             />
             <TouchableOpacity onPress={handleSetMax} style={styles.maxBtn}>
               <Text style={styles.maxText}>MÁX</Text>
@@ -149,16 +152,16 @@ export const RequestPayoutScreen = ({ navigation }: any) => {
         </View>
 
         {/* Live Conversion Summary */}
-        {diamonds >= 1000 && <PayoutConversionPreview diamonds={diamonds} />}
+        {beans >= 1000 && <PayoutConversionPreview beans={beans} />}
 
         {/* Submit Button */}
         <TouchableOpacity
           style={[
             styles.submitBtn,
-            (loading || diamonds < PAYOUT_CONFIG.MIN_PAYOUT_DIAMONDS || diamonds > availableDiamonds || !selectedMethod) && styles.disabledBtn
+            (loading || beans < PAYOUT_CONFIG.MIN_PAYOUT_BEANS || beans > availableBeans || !selectedMethod) && styles.disabledBtn
           ]}
           onPress={handleRequest}
-          disabled={loading || diamonds < PAYOUT_CONFIG.MIN_PAYOUT_DIAMONDS || diamonds > availableDiamonds || !selectedMethod}
+          disabled={loading || beans < PAYOUT_CONFIG.MIN_PAYOUT_BEANS || beans > availableBeans || !selectedMethod}
         >
           <Text style={styles.submitBtnText}>
             {loading ? 'Procesando...' : 'Enviar Solicitud'}

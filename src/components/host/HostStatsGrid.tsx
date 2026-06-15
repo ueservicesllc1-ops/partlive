@@ -18,9 +18,9 @@ export const HostStatsGrid: React.FC<Props> = ({ stats }) => {
   const items: StatItem[] = [
     { emoji: '📺', label: 'Lives', value: stats?.totalLives ?? 0, color: colors.secondary },
     { emoji: '🏠', label: 'Salas', value: stats?.totalRooms ?? 0, color: colors.primary },
-    { emoji: '💎', label: 'Diamonds', value: formatNum(stats?.totalDiamondsEarned), color: colors.accent },
-    { emoji: '🎁', label: 'Regalos', value: formatNum(stats?.totalGiftsReceived), color: colors.gold },
-    { emoji: '👁️', label: 'Pico espectadores', value: stats?.peakViewers ?? 0 },
+    { emoji: '🫘', label: 'Beans', value: formatNum(stats?.totalBeansEarned), color: colors.accent },
+    { emoji: '👥', label: 'Seguidores', value: formatNum(stats?.followersCount), color: colors.gold },
+    { emoji: '👁️', label: 'Prom. Viewers', value: stats?.averageViewers ?? 0 },
     { emoji: '⏱️', label: 'Minutos en vivo', value: formatNum(stats?.totalLiveMinutes) },
   ];
 

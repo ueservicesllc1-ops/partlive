@@ -84,13 +84,13 @@ export const GiftCatalogModal: React.FC<GiftCatalogModalProps> = ({
 
     try {
       const quantity = 1;
-      const totalCoins = selectedGift.priceCoins * quantity;
-      const totalDiamonds = selectedGift.valueDiamonds * quantity;
+      const totalDiamonds = selectedGift.priceDiamonds * quantity;
+      const totalBeans = selectedGift.beansValue * quantity;
 
       if (GIFT_WALLET_MODE === 'backend') {
         // Validation check client-side
-        if (!wallet || wallet.coins < totalCoins) {
-          Alert.alert('Monedas Insuficientes', 'No tienes suficientes monedas. Ve a la Billetera a recargar.');
+        if (!wallet || wallet.diamonds < totalDiamonds) {
+          Alert.alert('Diamantes Insuficientes', 'No tienes suficientes diamantes. Ve a la Billetera a recargar.');
           setSending(false);
           return;
         }
@@ -144,8 +144,8 @@ export const GiftCatalogModal: React.FC<GiftCatalogModalProps> = ({
             receiverName: selectedReceiver.displayName,
             roomId,
             quantity,
-            totalCoins,
             totalDiamonds,
+            totalBeans,
             createdAt: firestore.FieldValue.serverTimestamp(),
           };
           await eventRef.set(giftEvent);
@@ -235,7 +235,7 @@ export const GiftCatalogModal: React.FC<GiftCatalogModalProps> = ({
                     >
                       <Text style={styles.giftIcon}>{item.iconUrl || '🎁'}</Text>
                       <Text style={styles.giftNameText} numberOfLines={1}>{item.name}</Text>
-                      <Text style={styles.giftPrice}>🪙 {item.priceCoins}</Text>
+                      <Text style={styles.giftPrice}>💎 {item.priceDiamonds}</Text>
                     </TouchableOpacity>
                   );
                 }}
@@ -247,7 +247,7 @@ export const GiftCatalogModal: React.FC<GiftCatalogModalProps> = ({
           <View style={styles.footer}>
             <View style={styles.balanceContainer}>
               <Text style={styles.balanceLabel}>Tu Saldo:</Text>
-              <Text style={styles.balanceValue}>🪙 {wallet?.coins || 0}</Text>
+              <Text style={styles.balanceValue}>💎 {wallet?.diamonds || 0}</Text>
             </View>
 
             <TouchableOpacity

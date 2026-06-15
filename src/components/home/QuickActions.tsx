@@ -12,8 +12,8 @@ export const QuickActions = ({ onAction }: QuickActionsProps) => {
     { id: 'lives', icon: '📺', label: 'Lives' },
     { id: 'games', icon: '🎮', label: 'Juegos' },
     { id: 'rankings', icon: '🏆', label: 'Ranking' },
-    { id: 'events', icon: '🎉', label: 'Eventos' },
-    { id: 'wallet', icon: '🪙', label: 'Billetera' },
+    { id: 'missions', icon: '🎯', label: 'Misiones' },
+    { id: 'wallet', icon: '💎', label: 'Billetera' },
   ];
 
   return (

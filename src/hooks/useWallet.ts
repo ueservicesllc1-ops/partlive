@@ -1,27 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../store/AuthContext';
-import { CoinPackage, WalletTransaction } from '../types';
+import { DiamondPackage, WalletTransaction } from '../types';
 import {
-  listenToActiveCoinPackages,
-} from '../services/firebase/firestore/coinPackagesService';
+  listenToActiveDiamondPackages,
+} from '../services/firebase/firestore/diamondPackagesService';
 import {
   listenToUserWalletTransactions,
-  devCreditCoins as apiDevCreditCoins,
   devCreditDiamonds as apiDevCreditDiamonds,
+  devCreditBeans as apiDevCreditBeans,
 } from '../services/firebase/firestore/walletService';
 
 export const useWallet = () => {
   const { user, userWallet, refreshUserProfile, refreshWallet } = useAuth();
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [coinPackages, setCoinPackages] = useState<CoinPackage[]>([]);
+  const [diamondPackages, setDiamondPackages] = useState<DiamondPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // 1. Listen to active packages
   useEffect(() => {
     setLoading(true);
-    const unsubscribe = listenToActiveCoinPackages((packages) => {
-      setCoinPackages(packages);
+    const unsubscribe = listenToActiveDiamondPackages((packages) => {
+      setDiamondPackages(packages);
       setLoading(false);
     });
 
@@ -56,22 +56,6 @@ export const useWallet = () => {
   }, [refreshUserProfile, refreshWallet]);
 
   // 4. Dev credits calling backend routes
-  const devCreditCoins = useCallback(async (amount: number, description: string) => {
-    if (!user) return;
-    setLoading(true);
-    setError(null);
-    try {
-      await apiDevCreditCoins(amount, description);
-      await refresh();
-    } catch (err: any) {
-      console.error('Error crediting coins:', err);
-      setError(err?.message || 'Error al acreditar monedas');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [user, refresh]);
-
   const devCreditDiamonds = useCallback(async (amount: number, description: string) => {
     if (!user) return;
     setLoading(true);
@@ -88,14 +72,30 @@ export const useWallet = () => {
     }
   }, [user, refresh]);
 
+  const devCreditBeans = useCallback(async (amount: number, description: string) => {
+    if (!user) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await apiDevCreditBeans(amount, description);
+      await refresh();
+    } catch (err: any) {
+      console.error('Error crediting beans:', err);
+      setError(err?.message || 'Error al acreditar beans');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, refresh]);
+
   return {
     wallet: userWallet,
     transactions,
-    coinPackages,
+    diamondPackages,
     loading,
     error,
     refresh,
-    devCreditCoins,
     devCreditDiamonds,
+    devCreditBeans,
   };
 };

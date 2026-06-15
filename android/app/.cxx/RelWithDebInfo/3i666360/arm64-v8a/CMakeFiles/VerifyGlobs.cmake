@@ -132,6 +132,30 @@ if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
   file(TOUCH_NOCREATE "E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/CMakeFiles/cmake.verify_globs")
 endif()
 
+# react_codegen_SRCS at E:/Chaton/node_modules/react-native-nitro-modules/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "E:/Chaton/node_modules/react-native-nitro-modules/android/build/generated/source/codegen/jni/*.cpp")
+set(OLD_GLOB
+  "E:/Chaton/node_modules/react-native-nitro-modules/android/build/generated/source/codegen/jni/NitroModulesSpec-generated.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/CMakeFiles/cmake.verify_globs")
+endif()
+
+# react_codegen_SRCS at E:/Chaton/node_modules/react-native-nitro-modules/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "E:/Chaton/node_modules/react-native-nitro-modules/android/build/generated/source/codegen/jni/react/renderer/components/NitroModulesSpec/*.cpp")
+set(OLD_GLOB
+  "E:/Chaton/node_modules/react-native-nitro-modules/android/build/generated/source/codegen/jni/react/renderer/components/NitroModulesSpec/ComponentDescriptors.cpp"
+  "E:/Chaton/node_modules/react-native-nitro-modules/android/build/generated/source/codegen/jni/react/renderer/components/NitroModulesSpec/EventEmitters.cpp"
+  "E:/Chaton/node_modules/react-native-nitro-modules/android/build/generated/source/codegen/jni/react/renderer/components/NitroModulesSpec/Props.cpp"
+  "E:/Chaton/node_modules/react-native-nitro-modules/android/build/generated/source/codegen/jni/react/renderer/components/NitroModulesSpec/ShadowNodes.cpp"
+  "E:/Chaton/node_modules/react-native-nitro-modules/android/build/generated/source/codegen/jni/react/renderer/components/NitroModulesSpec/States.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/CMakeFiles/cmake.verify_globs")
+endif()
+
 # react_codegen_SRCS at E:/Chaton/node_modules/react-native-pager-view/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
 file(GLOB NEW_GLOB LIST_DIRECTORIES true "E:/Chaton/node_modules/react-native-pager-view/android/build/generated/source/codegen/jni/*.cpp")
 set(OLD_GLOB

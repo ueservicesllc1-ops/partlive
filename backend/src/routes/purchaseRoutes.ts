@@ -38,7 +38,7 @@ purchaseRoutes.post(
       res.json({
         ok: true,
         purchaseId: result.purchase.id,
-        coinsCredited: result.purchase.totalCoins,
+        diamondsCredited: result.purchase.totalDiamonds,
         wallet: result.wallet,
       });
     } catch (error: any) {

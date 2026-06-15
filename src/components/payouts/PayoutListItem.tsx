@@ -39,9 +39,9 @@ export const PayoutListItem: React.FC<PayoutListItemProps> = ({ payout, onPress 
       <View style={styles.leftCol}>
         <Text style={styles.icon}>{getMethodIcon()}</Text>
         <View style={styles.info}>
-          <Text style={styles.amount}>{formatPayoutAmountUsd(payout.amount)}</Text>
+          <Text style={styles.amount}>{formatPayoutAmountUsd(payout.amountUsd)}</Text>
           <Text style={styles.subtext}>
-            💎 {payout.diamondsConverted.toLocaleString()} → {payout.payoutMethodLabel}
+            🫘 {payout.amountBeans.toLocaleString()} → {payout.payoutMethodLabel}
           </Text>
         </View>
       </View>

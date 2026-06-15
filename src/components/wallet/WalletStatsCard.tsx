@@ -4,23 +4,23 @@ import { colors, textPresets, spacing } from '../../theme';
 import { formatCoins } from '../../utils/formatNumbers';
 
 interface WalletStatsCardProps {
-  lifetimeCoinsPurchased: number;
-  lifetimeCoinsSpent: number;
-  lifetimeDiamondsEarned: number;
-  lifetimeDiamondsWithdrawn: number;
+  lifetimeDiamondsPurchased: number;
+  lifetimeDiamondsSpent: number;
+  lifetimeBeansEarned: number;
+  lifetimeBeansWithdrawn: number;
 }
 
 export const WalletStatsCard: React.FC<WalletStatsCardProps> = ({
-  lifetimeCoinsPurchased,
-  lifetimeCoinsSpent,
-  lifetimeDiamondsEarned,
-  lifetimeDiamondsWithdrawn,
+  lifetimeDiamondsPurchased,
+  lifetimeDiamondsSpent,
+  lifetimeBeansEarned,
+  lifetimeBeansWithdrawn,
 }) => {
   const stats = [
-    { label: '🪙 Total Monedas Compradas', value: formatCoins(lifetimeCoinsPurchased) },
-    { label: '💸 Total Monedas Gastadas', value: formatCoins(lifetimeCoinsSpent) },
-    { label: '💎 Total Diamantes Ganados', value: formatCoins(lifetimeDiamondsEarned) },
-    { label: '🏧 Total Diamantes Retirados', value: formatCoins(lifetimeDiamondsWithdrawn) },
+    { label: '💎 Total Diamantes Comprados', value: formatCoins(lifetimeDiamondsPurchased) },
+    { label: '💸 Total Diamantes Gastados', value: formatCoins(lifetimeDiamondsSpent) },
+    { label: '🫘 Total Beans Ganados', value: formatCoins(lifetimeBeansEarned) },
+    { label: '🏧 Total Beans Retirados', value: formatCoins(lifetimeBeansWithdrawn) },
   ];
 
   return (

@@ -1,0 +1,43 @@
+import { HostMonetizationLevel } from '../types/host';
+
+export const HOST_LEVELS: HostMonetizationLevel[] = [
+  {
+    id: 'initial',
+    name: 'Host Inicial',
+    minFollowers: 300,
+    minLiveHoursMonthly: 20,
+    minActiveDaysMonthly: 10,
+    minAverageViewers: 15,
+    minDiamondsMonthly: 0,
+    hostSharePercent: 35,
+    platformSharePercent: 65,
+    isActive: true,
+    sortOrder: 1,
+  },
+  {
+    id: 'silver',
+    name: 'Host Silver',
+    minFollowers: 2000,
+    minLiveHoursMonthly: 40,
+    minActiveDaysMonthly: 15,
+    minAverageViewers: 50,
+    minDiamondsMonthly: 100000,
+    hostSharePercent: 45,
+    platformSharePercent: 55,
+    isActive: true,
+    sortOrder: 2,
+  },
+  {
+    id: 'gold',
+    name: 'Host Gold',
+    minFollowers: 10000,
+    minLiveHoursMonthly: 80,
+    minActiveDaysMonthly: 20,
+    minAverageViewers: 100,
+    minDiamondsMonthly: 500000,
+    hostSharePercent: 55,
+    platformSharePercent: 45,
+    isActive: true,
+    sortOrder: 3,
+  },
+];

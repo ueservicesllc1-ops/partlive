@@ -17,8 +17,8 @@ export const sendLiveGift = async (
   quantity: number = 1
 ): Promise<void> => {
   const db = firestore();
-  const totalCoins = gift.priceCoins * quantity;
-  const totalDiamonds = gift.valueDiamonds * quantity;
+  const totalDiamonds = gift.priceDiamonds * quantity;
+  const totalBeans = gift.beansValue * quantity;
 
   if (GIFT_WALLET_MODE === 'backend') {
     // API backend integration
@@ -49,8 +49,8 @@ export const sendLiveGift = async (
     receiverName: receiverProfile.displayName,
     liveId,
     quantity,
-    totalCoins,
     totalDiamonds,
+    totalBeans,
     createdAt: firestore.FieldValue.serverTimestamp(),
   };
 
@@ -63,7 +63,7 @@ export const sendLiveGift = async (
     transaction.set(eventRef, giftEvent);
     transaction.update(liveRef, {
       giftsCount: (liveData.giftsCount || 0) + quantity,
-      diamondsEarned: (liveData.diamondsEarned || 0) + totalDiamonds,
+      beansEarned: (liveData.beansEarned || 0) + totalBeans,
       updatedAt: firestore.FieldValue.serverTimestamp(),
     });
   });
@@ -76,8 +76,8 @@ export const sendLiveGift = async (
     quantity,
     receiverName: receiverProfile.displayName,
     giftIconUrl: gift.iconUrl,
-    totalCoins,
     totalDiamonds,
+    totalBeans,
   });
 };
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import * as IAP from 'react-native-iap';
-import { CoinPackage } from '../types';
+import { DiamondPackage } from '../types';
 import {
   initIAP,
   endIAP,
@@ -14,9 +14,9 @@ import { useAuth } from '../store/AuthContext';
 
 /**
  * Custom hook to manage Google Play Billing operations within the Wallet screen.
- * Maps Firestore coin packages to Google Play real-time localized prices.
+ * Maps Firestore diamond packages to Google Play real-time localized prices.
  */
-export const useInAppPurchases = (coinPackages: CoinPackage[]) => {
+export const useInAppPurchases = (diamondPackages: DiamondPackage[]) => {
   const { refreshWallet, refreshUserProfile } = useAuth();
   
   const [iapProducts, setIapProducts] = useState<Record<string, IAP.Product>>({});
@@ -34,7 +34,7 @@ export const useInAppPurchases = (coinPackages: CoinPackage[]) => {
       
       Alert.alert(
         '¡Compra Completada!',
-        `Se han acreditado ${purchase.totalCoins} monedas a tu billetera exitosamente.`
+        `Se han acreditado ${purchase.totalDiamonds || purchase.diamondsCredited} diamantes a tu billetera exitosamente.`
       );
 
       try {
@@ -90,14 +90,14 @@ export const useInAppPurchases = (coinPackages: CoinPackage[]) => {
     };
   }, [handlePurchaseSuccess, handlePurchaseError]);
 
-  // Query details from Google Play Console once Billing connection is active and coin packages load
+  // Query details from Google Play Console once Billing connection is active and diamond packages load
   useEffect(() => {
-    if (!isIapReady || coinPackages.length === 0) return;
+    if (!isIapReady || diamondPackages.length === 0) return;
 
     const loadProducts = async () => {
       setLoadingProducts(true);
       try {
-        const skus = coinPackages
+        const skus = diamondPackages
           .map((p) => p.googlePlayProductId)
           .filter(Boolean);
 
@@ -117,11 +117,11 @@ export const useInAppPurchases = (coinPackages: CoinPackage[]) => {
     };
 
     loadProducts();
-  }, [isIapReady, coinPackages]);
+  }, [isIapReady, diamondPackages]);
 
-  // Request purchase of a coin package
+  // Request purchase of a diamond package
   const buyPackage = useCallback(
-    async (pkg: CoinPackage) => {
+    async (pkg: DiamondPackage) => {
       if (!isIapReady) {
         Alert.alert('Error', 'El servicio de compras no está listo. Reintenta en unos momentos.');
         return;

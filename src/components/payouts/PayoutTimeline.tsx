@@ -59,7 +59,7 @@ export const PayoutTimeline: React.FC<PayoutTimelineProps> = ({ payout }) => {
   } else if (isRejected) {
     steps.push({
       title: 'Rechazado',
-      desc: payout.adminNotes || 'La solicitud fue rechazada por administración.',
+      desc: payout.adminNote || 'La solicitud fue rechazada por administración.',
       date: formatDate(payout.rejectedAt || payout.updatedAt),
       active: true,
       completed: true,
@@ -78,7 +78,7 @@ export const PayoutTimeline: React.FC<PayoutTimelineProps> = ({ payout }) => {
     // Paid Step
     steps.push({
       title: 'Pagado',
-      desc: payout.adminNotes || 'Los fondos fueron transferidos a tu cuenta.',
+      desc: payout.adminNote || 'Los fondos fueron transferidos a tu cuenta.',
       date: formatDate(payout.paidAt),
       active: isPaid,
       completed: isPaid,

@@ -35,24 +35,40 @@ const navSections = [
     ],
   },
   {
+    title: 'Analíticas',
+    items: [
+      { label: 'Resumen General', icon: '📊', href: '/analytics' },
+      { label: 'Revenue', icon: '💵', href: '/analytics/revenue' },
+      { label: 'Países', icon: '🌎', href: '/analytics/countries' },
+      { label: 'Top Hosts', icon: '🎙️', href: '/analytics/hosts' },
+      { label: 'Regalos', icon: '🎁', href: '/analytics/gifts' },
+      { label: 'Alertas', icon: '🚨', href: '/analytics/alerts' },
+    ],
+  },
+  {
     title: 'Contenido',
     items: [
       { label: 'Regalos', icon: '🎁', href: '/gifts' },
       { label: 'Banners', icon: '🖼️', href: '/banners' },
       { label: 'Eventos', icon: '🎉', href: '/events' },
       { label: 'Misiones', icon: '🎯', href: '/missions' },
-      { label: 'Rankings', icon: '🏆', href: '/rankings' },
+      { label: 'Recompensas', icon: '🏆', href: '/mission-rewards' },
+      { label: 'Notificaciones', icon: '🔔', href: '/notifications' },
+      { label: 'Rankings', icon: '📈', href: '/rankings' },
+      { label: 'Social', icon: '👥', href: '/social' },
     ],
   },
   {
     title: 'Moderación',
     items: [
       { label: 'Reportes', icon: '🚨', href: '/reports' },
+      { label: 'Historial', icon: '📜', href: '/moderation-logs' },
     ],
   },
   {
     title: 'Sistema',
     items: [
+      { label: 'Búsqueda', icon: '🔍', href: '/search' },
       { label: 'Configuración', icon: '⚙️', href: '/settings' },
     ],
   },

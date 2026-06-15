@@ -53,6 +53,7 @@ react {
     // hermesFlags = ["-O", "-output-source-map"]
 
     /* Autolinking */
+    debuggableVariants = []
     autolinkLibrariesWithApp()
 }
 

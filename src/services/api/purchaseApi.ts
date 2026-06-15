@@ -5,7 +5,7 @@ import { Wallet } from '../../types/wallet';
 export interface VerifyPurchaseResponse {
   ok: boolean;
   purchaseId: string;
-  coinsCredited: number;
+  diamondsCredited: number;
   wallet: Wallet;
 }
 

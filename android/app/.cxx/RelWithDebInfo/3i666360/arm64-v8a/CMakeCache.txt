@@ -139,7 +139,7 @@ CMAKE_LIBRARY_OUTPUT_DIRECTORY:UNINITIALIZED=E:\Chaton\android\app\build\interme
 CMAKE_LINKER:FILEPATH=C:/Users/Freedom Labs/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/bin/ld.lld.exe
 
 //make program
-CMAKE_MAKE_PROGRAM:FILEPATH=C:/Users/FREEDO~1/AppData/Local/Android/Sdk/cmake/322~1.1/bin/ninja.exe
+CMAKE_MAKE_PROGRAM:FILEPATH=C:/Users/Freedom Labs/AppData/Local/Android/Sdk/cmake/3.22.1/bin/ninja.exe
 
 //Flags used by the linker during the creation of modules.
 CMAKE_MODULE_LINKER_FLAGS:STRING=
@@ -242,8 +242,8 @@ CMAKE_SYSTEM_NAME:UNINITIALIZED=Android
 //No help, variable specified on the command line.
 CMAKE_SYSTEM_VERSION:UNINITIALIZED=24
 
-//The CMake toolchain file
-CMAKE_TOOLCHAIN_FILE:FILEPATH=C:/Users/Freedom Labs/AppData/Local/Android/Sdk/ndk/26.1.10909125/build/cmake/android.toolchain.cmake
+//No help, variable specified on the command line.
+CMAKE_TOOLCHAIN_FILE:UNINITIALIZED=C:\Users\Freedom Labs\AppData\Local\Android\Sdk\ndk\26.1.10909125\build\cmake\android.toolchain.cmake
 
 //If this value is on, makefiles will be generated without the
 // .SILENT directive, and all commands will be echoed to the console
@@ -374,7 +374,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=9
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=10
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP

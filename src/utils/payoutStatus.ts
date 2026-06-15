@@ -27,9 +27,9 @@ export const getPayoutStatusDescription = (status: PayoutStatus): string => {
     case 'paid':
       return 'Los fondos han sido transferidos exitosamente a tu cuenta.';
     case 'rejected':
-      return 'Tu solicitud fue rechazada. Los diamantes han sido reembolsados a tu billetera.';
+      return 'Tu solicitud fue rechazada. Los beans han sido reembolsados a tu billetera.';
     case 'cancelled':
-      return 'Cancelaste esta solicitud. Los diamantes han sido devueltos a tu billetera.';
+      return 'Cancelaste esta solicitud. Los beans han sido devueltos a tu billetera.';
     default:
       return '';
   }
@@ -71,9 +71,9 @@ export const canCancelPayout = (status: PayoutStatus): boolean => {
   return status === 'pending';
 };
 
-export const calculatePayoutPreview = (diamonds: number) => {
-  const amountUsd = diamonds * PAYOUT_CONFIG.DIAMONDS_TO_USD_RATE;
-  const feeUsd = PAYOUT_CONFIG.PAYOUT_FEE_USD;
+export const calculatePayoutPreview = (beans: number) => {
+  const amountUsd = beans * PAYOUT_CONFIG.BEANS_TO_USD_RATE;
+  const feeUsd = 0; // No platform fee configured
   const netAmountUsd = Math.max(0, amountUsd - feeUsd);
 
   return {

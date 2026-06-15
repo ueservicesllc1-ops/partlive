@@ -17,14 +17,14 @@ export const ensureUserWallet = async (userId: string): Promise<Wallet> => {
   const newWallet: Wallet = {
     id: userId,
     userId,
-    coins: 0,
     diamonds: 0,
-    lifetimeCoinsPurchased: 0,
-    lifetimeCoinsSpent: 0,
-    lifetimeDiamondsEarned: 0,
-    lifetimeDiamondsWithdrawn: 0,
-    pendingDiamonds: 0,
-    lockedDiamonds: 0,
+    beans: 0,
+    lifetimeDiamondsPurchased: 0,
+    lifetimeDiamondsSpent: 0,
+    lifetimeBeansEarned: 0,
+    lifetimeBeansWithdrawn: 0,
+    pendingBeans: 0,
+    lockedBeans: 0,
     status: 'active',
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -95,9 +95,9 @@ export const listenToUserWalletTransactions = (
 };
 
 // DEV Methods - call secure backend endpoints
-export const devCreditCoins = async (amount: number, description: string): Promise<{ success: boolean; wallet: Wallet }> => {
+export const devCreditDiamonds = async (amount: number, description: string): Promise<{ success: boolean; wallet: Wallet }> => {
   if (__DEV__) {
-    const result = await apiFetch('/wallet/dev/credit-coins', {
+    const result = await apiFetch('/wallet/dev/credit-diamonds', {
       method: 'POST',
       body: JSON.stringify({ amount, description }),
     });
@@ -106,9 +106,9 @@ export const devCreditCoins = async (amount: number, description: string): Promi
   throw new Error('Not allowed in production environment');
 };
 
-export const devCreditDiamonds = async (amount: number, description: string): Promise<{ success: boolean; wallet: Wallet }> => {
+export const devCreditBeans = async (amount: number, description: string): Promise<{ success: boolean; wallet: Wallet }> => {
   if (__DEV__) {
-    const result = await apiFetch('/wallet/dev/credit-diamonds', {
+    const result = await apiFetch('/wallet/dev/credit-beans', {
       method: 'POST',
       body: JSON.stringify({ amount, description }),
     });

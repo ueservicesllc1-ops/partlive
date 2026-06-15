@@ -21,3 +21,7 @@ export * from './liveMessagesService';
 export * from './liveViewersService';
 export * from './liveGiftEventsService';
 export * from './payoutsService';
+export * from './karaokeService';
+export * from './pkService';
+export * from './agencyService';
+

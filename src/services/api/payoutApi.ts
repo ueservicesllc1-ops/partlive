@@ -42,7 +42,7 @@ export const deletePayoutMethod = async (id: string): Promise<{ success: boolean
 // ─── Payout Requests API ──────────────────────────────────────────────────────
 
 export const requestPayout = async (data: {
-  diamondsConverted: number;
+  beansConverted: number;
   payoutMethodId: string;
 }): Promise<HostPayout> => {
   return (await apiFetch('/payouts/request', {

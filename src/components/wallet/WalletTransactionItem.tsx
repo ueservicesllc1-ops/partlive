@@ -12,29 +12,33 @@ interface WalletTransactionItemProps {
 export const WalletTransactionItem: React.FC<WalletTransactionItemProps> = ({ tx }) => {
   const getIcon = () => {
     switch (tx.type) {
-      case 'purchase':
+      case 'diamond_purchase':
         return '💳';
       case 'gift_sent':
         return '🎁';
       case 'gift_received':
         return '💝';
-      case 'daily_bonus':
-        return '📅';
-      case 'mission_reward':
-        return '🏆';
+      case 'beans_earned':
+        return '🫘';
+      case 'payout_requested':
+        return '🏧';
+      case 'payout_paid':
+        return '✅';
+      case 'payout_rejected':
+        return '❌';
+      case 'vip_purchase':
+        return '👑';
       case 'reward':
         return '🌟';
-      case 'withdrawal':
-        return '🏧';
-      case 'refund':
-        return '↩️';
+      case 'admin_adjustment':
+        return '🔧';
       default:
         return '🔧';
     }
   };
 
   const getCurrencySymbol = () => {
-    return tx.currencyType === 'coins' ? '🪙' : '💎';
+    return tx.currencyType === 'diamonds' ? '💎' : '🫘';
   };
 
   const dateObj = toDateSafe(tx.createdAt);
@@ -75,20 +79,26 @@ export const WalletTransactionItem: React.FC<WalletTransactionItemProps> = ({ tx
 
 const getFallbackDescription = (tx: WalletTransaction): string => {
   switch (tx.type) {
-    case 'purchase':
-      return 'Compra de monedas';
+    case 'diamond_purchase':
+      return 'Compra de diamantes';
     case 'gift_sent':
       return 'Regalo enviado';
     case 'gift_received':
       return 'Regalo recibido';
-    case 'daily_bonus':
-      return 'Bono de ingreso diario';
-    case 'mission_reward':
-      return 'Recompensa de misión';
-    case 'withdrawal':
-      return 'Retiro de diamantes';
-    case 'refund':
-      return 'Reembolso';
+    case 'beans_earned':
+      return 'Beans ganados por regalo';
+    case 'payout_requested':
+      return 'Retiro solicitado';
+    case 'payout_paid':
+      return 'Retiro pagado';
+    case 'payout_rejected':
+      return 'Retiro rechazado';
+    case 'vip_purchase':
+      return 'Suscripción VIP';
+    case 'reward':
+      return 'Recompensa';
+    case 'admin_adjustment':
+      return 'Ajuste administrativo';
     default:
       return 'Ajuste de saldo';
   }

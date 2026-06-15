@@ -59,19 +59,19 @@ export const HostEarningsScreen = ({ navigation }: any) => {
             </TouchableOpacity>
           </View>
 
-          {/* Total gifts info */}
+          {/* Total beans info */}
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>Total de Regalos Recibidos</Text>
-            <Text style={styles.infoBig}>{(stats?.totalGiftsReceived ?? 0).toLocaleString()}</Text>
+            <Text style={styles.infoTitle}>Total de Beans Ganados</Text>
+            <Text style={styles.infoBig}>{(stats?.totalBeansEarned ?? 0).toLocaleString()} 🫘</Text>
           </View>
 
           {/* Explanation box */}
           <View style={styles.disclaimerBox}>
-            <Text style={styles.disclaimerTitle}>¿Qué son los diamonds?</Text>
+            <Text style={styles.disclaimerTitle}>¿Qué son los Beans?</Text>
             <Text style={styles.disclaimerText}>
-              Los diamonds son puntos que ganas al recibir regalos de tus espectadores. Aún no son dinero real.{'\n\n'}
-              Cuando el sistema de retiros esté disponible, podrás convertir tus diamonds disponibles en pagos reales a tu cuenta bancaria o PayPal.{'\n\n'}
-              La plataforma puede revisar tu actividad antes de aprobar cualquier retiro.
+              Los Beans son la moneda de retiro para los hosts. Ganas Beans de forma proporcional cuando los usuarios te envían regalos usando Diamantes.{'\n\n'}
+              Puedes solicitar el retiro de tus Beans disponibles en dólares americanos (mínimo de $20 USD). Tu nivel de Host (Initial, Silver o Gold) determina tu porcentaje de ganancias.{'\n\n'}
+              Las solicitudes de retiro se verifican de forma segura contra fraude y se procesan manualmente.
             </Text>
           </View>
 

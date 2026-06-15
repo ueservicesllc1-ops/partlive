@@ -122,20 +122,20 @@ payoutRoutes.delete('/methods/:id', requireAuth, async (req: AuthRequest, res: R
 payoutRoutes.post('/request', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const uid = req.user.uid;
-    const { diamondsConverted, payoutMethodId } = req.body;
+    const { beansConverted, payoutMethodId } = req.body;
 
-    if (!diamondsConverted || !payoutMethodId) {
-      res.status(400).json({ error: 'diamondsConverted y payoutMethodId son requeridos.' });
+    if (!beansConverted || !payoutMethodId) {
+      res.status(400).json({ error: 'beansConverted y payoutMethodId son requeridos.' });
       return;
     }
 
-    const diamondsNum = Number(diamondsConverted);
-    if (isNaN(diamondsNum) || diamondsNum <= 0) {
-      res.status(400).json({ error: 'La cantidad de diamantes debe ser un número positivo.' });
+    const beansNum = Number(beansConverted);
+    if (isNaN(beansNum) || beansNum <= 0) {
+      res.status(400).json({ error: 'La cantidad de beans debe ser un número positivo.' });
       return;
     }
 
-    const payout = await payoutService.requestHostPayout(uid, diamondsNum, payoutMethodId);
+    const payout = await payoutService.requestHostPayout(uid, beansNum, payoutMethodId);
     res.status(201).json(payout);
   } catch (error: any) {
     console.error('Error requesting payout:', error);

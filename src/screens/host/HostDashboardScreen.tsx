@@ -145,14 +145,45 @@ export const HostDashboardScreen = ({ navigation }: any) => {
               onViewPayoutMethods={() => navigation.navigate(MAIN_ROUTES.PAYOUT_METHODS)}
             />
 
+            {/* Agency & KYC Section */}
+            <View style={styles.agencyKycRow}>
+              <TouchableOpacity
+                style={styles.halfCard}
+                onPress={() => {
+                  if (userProfile?.role === 'agency') {
+                    navigation.navigate(MAIN_ROUTES.AGENCY_DASHBOARD);
+                  } else {
+                    navigation.navigate(MAIN_ROUTES.AGENCY_APPLICATION);
+                  }
+                }}
+              >
+                <Text style={styles.cardEmoji}>🏢</Text>
+                <Text style={styles.cardTitle}>Agencia</Text>
+                <Text style={styles.cardStatus} numberOfLines={1}>
+                  {userProfile?.role === 'agency' ? 'Mi Dashboard' : 'Aplicar o Unirse'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.halfCard}
+                onPress={() => navigation.navigate('VerificationStart')}
+              >
+                <Text style={styles.cardEmoji}>🔒</Text>
+                <Text style={styles.cardTitle}>Verificación KYC</Text>
+                <Text style={styles.cardStatus} numberOfLines={1}>
+                  {userProfile?.isKycVerified ? 'Verificado' : userProfile?.kycStatus === 'pending' ? 'Pendiente' : 'Verificar Cuenta'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <HostEarningsCard stats={stats} />
 
             <HostStatsGrid stats={stats} />
 
             <HostRankingCard
-              dailyRank={stats?.currentDailyRank}
-              weeklyRank={stats?.currentWeeklyRank}
-              bestRank={stats?.bestRankingPosition}
+              dailyRank={undefined}
+              weeklyRank={undefined}
+              bestRank={undefined}
             />
 
             {/* Recent Activity preview */}
@@ -300,6 +331,36 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { ...textPresets.h3, color: colors.text },
   sectionMore: { fontSize: 12, color: colors.primary, fontWeight: '600' },
+  agencyKycRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    gap: spacing.md,
+  },
+  halfCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.md,
+    alignItems: 'center',
+    borderWidth: 1.2,
+    borderColor: colors.border,
+  },
+  cardEmoji: {
+    fontSize: 24,
+    marginBottom: spacing.xs,
+  },
+  cardTitle: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  cardStatus: {
+    color: colors.textMuted,
+    fontSize: 10,
+    marginTop: 4,
+    textAlign: 'center',
+  },
 });
 
 export default HostDashboardScreen;

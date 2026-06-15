@@ -5,11 +5,11 @@ import { calculatePayoutPreview, formatPayoutAmountUsd } from '../../utils/payou
 import { PAYOUT_CONFIG } from '../../constants/payoutConfig';
 
 interface PayoutConversionPreviewProps {
-  diamonds: number;
+  beans: number;
 }
 
-export const PayoutConversionPreview: React.FC<PayoutConversionPreviewProps> = ({ diamonds }) => {
-  const { amountUsd, feeUsd, netAmountUsd } = calculatePayoutPreview(diamonds);
+export const PayoutConversionPreview: React.FC<PayoutConversionPreviewProps> = ({ beans }) => {
+  const { amountUsd, feeUsd, netAmountUsd } = calculatePayoutPreview(beans);
 
   return (
     <View style={styles.container}>
@@ -17,12 +17,12 @@ export const PayoutConversionPreview: React.FC<PayoutConversionPreviewProps> = (
       
       <View style={styles.row}>
         <Text style={styles.label}>Cantidad a convertir</Text>
-        <Text style={styles.value}>💎 {diamonds.toLocaleString()}</Text>
+        <Text style={styles.value}>🫘 {beans.toLocaleString()}</Text>
       </View>
 
       <View style={styles.row}>
         <Text style={styles.label}>Tasa de cambio</Text>
-        <Text style={styles.value}>10,000 💎 = $50 USD</Text>
+        <Text style={styles.value}>1,000 🫘 = $3 USD</Text>
       </View>
 
       <View style={styles.row}>

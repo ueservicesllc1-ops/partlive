@@ -1,25 +1,84 @@
+export type MissionType = 'daily' | 'weekly' | 'event' | 'host' | 'vip' | 'new_user';
+
+export type MissionActionType =
+  | 'daily_login'
+  | 'join_room'
+  | 'stay_in_room_minutes'
+  | 'watch_live_minutes'
+  | 'send_message'
+  | 'send_gift'
+  | 'receive_gift'
+  | 'play_game'
+  | 'win_game'
+  | 'follow_user'
+  | 'invite_friend'
+  | 'start_live'
+  | 'create_room'
+  | 'host_live_minutes'
+  | 'karaoke_participation'
+  | 'event_participation';
+
+export type MissionRewardType =
+  | 'xp'
+  | 'diamonds'
+  | 'beans'
+  | 'badge'
+  | 'event_points'
+  | 'vip_trial'
+  | 'gift_ticket';
+
+export type MissionStatus = 'active' | 'inactive' | 'scheduled' | 'ended';
+
 export interface Mission {
   id: string;
   title: string;
   description: string;
-  type: 'daily_login' | 'watch_live' | 'join_room' | 'send_gift' | 'play_game' | 'invite_friend';
+  type: MissionType;
+  actionType: MissionActionType;
   targetValue: number;
-  rewardType: 'coins' | 'diamonds' | 'xp';
+  rewardType: MissionRewardType;
   rewardAmount: number;
-  isActive: boolean;
-  createdAt: any; // Firestore Timestamp
-  updatedAt: any; // Firestore Timestamp
+  rewardMetadata?: Record<string, any>;
+  isRepeatable: boolean;
+  maxClaimsPerUser: number;
+  requiresVip?: boolean;
+  requiresHost?: boolean;
+  eventId?: string;
+  startsAt?: any; // Timestamp
+  endsAt?: any; // Timestamp
+  status: MissionStatus;
+  sortOrder: number;
+  createdAt: any; // Timestamp
+  updatedAt: any; // Timestamp
 }
 
-export interface UserDailyMission {
-  id: string;
+export interface UserMissionProgress {
+  id: string; // {userId}_{missionId}_{periodKey}
   userId: string;
   missionId: string;
+  missionType: MissionType;
+  actionType: MissionActionType;
+  periodKey: string;
   progress: number;
   targetValue: number;
   isCompleted: boolean;
   isClaimed: boolean;
-  dateKey: string; // YYYY-MM-DD
-  createdAt: any; // Firestore Timestamp
-  updatedAt: any; // Firestore Timestamp
+  claimedAt?: any; // Timestamp
+  rewardType: MissionRewardType;
+  rewardAmount: number;
+  createdAt: any; // Timestamp
+  updatedAt: any; // Timestamp
+}
+
+export interface MissionReward {
+  id: string;
+  userId: string;
+  missionId: string;
+  progressId: string;
+  rewardType: MissionRewardType;
+  rewardAmount: number;
+  status: 'pending' | 'claimed' | 'failed' | 'reversed';
+  description?: string;
+  createdAt: any; // Timestamp
+  claimedAt?: any; // Timestamp
 }

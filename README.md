@@ -56,6 +56,20 @@ docker run --rm -d --name livekit-server -p 7880:7880 -p 7881:7881 -p 50000-5010
 ```
 *Ver guía detallada en [docs/livekit-self-hosted.md](file:///e:/Chaton/docs/livekit-self-hosted.md).*
 
+### 🛡️ Sistema de Moderación Centralizado
+El proyecto cuenta con un sistema completo de moderación para salas de voz, transmisiones en vivo y usuarios globales:
+- **Envío de reportes:** Los clientes móviles pueden denunciar usuarios, salas, lives y mensajes ofensivos.
+- **Auditoría y acciones:** El panel de administración Next.js permite revisar los reportes y sancionar enviando advertencias, suspensiones, bloqueos de wallets o baneos globales.
+*Ver guía detallada en [docs/moderation-system.md](file:///e:/Chaton/docs/moderation-system.md).*
+
+### 🎯 Sistema de Misiones y Recompensas (Gamificación)
+Implementación completa de gamificación con misiones diarias y semanales, XP de usuario, niveles y claim seguro a través del backend para evitar exploits.
+*Ver guía detallada en [docs/missions-rewards-system.md](file:///e:/Chaton/docs/missions-rewards-system.md).*
+
+### 🔔 Sistema de Notificaciones Internas y Push
+Despacho seguro de notificaciones in-app y push (FCM) para eventos de hosting, payouts, juegos y moderación, con filtros de usuario y un banner interno para foreground.
+*Ver guía detallada en [docs/notifications-system.md](file:///e:/Chaton/docs/notifications-system.md).*
+
 #### 2. Iniciar Backend (Servidor de Tokens Express)
 1. Navega a `backend/` y configura el archivo `.env` con tus claves de Firebase y las credenciales de Livekit (`LIVEKIT_API_KEY=devkey` y `LIVEKIT_API_SECRET=devsecret`).
 2. Levanta el servidor:
@@ -77,6 +91,13 @@ npm run android
 4. Se generarán automáticamente regalos, juegos, misiones y salas base en Firebase.
 
 > ⚠️ **Advertencia de Seguridad:** Actualmente el proyecto utiliza reglas de Firestore en "Modo de Prueba". Antes de salir a producción, se DEBE aplicar el borrador ubicado en `firebase/firestore.rules.draft` y restringir operaciones críticas de billetera para que solo puedan modificarse mediante Cloud Functions (backend).
+### 🔍 Sistema de Búsqueda y Filtros
+Búsqueda optimizada por prefijo de texto normalizado y filtros por país, idioma, categoría y tipo de contenido, con historial de consultas recientes y tendencias dinámicas globales.
+*Ver guía detallada en [docs/search-filters-system.md](file:///e:/Chaton/docs/search-filters-system.md).*
+
+### 👥 Sistema Social, Seguidores y Amigos
+Relaciones de seguimiento de usuarios (Follow / Unfollow), amigos mutuos por doble seguimiento, feed de actividades en tiempo real, recomendaciones de perfiles y ajustes estrictos de privacidad.
+*Ver guía detallada en [docs/social-follow-friends-system.md](file:///e:/Chaton/docs/social-follow-friends-system.md).*
 
 ## 🚀 Próximos Pasos
 - Implementar Video Lives.

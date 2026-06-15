@@ -17,6 +17,8 @@ import { DailyRankingSection } from '../components/home/DailyRankingSection';
 import { FeaturedHostsSection } from '../components/home/FeaturedHostsSection';
 import { DailyMissionsSection } from '../components/home/DailyMissionsSection';
 import { FloatingCreateButton } from '../components/home/FloatingCreateButton';
+import { useSocialFeed } from '../hooks/useSocialFeed';
+import { RecommendedUsersCarousel } from '../components/social/RecommendedUsersCarousel';
 
 export const HomeScreen = ({ navigation }: any) => {
   const { 
@@ -25,6 +27,7 @@ export const HomeScreen = ({ navigation }: any) => {
     refresh 
   } = useHomeData();
   const { userProfile } = useAuth();
+  const { recommendedUsers } = useSocialFeed();
 
   const handleBannerPress = (banner: any) => {
     if (banner.actionType === 'event') navigation.navigate(MAIN_ROUTES.EVENTS);
@@ -40,6 +43,7 @@ export const HomeScreen = ({ navigation }: any) => {
       case 'rankings': navigation.navigate(MAIN_ROUTES.RANKINGS); break;
       case 'events': navigation.navigate(MAIN_ROUTES.EVENTS); break;
       case 'wallet': navigation.navigate(MAIN_ROUTES.WALLET); break;
+      case 'missions': navigation.navigate(MAIN_ROUTES.MISSIONS); break;
     }
   };
 
@@ -51,6 +55,7 @@ export const HomeScreen = ({ navigation }: any) => {
         onSearchPress={() => navigation.navigate(MAIN_ROUTES.SEARCH)}
         onNotificationsPress={() => navigation.navigate(MAIN_ROUTES.NOTIFICATIONS)}
         onWalletPress={() => navigation.navigate(MAIN_ROUTES.WALLET)}
+        onMessagesPress={() => navigation.navigate(MAIN_ROUTES.PRIVATE_CONVERSATIONS)}
       />
       
       {loading && !refreshing ? (
@@ -77,6 +82,30 @@ export const HomeScreen = ({ navigation }: any) => {
           <HomeGreeting />
           <HomeBannerCarousel banners={banners} onPress={handleBannerPress} />
           <QuickActions onAction={handleQuickAction} />
+
+          {/* Social Feed Quick Banner */}
+          <TouchableOpacity
+            style={styles.socialFeedBanner}
+            onPress={() =>
+              navigation.navigate(MAIN_ROUTES.SEARCH, {
+                screen: 'SocialFeed',
+              })
+            }
+            activeOpacity={0.8}
+          >
+            <Text style={styles.socialFeedBannerEmoji}>👥</Text>
+            <View style={styles.socialFeedBannerText}>
+              <Text style={styles.socialFeedBannerTitle}>Feed de Amigos</Text>
+              <Text style={styles.socialFeedBannerSub}>Mira la actividad de las personas que sigues</Text>
+            </View>
+            <Text style={styles.socialFeedBannerArrow}>→</Text>
+          </TouchableOpacity>
+
+          {/* Recommended Users Carousel */}
+          <RecommendedUsersCarousel
+            users={recommendedUsers}
+            onPressUser={id => navigation.navigate(MAIN_ROUTES.PUBLIC_PROFILE, { userId: id })}
+          />
 
           {/* Host Center Banner */}
           {userProfile?.isHost ? (
@@ -127,7 +156,7 @@ export const HomeScreen = ({ navigation }: any) => {
             onHostPress={(id) => navigation.navigate(MAIN_ROUTES.PUBLIC_PROFILE, { userId: id })} 
           />
           
-          <DailyMissionsSection missions={missions} />
+          <DailyMissionsSection onSeeAll={() => navigation.navigate(MAIN_ROUTES.MISSIONS)} />
         </ScrollView>
       )}
 
@@ -159,6 +188,23 @@ const styles = StyleSheet.create({
     ...textPresets.bodyMedium,
     color: colors.error,
   },
+  socialFeedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  socialFeedBannerEmoji: { fontSize: 24 },
+  socialFeedBannerText: { flex: 1 },
+  socialFeedBannerTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+  socialFeedBannerSub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  socialFeedBannerArrow: { fontSize: 18, color: colors.primary },
   hostBanner: {
     flexDirection: 'row',
     alignItems: 'center',

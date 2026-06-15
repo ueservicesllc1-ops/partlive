@@ -108,12 +108,12 @@ export const usePayouts = () => {
     }
   }, []);
 
-  const requestWithdrawal = useCallback(async (diamondsConverted: number, payoutMethodId: string) => {
+  const requestWithdrawal = useCallback(async (beansConverted: number, payoutMethodId: string) => {
     setLoading(true);
     setError(null);
     try {
-      const payout = await payoutApi.requestPayout({ diamondsConverted, payoutMethodId });
-      // Refresh user profiles to update available / locked diamonds immediately
+      const payout = await payoutApi.requestPayout({ beansConverted, payoutMethodId });
+      // Refresh user profiles to update available / locked beans immediately
       await Promise.all([refreshWallet(), refreshUserProfile()]);
       return payout;
     } catch (err: any) {

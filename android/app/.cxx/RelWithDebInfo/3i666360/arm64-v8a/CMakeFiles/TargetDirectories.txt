@@ -16,6 +16,9 @@ E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/RNGetRandomValuesSp
 E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/RNImagePickerSpec_autolinked_build/CMakeFiles/react_codegen_RNImagePickerSpec.dir
 E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/RNImagePickerSpec_autolinked_build/CMakeFiles/edit_cache.dir
 E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/RNImagePickerSpec_autolinked_build/CMakeFiles/rebuild_cache.dir
+E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/NitroModulesSpec_autolinked_build/CMakeFiles/react_codegen_NitroModulesSpec.dir
+E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/NitroModulesSpec_autolinked_build/CMakeFiles/edit_cache.dir
+E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/NitroModulesSpec_autolinked_build/CMakeFiles/rebuild_cache.dir
 E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/pagerview_autolinked_build/CMakeFiles/react_codegen_pagerview.dir
 E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/pagerview_autolinked_build/CMakeFiles/edit_cache.dir
 E:/Chaton/android/app/.cxx/RelWithDebInfo/3i666360/arm64-v8a/pagerview_autolinked_build/CMakeFiles/rebuild_cache.dir

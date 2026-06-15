@@ -19,6 +19,11 @@ export const typography = {
 };
 
 export const presets = {
+  header: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    lineHeight: 24,
+  } as TextStyle,
   h1: {
     fontSize: typography.sizes.xxxl,
     fontWeight: typography.weights.bold,

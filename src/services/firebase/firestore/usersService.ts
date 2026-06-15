@@ -2,13 +2,23 @@ import firestore from '@react-native-firebase/firestore';
 import { UserProfile } from '../../../types/user';
 import { FirestoreCollections } from '../../../constants/firestoreCollections';
 import { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import { buildSearchKeywords } from '../../../utils/searchNormalize';
 
 import { updateUsername } from './usernameService';
 
 export const createUserProfile = async (uid: string, data: Partial<UserProfile>): Promise<void> => {
   const timestamp = firestore.FieldValue.serverTimestamp();
+  const username = data.username || '';
+  const displayName = data.displayName || '';
+  const usernameLowercase = username.trim().toLowerCase();
+  const displayNameLowercase = displayName.trim().toLowerCase();
+  const searchKeywords = buildSearchKeywords([username, displayName]);
+
   await firestore().collection(FirestoreCollections.USERS).doc(uid).set({
     ...data,
+    usernameLowercase,
+    displayNameLowercase,
+    searchKeywords,
     createdAt: timestamp,
     updatedAt: timestamp,
     lastActiveAt: timestamp,
@@ -31,6 +41,14 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfile>)
   
   if (data.username !== undefined) {
     updates.usernameLowercase = data.username.trim().toLowerCase();
+  }
+  if (data.displayName !== undefined) {
+    updates.displayNameLowercase = data.displayName.trim().toLowerCase();
+  }
+  if (data.username !== undefined || data.displayName !== undefined) {
+    const username = data.username !== undefined ? data.username : '';
+    const displayName = data.displayName !== undefined ? data.displayName : '';
+    updates.searchKeywords = buildSearchKeywords([username, displayName]);
   }
   
   await firestore().collection(FirestoreCollections.USERS).doc(uid).update(updates);
@@ -74,14 +92,32 @@ export const updateEditableProfile = async (uid: string, data: Partial<UserProfi
     }
   }
 
+  if (data.displayName !== undefined) {
+    updates.displayNameLowercase = data.displayName.trim().toLowerCase();
+  }
+
   // Handle username separately due to transaction requirement
+  let usernameToUse = '';
+  let displayNameToUse = data.displayName || '';
+
   if (data.username) {
     const currentProfile = await getUserProfile(uid);
     if (currentProfile?.username !== data.username) {
       await updateUsername(uid, currentProfile?.username || '', data.username);
       updates.username = data.username;
       updates.usernameLowercase = data.username.trim().toLowerCase();
+      usernameToUse = data.username;
+      if (!displayNameToUse && currentProfile?.displayName) {
+        displayNameToUse = currentProfile.displayName;
+      }
     }
+  }
+
+  if (updates.usernameLowercase || updates.displayNameLowercase) {
+    const currentProfile = await getUserProfile(uid);
+    const u = usernameToUse || currentProfile?.username || '';
+    const d = displayNameToUse || currentProfile?.displayName || '';
+    updates.searchKeywords = buildSearchKeywords([u, d]);
   }
 
   if (Object.keys(updates).length > 1) { // more than just updatedAt
@@ -131,8 +167,8 @@ export const ensureUserProfile = async (firebaseUser: FirebaseAuthTypes.User): P
       photoURL: photoURL || undefined,
       level: 1,
       xp: 0,
-      coins: 0,
       diamonds: 0,
+      beans: 0,
       followersCount: 0,
       followingCount: 0,
       friendsCount: 0,
@@ -162,4 +198,38 @@ export const updateLastActive = async (uid: string): Promise<void> => {
   await firestore().collection(FirestoreCollections.USERS).doc(uid).update({
     lastActiveAt: firestore.FieldValue.serverTimestamp(),
   });
+};
+
+export const searchUsersByUsername = async (
+  query: string,
+  limitCount = 20,
+): Promise<UserProfile[]> => {
+  const cleanQuery = query.trim().toLowerCase();
+  if (!cleanQuery) return [];
+
+  const snapshot = await firestore()
+    .collection(FirestoreCollections.USERS)
+    .where('usernameLowercase', '>=', cleanQuery)
+    .where('usernameLowercase', '<=', cleanQuery + '\uf8ff')
+    .limit(limitCount)
+    .get();
+
+  return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+};
+
+export const searchUsersByDisplayName = async (
+  query: string,
+  limitCount = 20,
+): Promise<UserProfile[]> => {
+  const cleanQuery = query.trim();
+  if (!cleanQuery) return [];
+
+  const snapshot = await firestore()
+    .collection(FirestoreCollections.USERS)
+    .where('displayName', '>=', cleanQuery)
+    .where('displayName', '<=', cleanQuery + '\uf8ff')
+    .limit(limitCount)
+    .get();
+
+  return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
 };

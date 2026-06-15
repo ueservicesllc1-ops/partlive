@@ -27,6 +27,10 @@ export interface LiveStream {
   endedAt?: any; // Firestore Timestamp
   createdAt: any; // Firestore Timestamp
   updatedAt: any; // Firestore Timestamp
+  isInPkBattle?: boolean;
+  activePkBattleId?: string;
+  pkOpponentHostId?: string;
+  pkOpponentLiveId?: string;
 }
 
 // Keep Live interface alias for compatibility if needed elsewhere

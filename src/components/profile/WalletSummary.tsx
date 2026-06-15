@@ -4,11 +4,11 @@ import { colors, textPresets, spacing } from '../../theme';
 import { formatCoins } from '../../utils/formatNumbers';
 
 interface WalletSummaryProps {
-  coins: number;
+  beans: number;
   diamonds: number;
 }
 
-export const WalletSummary = ({ coins, diamonds }: WalletSummaryProps) => {
+export const WalletSummary = ({ beans, diamonds }: WalletSummaryProps) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -20,26 +20,26 @@ export const WalletSummary = ({ coins, diamonds }: WalletSummaryProps) => {
 
       <View style={styles.balances}>
         <View style={styles.balanceItem}>
-          <Text style={styles.icon}>🪙</Text>
-          <View>
-            <Text style={styles.balanceValue}>{formatCoins(coins)}</Text>
-            <Text style={styles.balanceLabel}>Monedas</Text>
-          </View>
-        </View>
-        
-        <View style={styles.divider} />
-        
-        <View style={styles.balanceItem}>
           <Text style={styles.icon}>💎</Text>
           <View>
             <Text style={styles.balanceValue}>{formatCoins(diamonds)}</Text>
             <Text style={styles.balanceLabel}>Diamantes</Text>
           </View>
         </View>
+        
+        <View style={styles.divider} />
+        
+        <View style={styles.balanceItem}>
+          <Text style={styles.icon}>🫘</Text>
+          <View>
+            <Text style={styles.balanceValue}>{formatCoins(beans)}</Text>
+            <Text style={styles.balanceLabel}>Beans</Text>
+          </View>
+        </View>
       </View>
 
       <TouchableOpacity style={styles.buyButton} disabled>
-        <Text style={styles.buyButtonText}>Comprar Monedas</Text>
+        <Text style={styles.buyButtonText}>Comprar Diamantes</Text>
       </TouchableOpacity>
     </View>
   );

@@ -36,6 +36,8 @@ export type MainStackParamList = {
   LiveDetails: { liveId: string };
   StartLive: undefined;
   GameDetails: { gameId: string };
+  GameSession: { sessionId: string; gameSlug: string; gameTitle: string };
+  GameInvites: undefined;
 
   EditProfile: undefined;
   PublicProfile: { userId: string };
@@ -52,6 +54,30 @@ export type MainStackParamList = {
   PayoutMethods: undefined;
   AddPayoutMethod: undefined;
   PayoutDetails: { payoutId: string; initialPayout?: any };
+  Missions: undefined;
+  NotificationSettings: undefined;
+  SocialList: { userId: string; listType: 'followers' | 'following' | 'friends'; title?: string };
+  SocialFeed: undefined;
+  PrivacySettings: undefined;
+  PrivateConversations: undefined;
+  PrivateChat: { conversationId?: string; targetUserId?: string };
+  MessageRequests: undefined;
+  PrivateChatSettings: undefined;
+  KaraokeHome: { targetType: 'room' | 'live'; targetId: string };
+  KaraokeSongSearch: { targetType: 'room' | 'live'; targetId: string };
+  KaraokeQueue: { sessionId: string };
+  KaraokePerformance: { performanceId: string; instrumentalUrl: string; title: string; artist: string; lyricsText: string };
+  KaraokeBattle: { targetType: 'room' | 'live'; targetId: string };
+  MyKaraokeHistory: undefined;
+  PkHistory: { hostId: string };
+  PkResults: { battle: any };
+  AgencyApplication: undefined;
+  AgencyDashboard: undefined;
+  AgencyHosts: { agencyId: string };
+  VerificationStart: undefined;
+  VerificationForm: undefined;
+  HostAnalytics: undefined;
+  AgencyAnalytics: { agencyId: string };
 };
 
 // Root Stack
@@ -59,6 +85,8 @@ export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList>;
   Setup: NavigatorScreenParams<SetupStackParamList>;
   MainStack: NavigatorScreenParams<MainStackParamList>;
+  Suspended: undefined;
+  Banned: undefined;
 };
 
 // Global typing for useNavigation

@@ -111,13 +111,13 @@ export default function PayoutsAdminPage() {
         )}
 
         {!loading && !error && payouts.length > 0 && (
-          <Table headers={['Host', 'Diamonds', 'USD Neto', 'Método', 'Estado', 'Fecha', 'Acciones']}>
+          <Table headers={['Host', 'Beans', 'USD Neto', 'Método', 'Estado', 'Fecha', 'Acciones']}>
             {payouts.map((p: any) => {
               const status = STATUS_LABELS[p.status] || { label: p.status, badge: 'muted' as const };
               return (
                 <tr key={p.id} className="hover:bg-gray-900/40 transition-colors">
                   <td className="px-6 py-4 text-sm text-white font-medium">{p.hostId || '—'}</td>
-                  <td className="px-6 py-4 text-sm font-mono text-blue-400">💎 {(p.amountDiamonds || 0).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-sm font-mono text-yellow-400">🫘 {(p.amountBeans || 0).toLocaleString()}</td>
                   <td className="px-6 py-4 text-sm font-mono text-emerald-400">${(p.netAmountUsd || 0).toFixed(2)}</td>
                   <td className="px-6 py-4 text-xs text-gray-400">{p.payoutMethodType || '—'}</td>
                   <td className="px-6 py-4"><Badge variant={status.badge} dot>{status.label}</Badge></td>

@@ -100,10 +100,10 @@ export const setupPurchaseListeners = (
     if (purchaseToken) {
       try {
         if (onProgress) {
-          onProgress('Acreditando monedas en tu cuenta...');
+          onProgress('Acreditando diamantes en tu cuenta...');
         }
 
-        // Map productId to packageId (by configuration, they are identical, e.g. 'coins_100')
+        // Map productId to packageId (by configuration, they are identical, e.g. 'diamonds_100')
         const packageId = productId;
 
         // Call backend verification
@@ -115,7 +115,7 @@ export const setupPurchaseListeners = (
           await IAP.finishTransaction({ purchase, isConsumable: true });
           
           onSuccess(
-            { totalCoins: response.coinsCredited, id: response.purchaseId },
+            { totalDiamonds: response.diamondsCredited, id: response.purchaseId },
             response.wallet
           );
         } else {

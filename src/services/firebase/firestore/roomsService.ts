@@ -66,8 +66,9 @@ export const createRoom = async (
   const timestamp = firestore.FieldValue.serverTimestamp();
   const roomRef = db.collection(FirestoreCollections.ROOMS).doc();
 
-  const newRoom: Omit<Room, 'id'> = {
+  const newRoom: any = {
     ...data,
+    titleLowercase: data.title.trim().toLowerCase(),
     ownerId: ownerProfile.uid,
     ownerName: ownerProfile.displayName,
     ownerPhotoURL: ownerProfile.photoURL,
@@ -100,17 +101,41 @@ export const createRoom = async (
   batch.set(db.collection(getRoomMembersPath(roomRef.id)).doc(ownerProfile.uid), memberData);
   await batch.commit();
 
+  // Log social activity
+  try {
+    await firestore().collection('socialActivities').add({
+      userId: ownerProfile.uid,
+      username: ownerProfile.username || ownerProfile.displayName || '',
+      userPhotoURL: ownerProfile.photoURL || '',
+      type: 'create_room',
+      title: 'Creó una Sala 🏠',
+      description: `${ownerProfile.displayName || 'Usuario'} creó la sala de voz: ${data.title || ''}`,
+      actionType: 'open_room',
+      actionValue: roomRef.id,
+      visibility: 'public',
+      createdAt: firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (err) {
+    console.error('Failed to log room social activity:', err);
+  }
+
   return roomRef.id;
 };
 
 export const updateRoom = async (id: string, data: Partial<Room>): Promise<void> => {
+  const updates: any = {
+    ...data,
+    updatedAt: firestore.FieldValue.serverTimestamp(),
+  };
+
+  if (data.title !== undefined) {
+    updates.titleLowercase = data.title.trim().toLowerCase();
+  }
+
   await firestore()
     .collection(FirestoreCollections.ROOMS)
     .doc(id)
-    .update({
-      ...data,
-      updatedAt: firestore.FieldValue.serverTimestamp(),
-    });
+    .update(updates);
 };
 
 export const endRoom = async (roomId: string, userId: string): Promise<void> => {
@@ -158,6 +183,12 @@ export const joinRoom = async (
     }
 
     const memberSnap = await transaction.get(memberRef);
+    if (memberSnap.exists()) {
+      const memberData = memberSnap.data() as RoomMember;
+      if (memberData.isKicked) {
+        throw new Error('Has sido expulsado o baneado de esta sala.');
+      }
+    }
     const isAlreadyMember = memberSnap.exists();
 
     const timestamp = firestore.FieldValue.serverTimestamp();

@@ -2,6 +2,7 @@
   "enabled": true,
   "prefabPath": "C:\\Users\\Freedom Labs\\.gradle\\caches\\modules-2\\files-2.1\\com.google.prefab\\cli\\2.1.0\\aa32fec809c44fa531f01dcfb739b5b3304d3050\\cli-2.1.0-all.jar",
   "packages": [
+    "E:\\Chaton\\node_modules\\react-native-nitro-modules\\android\\build\\intermediates\\prefab_package\\release\\prefab",
     "C:\\Users\\Freedom Labs\\.gradle\\caches\\9.3.1\\transforms\\a89c7e27b2e03e6eba2a0f0205a9e6e6\\workspace\\transformed\\react-android-0.85.3-release\\prefab",
     "C:\\Users\\Freedom Labs\\.gradle\\caches\\9.3.1\\transforms\\15e3fc8dbe39a8c640ac544f5279a495\\workspace\\transformed\\hermes-android-250829098.0.10-release\\prefab",
     "C:\\Users\\Freedom Labs\\.gradle\\caches\\9.3.1\\transforms\\91f3fc34a4d52f5c27e8357687ecd9b7\\workspace\\transformed\\fbjni-0.7.0\\prefab"

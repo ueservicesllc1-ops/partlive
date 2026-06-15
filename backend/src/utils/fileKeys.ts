@@ -39,6 +39,10 @@ export const buildB2FileKey = ({ userId, fileType, contentType, originalFileName
       return `banners/${uuid}.${ext}`;
     case 'video':
       return `videos/${userId}/${uuid}.${ext}`;
+    case 'kyc_id_document':
+      return `verification/${userId}/${uuid}/id_document.${ext}`;
+    case 'kyc_selfie':
+      return `verification/${userId}/${uuid}/selfie.${ext}`;
     default:
       return `misc/${userId}/${uuid}.${ext}`;
   }

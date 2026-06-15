@@ -27,10 +27,14 @@ import { ScreenError } from '../../components/ScreenError';
 import { RoomMember } from '../../types';
 import { RoomMemberActionsModal } from '../../components/rooms/RoomMemberActionsModal';
 import { GiftCatalogModal } from '../../components/rooms/GiftCatalogModal';
+import { ReportModal } from '../../components/moderation/ReportModal';
 
 export const RoomDetailsScreen = ({ route, navigation }: any) => {
   const { roomId } = route.params || {};
   const { user, userWallet } = useAuth();
+  
+  const [roomMenuVisible, setRoomMenuVisible] = useState(false);
+  const [roomReportVisible, setRoomReportVisible] = useState(false);
   
   // 1. Social & Firestore State
   const {
@@ -252,7 +256,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#151221" />
 
-      <RoomHeader room={room} onLeavePress={handleLeave} onMenuPress={() => setAdminPanelVisible(true)} />
+      <RoomHeader room={room} onLeavePress={handleLeave} onMenuPress={() => setRoomMenuVisible(true)} />
 
       {/* Audio Connection Status indicator */}
       <View style={styles.statusIndicator}>
@@ -419,7 +423,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
           }
         }}
         onViewProfile={(targetId) => {
-          Alert.alert('Perfil', `Visualizando perfil del usuario ${targetId}`);
+          navigation.navigate('PublicProfile', { userId: targetId });
         }}
       />
 
@@ -432,6 +436,62 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         currentUserId={user?.uid || ''}
         currentMember={currentMember}
         wallet={userWallet}
+      />
+
+      {/* Room Options Sheet */}
+      <Modal visible={roomMenuVisible} transparent animationType="fade" onRequestClose={() => setRoomMenuVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setRoomMenuVisible(false)}>
+          <View style={styles.actionSheet}>
+            <Text style={styles.actionSheetTitle}>Opciones de Sala</Text>
+
+            {isPrivileged && (
+              <TouchableOpacity
+                style={styles.sheetBtn}
+                onPress={() => {
+                  setRoomMenuVisible(false);
+                  setAdminPanelVisible(true);
+                }}
+              >
+                <Text style={styles.sheetBtnText}>🎙️ Solicitudes de Micrófono ({micRequests.length})</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.sheetBtn}
+              onPress={() => {
+                setRoomMenuVisible(false);
+                navigation.navigate('KaraokeHome', { targetType: 'room', targetId: roomId });
+              }}
+            >
+              <Text style={styles.sheetBtnText}>🎤 Entrar al Karaoke</Text>
+            </TouchableOpacity>
+
+            {room.ownerId !== user?.uid && (
+              <TouchableOpacity
+                style={styles.sheetBtn}
+                onPress={() => {
+                  setRoomMenuVisible(false);
+                  setRoomReportVisible(true);
+                }}
+              >
+                <Text style={[styles.sheetBtnText, { color: colors.secondary }]}>⚠️ Reportar Sala</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.cancelSheetBtn} onPress={() => setRoomMenuVisible(false)}>
+              <Text style={styles.cancelSheetText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Report Room Modal */}
+      <ReportModal
+        visible={roomReportVisible}
+        onClose={() => setRoomReportVisible(false)}
+        targetType="room"
+        targetId={roomId}
+        targetOwnerId={room.ownerId}
       />
     </SafeAreaView>
   );

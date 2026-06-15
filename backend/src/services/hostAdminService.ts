@@ -112,6 +112,21 @@ export const approveHostApplication = async (
     title: '¡Solicitud aprobada!',
     description: note || 'Tu solicitud para ser host fue aprobada. ¡Bienvenido al programa!',
   });
+
+  // Trigger push and in-app notification
+  try {
+    const { createNotificationAndPush } = await import('./notificationService');
+    await createNotificationAndPush({
+      userId,
+      type: 'host_application',
+      channel: 'both',
+      title: '¡Programa de Host Aprobado! 🎙️',
+      body: note || 'Tu solicitud para ser host oficial en PartyLive ha sido aprobada con éxito. ¡Empieza a transmitir ya!',
+      actionType: 'open_host_dashboard',
+    });
+  } catch (err) {
+    console.error('Failed to dispatch host approved notification:', err);
+  }
 };
 
 /**
@@ -136,6 +151,21 @@ export const rejectHostApplication = async (
     reviewNote: note || 'Tu solicitud no cumple los requisitos actuales.',
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
+
+  // Trigger push and in-app notification
+  try {
+    const { createNotificationAndPush } = await import('./notificationService');
+    await createNotificationAndPush({
+      userId,
+      type: 'host_application',
+      channel: 'both',
+      title: 'Estatus de Host Actualizado',
+      body: note || 'Tu solicitud de host no cumple los requerimientos en este momento. Revisa los detalles.',
+      actionType: 'open_host_dashboard',
+    });
+  } catch (err) {
+    console.error('Failed to dispatch host rejected notification:', err);
+  }
 
   // Notify via activity
   await createHostActivity({

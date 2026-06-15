@@ -61,7 +61,7 @@ export const PayoutDetailsScreen = ({ route, navigation }: any) => {
   const handleCancel = () => {
     Alert.alert(
       'Cancelar Retiro',
-      '¿Estás seguro de que deseas cancelar esta solicitud? Los diamantes serán reembolsados a tu balance.',
+      '¿Estás seguro de que deseas cancelar esta solicitud? Los beans serán reembolsados a tu balance.',
       [
         { text: 'No', style: 'cancel' },
         {
@@ -94,7 +94,7 @@ export const PayoutDetailsScreen = ({ route, navigation }: any) => {
   const handleAdminReject = async () => {
     try {
       await adminReject(payoutId, adminNotes);
-      Alert.alert('Éxito', 'Solicitud rechazada. Diamantes devueltos.');
+      Alert.alert('Éxito', 'Solicitud rechazada. Beans devueltos.');
       setAdminNotes('');
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Error al rechazar.');
@@ -146,8 +146,8 @@ export const PayoutDetailsScreen = ({ route, navigation }: any) => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Main Details Card */}
         <View style={styles.detailsCard}>
-          <Text style={styles.amountText}>{formatPayoutAmountUsd(payout.amount)}</Text>
-          <Text style={styles.diamondsSubText}>💎 {payout.diamondsConverted.toLocaleString()} diamantes</Text>
+          <Text style={styles.amountText}>{formatPayoutAmountUsd(payout.amountUsd)}</Text>
+          <Text style={styles.diamondsSubText}>🫘 {payout.amountBeans.toLocaleString()} beans</Text>
 
           <View style={styles.infoGrid}>
             <View style={styles.gridRow}>
@@ -160,12 +160,12 @@ export const PayoutDetailsScreen = ({ route, navigation }: any) => {
             </View>
             <View style={styles.gridRow}>
               <Text style={styles.gridLabel}>Monto Neto:</Text>
-              <Text style={styles.gridValue}>{formatPayoutAmountUsd(payout.netAmount)}</Text>
+              <Text style={styles.gridValue}>{formatPayoutAmountUsd(payout.netAmountUsd)}</Text>
             </View>
-            {payout.adminNotes ? (
+            {payout.adminNote ? (
               <View style={[styles.gridRow, styles.notesRow]}>
                 <Text style={styles.gridLabel}>Notas:</Text>
-                <Text style={styles.notesValue}>{payout.adminNotes}</Text>
+                <Text style={styles.notesValue}>{payout.adminNote}</Text>
               </View>
             ) : null}
           </View>

@@ -5,6 +5,8 @@ node_modules/
 # ─── Builds ──────────────────────────────────────────────────────────────────
 android/build/
 android/app/build/
+android/app/.cxx/
+.cxx/
 ios/build/
 ios/Pods/
 .gradle/

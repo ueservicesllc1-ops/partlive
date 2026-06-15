@@ -3,15 +3,20 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, textPresets, spacing } from '../../theme';
 import { useAuth } from '../../store/AuthContext';
 import { formatCompactNumber } from '../../utils/formatNumbers';
+import { useUnreadNotificationsCount } from '../../hooks/useUnreadNotificationsCount';
+import { useUnreadPrivateMessagesCount } from '../../hooks/useUnreadPrivateMessagesCount';
+import { NotificationUnreadBadge } from '../notifications/NotificationUnreadBadge';
 
 interface MainHeaderProps {
   title?: string;
   showSearch?: boolean;
   showNotifications?: boolean;
   showWallet?: boolean;
+  showMessages?: boolean;
   onSearchPress?: () => void;
   onNotificationsPress?: () => void;
   onWalletPress?: () => void;
+  onMessagesPress?: () => void;
 }
 
 export const MainHeader = ({
@@ -19,12 +24,16 @@ export const MainHeader = ({
   showSearch = true,
   showNotifications = true,
   showWallet = true,
+  showMessages = true,
   onSearchPress,
   onNotificationsPress,
   onWalletPress,
+  onMessagesPress,
 }: MainHeaderProps) => {
   const { userProfile, userWallet } = useAuth();
-  const coinsBalance = userWallet ? userWallet.coins : (userProfile?.coins || 0);
+  const diamondsBalance = userWallet ? userWallet.diamonds : (userProfile?.diamonds || 0);
+  const unreadCount = useUnreadNotificationsCount();
+  const unreadPrivateCount = useUnreadPrivateMessagesCount();
 
   return (
     <View style={styles.container}>
@@ -37,8 +46,8 @@ export const MainHeader = ({
       <View style={styles.actions}>
         {showWallet && userProfile !== null && (
           <TouchableOpacity style={styles.walletBadge} onPress={onWalletPress}>
-            <Text style={styles.walletIcon}>🪙</Text>
-            <Text style={styles.walletText}>{formatCompactNumber(coinsBalance)}</Text>
+            <Text style={styles.walletIcon}>💎</Text>
+            <Text style={styles.walletText}>{formatCompactNumber(diamondsBalance)}</Text>
           </TouchableOpacity>
         )}
 
@@ -48,11 +57,17 @@ export const MainHeader = ({
           </TouchableOpacity>
         )}
 
+        {showMessages && (
+          <TouchableOpacity style={styles.iconButton} onPress={onMessagesPress}>
+            <Text style={styles.icon}>💬</Text>
+            <NotificationUnreadBadge count={unreadPrivateCount} />
+          </TouchableOpacity>
+        )}
+
         {showNotifications && (
           <TouchableOpacity style={styles.iconButton} onPress={onNotificationsPress}>
             <Text style={styles.icon}>🔔</Text>
-            {/* Mock unread badge */}
-            <View style={styles.unreadBadge} />
+            <NotificationUnreadBadge count={unreadCount} />
           </TouchableOpacity>
         )}
       </View>

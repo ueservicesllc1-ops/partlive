@@ -18,6 +18,7 @@ interface Props {
   onViewRules?: () => void;
   onViewPayouts?: () => void;
   onViewPayoutMethods?: () => void;
+  onViewAnalytics?: () => void;
 }
 
 export const HostQuickActions: React.FC<Props> = ({
@@ -28,6 +29,7 @@ export const HostQuickActions: React.FC<Props> = ({
   onViewRules,
   onViewPayouts,
   onViewPayoutMethods,
+  onViewAnalytics,
 }) => {
   const actions: QuickAction[] = [
     { id: 'live', label: 'Iniciar Live', emoji: '📺', color: colors.secondary, onPress: onStartLive || (() => {}) },
@@ -35,6 +37,7 @@ export const HostQuickActions: React.FC<Props> = ({
     { id: 'earnings', label: 'Ganancias', emoji: '💎', color: colors.gold, onPress: onViewEarnings || (() => {}) },
     { id: 'payouts', label: 'Retiros', emoji: '💸', color: colors.success, onPress: onViewPayouts || (() => {}) },
     { id: 'methods', label: 'Cuentas', emoji: '🏦', color: colors.accent, onPress: onViewPayoutMethods || (() => {}) },
+    { id: 'analytics', label: 'Analíticas', emoji: '📊', color: '#8b5cf6', onPress: onViewAnalytics || (() => {}) },
   ];
 
   return (

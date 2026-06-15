@@ -404,11 +404,175 @@ router.patch('/gifts/:giftId', requireAuth, requireAdmin, async (req: AuthReques
       description: `Updated gift: ${updates.name || giftId}`,
       metadata: updates,
     });
-
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating gift:', error);
     res.status(500).json({ error: 'Failed to update gift' });
+  }
+});
+
+// 8. Private Chat Admin Monitoring
+router.get('/private-chat/summary', requireAuth, requireAdminOrModerator, async (req: AuthRequest, res: Response) => {
+  try {
+    const conversationsSnap = await db.collection('privateConversations').get();
+    const activeConvs = conversationsSnap.docs.filter(doc => doc.data().status === 'active').length;
+    const pendingConvs = conversationsSnap.docs.filter(doc => doc.data().status === 'pending').length;
+
+    const reportsSnap = await db.collection('reports')
+      .where('targetType', '==', 'private_message')
+      .get();
+    const totalReported = reportsSnap.size;
+
+    // Aggregate users with most reports
+    const userReportCounts: Record<string, number> = {};
+    reportsSnap.forEach(doc => {
+      const data = doc.data();
+      if (data.reportedUserId) {
+        userReportCounts[data.reportedUserId] = (userReportCounts[data.reportedUserId] || 0) + 1;
+      }
+    });
+
+    const topReportedUsers = Object.keys(userReportCounts)
+      .map(userId => ({ userId, count: userReportCounts[userId] }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Fetch user details for top reported users
+    const topReportedUsersWithDetails = await Promise.all(
+      topReportedUsers.map(async item => {
+        const uSnap = await db.collection('users').doc(item.userId).get();
+        const uData = uSnap.exists ? uSnap.data()! : {};
+        return {
+          userId: item.userId,
+          count: item.count,
+          username: uData.username || 'unknown',
+          displayName: uData.displayName || 'Unknown User',
+          photoURL: uData.photoURL || '',
+          status: uData.status || 'active',
+        };
+      })
+    );
+
+    res.json({
+      summary: {
+        activeConversations: activeConvs,
+        pendingRequests: pendingConvs,
+        totalReportedMessages: totalReported,
+      },
+      topReportedUsers: topReportedUsersWithDetails,
+    });
+  } catch (error: any) {
+    console.error('Error fetching private chat summary:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch private chat summary.' });
+  }
+});
+
+router.get('/private-chat/reported-message/:messageId/context', requireAuth, requireAdminOrModerator, async (req: AuthRequest, res: Response) => {
+  try {
+    const messageId = req.params.messageId as string;
+
+    // Find the report to get context (like conversationId)
+    const reportSnap = await db.collection('reports')
+      .where('targetType', '==', 'private_message')
+      .where('targetId', '==', messageId)
+      .limit(1)
+      .get();
+
+    if (reportSnap.empty) {
+      res.status(404).json({ error: 'Reporte no encontrado para este mensaje.' });
+      return;
+    }
+
+    const reportData = reportSnap.docs[0].data();
+    const conversationId = reportData.conversationId as string;
+
+    if (!conversationId) {
+      res.status(400).json({ error: 'El reporte no contiene conversationId.' });
+      return;
+    }
+
+    // Retrieve the target message
+    const msgRef = db.collection('privateConversations').doc(conversationId).collection('messages').doc(messageId);
+    const msgSnap = await msgRef.get();
+    if (!msgSnap.exists) {
+      res.status(404).json({ error: 'El mensaje reportado ya no existe.' });
+      return;
+    }
+
+    const targetMsg = msgSnap.data() as any;
+    const targetMsgCreatedAt = targetMsg.createdAt;
+
+    // Fetch 5 messages before
+    const beforeSnap = await db.collection('privateConversations')
+      .doc(conversationId)
+      .collection('messages')
+      .where('createdAt', '<', targetMsgCreatedAt)
+      .orderBy('createdAt', 'desc')
+      .limit(5)
+      .get();
+
+    const beforeMsgs = beforeSnap.docs.map(doc => doc.data()).reverse();
+
+    // Fetch 5 messages after
+    const afterSnap = await db.collection('privateConversations')
+      .doc(conversationId)
+      .collection('messages')
+      .where('createdAt', '>', targetMsgCreatedAt)
+      .orderBy('createdAt', 'asc')
+      .limit(5)
+      .get();
+
+    const afterMsgs = afterSnap.docs.map(doc => doc.data());
+
+    // Combine
+    const contextMessages = [...beforeMsgs, targetMsg, ...afterMsgs];
+
+    res.json({
+      report: { id: reportSnap.docs[0].id, ...reportData },
+      targetMessage: targetMsg,
+      context: contextMessages,
+    });
+  } catch (error: any) {
+    console.error('Error fetching message context:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch reported message context.' });
+  }
+});
+
+router.post('/private-chat/messages/:messageId/hide', requireAuth, requireAdminOrModerator, async (req: AuthRequest, res: Response) => {
+  try {
+    const messageId = req.params.messageId as string;
+    const conversationId = req.body.conversationId as string;
+
+    if (!conversationId) {
+      res.status(400).json({ error: 'Falta el conversationId en el cuerpo de la petición.' });
+      return;
+    }
+
+    const msgRef = db.collection('privateConversations').doc(conversationId).collection('messages').doc(messageId);
+    const msgSnap = await msgRef.get();
+    if (!msgSnap.exists) {
+      res.status(404).json({ error: 'Mensaje no encontrado.' });
+      return;
+    }
+
+    await msgRef.update({
+      hiddenByAdmin: true,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    await createAdminLog({
+      adminId: req.user.uid as string,
+      action: 'hide_private_message',
+      targetType: 'private_message',
+      targetId: messageId,
+      description: `Moderator hid reported private message in conversation ${conversationId}`,
+      metadata: { conversationId },
+    });
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error hiding private message:', error);
+    res.status(500).json({ error: error.message || 'Failed to hide message.' });
   }
 });
 

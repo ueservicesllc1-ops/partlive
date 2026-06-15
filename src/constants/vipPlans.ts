@@ -1,0 +1,55 @@
+import { VipPlan } from '../types/vip';
+
+export const VIP_PLANS: Omit<VipPlan, 'createdAt' | 'updatedAt'>[] = [
+  {
+    id: 'vip_bronze',
+    name: 'VIP Bronce',
+    priceUsd: 9.99,
+    durationDays: 30,
+    benefits: {
+      badge: true,
+      exclusiveEmojis: true,
+      animatedEntry: false,
+      profileHighlight: false,
+      exclusiveGifts: false,
+      priorityRoomEntry: false,
+    },
+    googlePlayProductId: 'vip_bronze',
+    isActive: true,
+    sortOrder: 1,
+  },
+  {
+    id: 'vip_silver',
+    name: 'VIP Plata',
+    priceUsd: 29.99,
+    durationDays: 30,
+    benefits: {
+      badge: true,
+      exclusiveEmojis: true,
+      animatedEntry: true,
+      profileHighlight: true,
+      exclusiveGifts: false,
+      priorityRoomEntry: true,
+    },
+    googlePlayProductId: 'vip_silver',
+    isActive: true,
+    sortOrder: 2,
+  },
+  {
+    id: 'vip_gold',
+    name: 'VIP Oro',
+    priceUsd: 99.99,
+    durationDays: 30,
+    benefits: {
+      badge: true,
+      exclusiveEmojis: true,
+      animatedEntry: true,
+      profileHighlight: true,
+      exclusiveGifts: true,
+      priorityRoomEntry: true,
+    },
+    googlePlayProductId: 'vip_gold',
+    isActive: true,
+    sortOrder: 3,
+  },
+];
