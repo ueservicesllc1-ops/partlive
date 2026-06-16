@@ -125,11 +125,12 @@ export const checkGiftFraud = async (
 
   // 2. Detect New Account High Spend
   const senderSnap = await db.collection('users').doc(senderId).get();
+  const totalDiamonds = giftPriceDiamonds * quantity;
+
   if (senderSnap.exists) {
     const sender = senderSnap.data()!;
     const createdAt = sender.createdAt ? (sender.createdAt.toMillis ? sender.createdAt.toMillis() : new Date(sender.createdAt).getTime()) : Date.now();
     const accountAgeDays = (Date.now() - createdAt) / (1000 * 60 * 60 * 24);
-    const totalDiamonds = giftPriceDiamonds * quantity;
 
     if (accountAgeDays < 2 && totalDiamonds >= 5000) {
       await recordFraudSignal({
@@ -141,6 +142,28 @@ export const checkGiftFraud = async (
         metadata: { giftId, quantity, accountAgeDays },
       });
     }
+  }
+
+  // 3. High Value Gift Thresholds
+  if (totalDiamonds >= 50000) {
+    await recordFraudSignal({
+      userId: senderId,
+      type: 'suspicious_gift',
+      severity: 'critical',
+      score: 95, // Immediately triggers high risk & blocks future actions
+      description: `Intento de envío de regalo ultra-exclusivo bloqueado por seguridad: ${totalDiamonds} diamantes. Requiere aprobación administrativa.`,
+      metadata: { giftId, quantity, totalDiamonds, receiverId },
+    });
+    throw new Error('El envío de este regalo requiere aprobación administrativa por exceder el límite de seguridad (50,000 diamantes).');
+  } else if (totalDiamonds >= 5000) {
+    await recordFraudSignal({
+      userId: senderId,
+      type: 'suspicious_gift',
+      severity: 'medium',
+      score: 15, // Light alert, does not lock account/wallet but registers for review
+      description: `Envío de regalo de alto valor detectado: ${totalDiamonds} diamantes (Revisión ligera requerida).`,
+      metadata: { giftId, quantity, totalDiamonds, receiverId },
+    });
   }
 };
 

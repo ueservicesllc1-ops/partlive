@@ -26,8 +26,10 @@ import { ScreenLoading } from '../../components/ScreenLoading';
 import { ScreenError } from '../../components/ScreenError';
 import { RoomMember } from '../../types';
 import { RoomMemberActionsModal } from '../../components/rooms/RoomMemberActionsModal';
-import { GiftCatalogModal } from '../../components/rooms/GiftCatalogModal';
+import { GiftStoreModal } from '../../components/store/GiftStoreModal';
 import { ReportModal } from '../../components/moderation/ReportModal';
+import { useGiftEvents } from '../../hooks/useGiftEvents';
+import { GiftAnimationLayer, GiftReceivedToast, GlobalGiftBanner, TopGiftersPanel } from '../../components/gifts';
 
 export const RoomDetailsScreen = ({ route, navigation }: any) => {
   const { roomId } = route.params || {};
@@ -35,6 +37,14 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
   
   const [roomMenuVisible, setRoomMenuVisible] = useState(false);
   const [roomReportVisible, setRoomReportVisible] = useState(false);
+
+  const {
+    lastEvent,
+    activeToasts,
+    activeBanners,
+    dismissToast,
+    dismissBanner,
+  } = useGiftEvents('room', roomId);
   
   // 1. Social & Firestore State
   const {
@@ -427,16 +437,22 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         }}
       />
 
-      {/* Gift Catalog Modal */}
-      <GiftCatalogModal
+      {/* Gift Store Modal */}
+      <GiftStoreModal
         visible={giftModalVisible}
         onClose={() => setGiftModalVisible(false)}
-        roomId={roomId}
-        members={members}
-        currentUserId={user?.uid || ''}
-        currentMember={currentMember}
-        wallet={userWallet}
+        targetType="room"
+        targetId={roomId}
+        receivers={members.filter(m => m.userId !== user?.uid && !m.isKicked)}
+        onGoToPayout={() => {
+          setGiftModalVisible(false);
+          navigation.navigate('RequestPayout');
+        }}
       />
+
+      {/* Top Gifters Panel */}
+      <TopGiftersPanel targetType="room" targetId={roomId} limit={5} />
+      
 
       {/* Room Options Sheet */}
       <Modal visible={roomMenuVisible} transparent animationType="fade" onRequestClose={() => setRoomMenuVisible(false)}>
@@ -493,6 +509,29 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         targetId={roomId}
         targetOwnerId={room.ownerId}
       />
+
+      {/* Gift Animations Overlay */}
+      <GiftAnimationLayer lastGiftEvent={lastEvent} />
+
+      {/* Global Gift Banner */}
+      {activeBanners.map((banner) => (
+        <GlobalGiftBanner
+          key={banner.id}
+          banner={banner}
+          onDismiss={dismissBanner}
+        />
+      ))}
+
+      {/* Gift Received Toasts List */}
+      <View style={styles.toastContainer} pointerEvents="none">
+        {activeToasts.map((toast) => (
+          <GiftReceivedToast
+            key={toast.id}
+            toast={toast}
+            onDismiss={dismissToast}
+          />
+        ))}
+      </View>
     </SafeAreaView>
   );
 };
@@ -569,5 +608,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textMuted,
     fontWeight: 'bold',
+  },
+  toastContainer: {
+    position: 'absolute',
+    left: spacing.md,
+    bottom: 220, // Sit above the chat input
+    zIndex: 9999,
+    gap: spacing.sm,
   },
 });

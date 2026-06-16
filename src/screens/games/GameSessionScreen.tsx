@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { colors, spacing, textPresets } from '../../theme';
 import { useGameSession } from '../../hooks/useGameSession';
 import { GameSessionLobby } from '../../components/games/GameSessionLobby';
 import { GameScoreBoard } from '../../components/games/GameScoreBoard';
+import { GiftStoreModal } from '../../components/store/GiftStoreModal';
 
 // Game engines
 import { TriviaGame } from '../../components/games/trivia/TriviaGame';
@@ -53,6 +54,7 @@ export const GameSessionScreen = ({ route, navigation }: any) => {
   const username = currentUser?.displayName ?? 'Jugador';
 
   const isLocalSession = String(sessionId).startsWith(LOCAL_PREFIX);
+  const [giftModalVisible, setGiftModalVisible] = useState(false);
 
   // For real sessions: use the hook
   const {
@@ -142,7 +144,13 @@ export const GameSessionScreen = ({ route, navigation }: any) => {
           <Text style={styles.leaveIcon}>✕</Text>
         </TouchableOpacity>
         <Text style={styles.topTitle}>{gameTitle ?? gameSlug}</Text>
-        <View style={{ width: 32 }} />
+        {!isLocalSession && session ? (
+          <TouchableOpacity onPress={() => setGiftModalVisible(true)} style={styles.giftBtn}>
+            <Text style={styles.giftBtnText}>🎁 Regalar</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 32 }} />
+        )}
       </View>
 
       {/* Error state */}
@@ -191,6 +199,27 @@ export const GameSessionScreen = ({ route, navigation }: any) => {
             <Text style={styles.exitBtnText}>Volver al catálogo</Text>
           </TouchableOpacity>
         </View>
+      )}
+
+      {/* Gift Store Modal */}
+      {!isLocalSession && session && currentUser && (
+        <GiftStoreModal
+          visible={giftModalVisible}
+          onClose={() => setGiftModalVisible(false)}
+          targetType="game"
+          targetId={sessionId}
+          receivers={displayPlayers
+            .filter((p) => p.userId !== uid)
+            .map((p) => ({
+              userId: p.userId,
+              displayName: p.username,
+              photoURL: undefined,
+            }))}
+          onGoToPayout={() => {
+            setGiftModalVisible(false);
+            navigation.navigate('RequestPayout');
+          }}
+        />
       )}
     </SafeAreaView>
   );
@@ -249,4 +278,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl,
   },
   exitBtnText: { ...textPresets.bodyMedium, color: '#fff', fontWeight: '700' },
+  giftBtn: {
+    backgroundColor: 'rgba(138, 79, 255, 0.15)',
+    borderColor: colors.primary,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  giftBtnText: {
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: '800',
+  },
 });

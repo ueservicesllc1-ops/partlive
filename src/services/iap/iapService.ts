@@ -4,6 +4,7 @@ import { purchaseApi } from '../api/purchaseApi';
 
 let purchaseUpdateSubscription: any = null;
 let purchaseErrorSubscription: any = null;
+let activeOrderId: string | null = null;
 
 /**
  * Initializes Google Play Billing connection
@@ -51,9 +52,12 @@ export const getIapProducts = async (skus: string[]): Promise<IAP.Product[]> => 
 /**
  * Triggers Google Play UI purchase flow for a product SKU
  */
-export const buyProduct = async (sku: string): Promise<void> => {
+export const buyProduct = async (sku: string, orderId?: string): Promise<void> => {
   try {
-    console.log(`[IAP] Initiating purchase for SKU: ${sku}`);
+    console.log(`[IAP] Initiating purchase for SKU: ${sku}, orderId: ${orderId}`);
+    if (orderId) {
+      activeOrderId = orderId;
+    }
     if (Platform.OS === 'android') {
       await IAP.requestPurchase({
         type: 'in-app',
@@ -75,6 +79,14 @@ export const buyProduct = async (sku: string): Promise<void> => {
     }
   } catch (error) {
     console.error('[IAP] requestPurchase error:', error);
+    if (activeOrderId) {
+      try {
+        await purchaseApi.markOrderFailed(activeOrderId, error instanceof Error ? error.message : 'Request purchase failed');
+      } catch (err) {
+        console.error('[IAP] Error marking order failed on buyProduct exception:', err);
+      }
+      activeOrderId = null;
+    }
     throw error;
   }
 };
@@ -103,11 +115,13 @@ export const setupPurchaseListeners = (
           onProgress('Acreditando diamantes en tu cuenta...');
         }
 
-        // Map productId to packageId (by configuration, they are identical, e.g. 'diamonds_100')
-        const packageId = productId;
+        const orderId = activeOrderId;
+        if (!orderId) {
+          throw new Error('No se encontró un ID de orden activo para validar la compra.');
+        }
 
         // Call backend verification
-        const response = await purchaseApi.verifyAndroidPurchase(productId, purchaseToken, packageId);
+        const response = await purchaseApi.verifyGooglePlayPurchase(orderId, purchaseToken, productId);
 
         if (response.ok) {
           console.log(`[IAP] Backend credited successfully. Consuming purchase on Play Console...`);
@@ -115,14 +129,24 @@ export const setupPurchaseListeners = (
           await IAP.finishTransaction({ purchase, isConsumable: true });
           
           onSuccess(
-            { totalDiamonds: response.diamondsCredited, id: response.purchaseId },
+            { totalDiamonds: response.diamondsCredited, id: orderId },
             response.wallet
           );
+          
+          activeOrderId = null;
         } else {
           throw new Error('El backend devolvió una respuesta insatisfactoria.');
         }
       } catch (error: any) {
         console.error('[IAP] Validation flow failed:', error);
+        if (activeOrderId) {
+          try {
+            await purchaseApi.markOrderFailed(activeOrderId, error.message || 'Validation failed');
+          } catch (failErr) {
+            console.error('[IAP] Failed to mark order as failed in backend:', failErr);
+          }
+          activeOrderId = null;
+        }
         onError(error);
       }
     } else {
@@ -130,8 +154,16 @@ export const setupPurchaseListeners = (
     }
   });
 
-  purchaseErrorSubscription = IAP.purchaseErrorListener((error: IAP.PurchaseError) => {
+  purchaseErrorSubscription = IAP.purchaseErrorListener(async (error: IAP.PurchaseError) => {
     console.log('[IAP] Native purchase error listener triggered:', error);
+    if (activeOrderId) {
+      try {
+        await purchaseApi.markOrderFailed(activeOrderId, error.message || 'Purchase error');
+      } catch (failErr) {
+        console.error('[IAP] Failed to mark order as failed in backend:', failErr);
+      }
+      activeOrderId = null;
+    }
     onError(error);
   });
 };

@@ -3,59 +3,35 @@ import { db } from '../config/firebase';
 import { verifyAndroidProductPurchase, acknowledgeAndroidPurchase } from './googlePlayService';
 import { recordDiamondPurchaseRevenue } from './revenueService';
 
-export interface PurchaseData {
+export interface PurchaseOrder {
   id: string;
   userId: string;
-  platform: 'android';
-  productId: string;
-  googlePlayProductId: string;
-  purchaseToken: string;
-  orderId?: string;
   packageId: string;
+  googlePlayProductId: string;
+  provider: 'google_play' | 'app_store' | 'stripe' | 'manual' | 'local_gateway';
+  status: 'pending' | 'paid' | 'failed' | 'refunded' | 'disputed' | 'cancelled';
+  priceUsd: number;
   diamonds: number;
   bonusDiamonds: number;
   totalDiamonds: number;
-  priceUsd?: number;
-  currency?: string;
-  status: 'pending' | 'validated' | 'credited' | 'failed' | 'refunded' | 'duplicate';
-  validationResponse?: Record<string, any>;
-  errorMessage?: string;
+  purchaseToken?: string;
+  providerOrderId?: string;
+  receiptData?: string;
+  failureReason?: string;
+  refundReason?: string;
   createdAt: any;
+  paidAt?: any;
+  failedAt?: any;
+  refundedAt?: any;
   updatedAt: any;
-  creditedAt?: any;
 }
 
-/**
- * Validates an Android In-App Purchase and credits diamonds to the user's wallet in a transaction.
- */
-export const validateAndCreditAndroidPurchase = async (
+export const createPurchaseOrder = async (
   userId: string,
-  productId: string,
-  purchaseToken: string,
-  packageId: string
-): Promise<{ purchase: PurchaseData; wallet: any }> => {
-  // 1. Check for duplicate token
-  const tokenRef = db.collection('processedPurchaseTokens').doc(purchaseToken);
-  const tokenDoc = await tokenRef.get();
-  if (tokenDoc.exists) {
-    console.warn(`[IAP] Token already processed for user ${tokenDoc.data()?.userId}`);
-    
-    const existingPurchases = await db.collection('purchases')
-      .where('purchaseToken', '==', purchaseToken)
-      .where('status', '==', 'credited')
-      .limit(1)
-      .get();
-      
-    if (!existingPurchases.empty) {
-      const purchase = { id: existingPurchases.docs[0].id, ...existingPurchases.docs[0].data() } as PurchaseData;
-      const walletDoc = await db.collection('wallets').doc(userId).get();
-      return { purchase, wallet: walletDoc.data() };
-    }
-    
-    throw new Error('DUPLICATE_PURCHASE: Purchase token has already been processed');
-  }
-
-  // 2. Fetch the diamond package from Firestore
+  packageId: string,
+  provider: PurchaseOrder['provider']
+): Promise<PurchaseOrder> => {
+  // Fetch diamond package
   const packageRef = db.collection('diamondPackages').doc(packageId);
   const packageDoc = await packageRef.get();
   if (!packageDoc.exists) {
@@ -66,40 +42,82 @@ export const validateAndCreditAndroidPurchase = async (
   const bonusDiamonds = diamondPackage.bonusDiamonds || 0;
   const totalDiamonds = diamondPackage.totalDiamonds || (diamonds + bonusDiamonds);
   const priceUsd = diamondPackage.priceUsd || 0;
+  const googlePlayProductId = diamondPackage.googlePlayProductId || packageId;
 
-  // 3. Create a pending purchase record
-  const purchaseRef = db.collection('purchases').doc();
-  const purchaseId = purchaseRef.id;
+  const orderRef = db.collection('purchaseOrders').doc();
   const timestamp = admin.firestore.FieldValue.serverTimestamp();
 
-  const pendingPurchase: PurchaseData = {
-    id: purchaseId,
+  const newOrder: PurchaseOrder = {
+    id: orderRef.id,
     userId,
-    platform: 'android',
-    productId,
-    googlePlayProductId: productId,
-    purchaseToken,
     packageId,
+    googlePlayProductId,
+    provider,
+    status: 'pending',
+    priceUsd,
     diamonds,
     bonusDiamonds,
     totalDiamonds,
-    priceUsd,
-    status: 'pending',
     createdAt: timestamp,
     updatedAt: timestamp,
   };
 
-  await purchaseRef.set(pendingPurchase);
+  await orderRef.set(newOrder);
+  return { ...newOrder, id: orderRef.id };
+};
+
+export const verifyGooglePlayPurchase = async (
+  userId: string,
+  orderId: string,
+  purchaseToken: string,
+  productId: string
+): Promise<{ ok: boolean; status: string; diamondsCredited: number; wallet: any }> => {
+  // 1. Check duplicate token
+  const tokenRef = db.collection('processedPurchaseTokens').doc(purchaseToken);
+  const tokenDoc = await tokenRef.get();
+  if (tokenDoc.exists) {
+    console.warn(`[IAP] Token already processed for token: ${purchaseToken}`);
+    const walletDoc = await db.collection('wallets').doc(userId).get();
+    
+    // Check if the order was already marked paid
+    const orderSnap = await db.collection('purchaseOrders').doc(orderId).get();
+    if (orderSnap.exists && orderSnap.data()?.status === 'paid') {
+      return {
+        ok: true,
+        status: 'paid',
+        diamondsCredited: orderSnap.data()?.totalDiamonds || 0,
+        wallet: walletDoc.data(),
+      };
+    }
+    throw new Error('DUPLICATE_PURCHASE: Purchase token has already been processed');
+  }
+
+  // 2. Fetch the order
+  const orderRef = db.collection('purchaseOrders').doc(orderId);
+  const orderSnap = await orderRef.get();
+  if (!orderSnap.exists) {
+    throw new Error(`ORDER_NOT_FOUND: Purchase order ${orderId} does not exist`);
+  }
+  const orderData = orderSnap.data() as PurchaseOrder;
+  if (orderData.status === 'paid') {
+    const walletDoc = await db.collection('wallets').doc(userId).get();
+    return {
+      ok: true,
+      status: 'paid',
+      diamondsCredited: orderData.totalDiamonds,
+      wallet: walletDoc.data(),
+    };
+  }
 
   let googlePurchase;
   try {
-    // 4. Verify purchase with Google Play Developer API
+    // 3. Verify purchase with Google Play Developer API
     googlePurchase = await verifyAndroidProductPurchase(productId, purchaseToken);
   } catch (err: any) {
     console.error(`[IAP] Google Play verification failed for token: ${purchaseToken}`, err);
-    await purchaseRef.update({
+    await orderRef.update({
       status: 'failed',
-      errorMessage: err.message || 'Google Play verification failed',
+      failureReason: err.message || 'Google Play verification failed',
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     throw err;
@@ -114,179 +132,347 @@ export const validateAndCreditAndroidPurchase = async (
         ? 'Purchase is pending approval'
         : `Unknown purchase state: ${googlePurchase.purchaseState}`;
         
-    await purchaseRef.update({
+    await orderRef.update({
       status: 'failed',
-      errorMessage: stateMsg,
-      validationResponse: googlePurchase as Record<string, any>,
+      failureReason: stateMsg,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     throw new Error(`INVALID_PURCHASE_STATE: ${stateMsg}`);
   }
 
-  const orderId = googlePurchase.orderId || `GPA.mock-${Date.now()}`;
+  const providerOrderId = googlePurchase.orderId || `GPA.mock-${Date.now()}`;
 
-  // 5. Execute DB transaction
+  // 4. Run database transaction
   let updatedWallet: any = null;
-  let finalPurchase: PurchaseData | null = null;
+  const totalDiamonds = orderData.totalDiamonds;
 
-  try {
-    await db.runTransaction(async (transaction) => {
-      const tokenSnap = await transaction.get(tokenRef);
-      if (tokenSnap.exists) {
-        throw new Error('DUPLICATE_PURCHASE: Purchase token has already been processed');
-      }
+  await db.runTransaction(async (transaction) => {
+    const tokenSnap = await transaction.get(tokenRef);
+    if (tokenSnap.exists) {
+      throw new Error('DUPLICATE_PURCHASE: Purchase token has already been processed');
+    }
 
-      const walletRef = db.collection('wallets').doc(userId);
-      const userRef = db.collection('users').doc(userId);
-      const txRef = db.collection('walletTransactions').doc();
-      const currentTimestamp = admin.firestore.FieldValue.serverTimestamp();
+    const walletRef = db.collection('wallets').doc(userId);
+    const userRef = db.collection('users').doc(userId);
+    const txRef = db.collection('walletTransactions').doc();
+    const currentTimestamp = admin.firestore.FieldValue.serverTimestamp();
 
-      const walletSnap = await transaction.get(walletRef);
-      let wallet: any;
+    const walletSnap = await transaction.get(walletRef);
+    let wallet: any;
 
-      if (!walletSnap.exists) {
-        wallet = {
-          id: userId,
-          userId,
-          diamonds: 0,
-          beans: 0,
-          lifetimeDiamondsPurchased: 0,
-          lifetimeDiamondsSpent: 0,
-          lifetimeBeansEarned: 0,
-          lifetimeBeansWithdrawn: 0,
-          pendingBeans: 0,
-          lockedBeans: 0,
-          status: 'active',
-          createdAt: currentTimestamp,
-          updatedAt: currentTimestamp,
-        };
-      } else {
-        wallet = walletSnap.data()!;
-      }
-
-      if (wallet.status !== 'active') {
-        throw new Error(`WALLET_BLOCKED: User wallet status is ${wallet.status}`);
-      }
-
-      const newDiamonds = (wallet.diamonds || 0) + totalDiamonds;
-      const newLifetimePurchased = (wallet.lifetimeDiamondsPurchased || 0) + totalDiamonds;
-
-      const updatedWalletData = {
-        diamonds: newDiamonds,
-        lifetimeDiamondsPurchased: newLifetimePurchased,
-        updatedAt: currentTimestamp,
-      };
-
-      if (!walletSnap.exists) {
-        transaction.set(walletRef, { ...wallet, ...updatedWalletData });
-      } else {
-        transaction.update(walletRef, updatedWalletData);
-      }
-
-      // Update cache
-      transaction.update(userRef, {
-        diamonds: newDiamonds,
-        updatedAt: currentTimestamp,
-      });
-
-      // Transaction log
-      const txData = {
-        id: txRef.id,
+    if (!walletSnap.exists) {
+      wallet = {
+        id: userId,
         userId,
-        type: 'diamond_purchase',
-        direction: 'credit',
-        currencyType: 'diamonds',
-        amount: totalDiamonds,
-        balanceAfter: newDiamonds,
-        status: 'completed',
-        description: `Compra de paquete ${diamondPackage.title}`,
-        relatedUserId: null,
-        relatedRoomId: null,
-        relatedLiveId: null,
-        relatedGiftId: null,
-        relatedGiftEventId: null,
-        relatedPurchaseId: purchaseId,
-        metadata: {
-          platform: 'android',
-          productId,
-          orderId,
-          purchaseToken,
-        },
+        diamonds: 0,
+        beans: 0,
+        lifetimeDiamondsPurchased: 0,
+        lifetimeDiamondsSpent: 0,
+        lifetimeBeansEarned: 0,
+        lifetimeBeansWithdrawn: 0,
+        pendingBeans: 0,
+        lockedBeans: 0,
+        status: 'active',
         createdAt: currentTimestamp,
         updatedAt: currentTimestamp,
       };
-      transaction.set(txRef, txData);
+    } else {
+      wallet = walletSnap.data()!;
+    }
 
-      transaction.set(tokenRef, {
-        processedAt: currentTimestamp,
-        userId,
-        orderId,
-        purchaseId,
-      });
+    if (wallet.status !== 'active') {
+      throw new Error(`WALLET_BLOCKED: User wallet status is ${wallet.status}`);
+    }
 
-      const purchaseUpdate: Partial<PurchaseData> = {
-        status: 'credited',
-        orderId,
-        validationResponse: googlePurchase as Record<string, any>,
-        creditedAt: currentTimestamp,
-        updatedAt: currentTimestamp,
-      };
-      transaction.update(purchaseRef, purchaseUpdate);
+    const newDiamonds = (wallet.diamonds || 0) + totalDiamonds;
+    const newLifetimePurchased = (wallet.lifetimeDiamondsPurchased || 0) + totalDiamonds;
 
-      updatedWallet = {
-        ...wallet,
-        ...updatedWalletData,
-      };
+    const updatedWalletData = {
+      diamonds: newDiamonds,
+      lifetimeDiamondsPurchased: newLifetimePurchased,
+      updatedAt: currentTimestamp,
+    };
 
-      finalPurchase = {
-        ...pendingPurchase,
-        ...purchaseUpdate,
-      } as PurchaseData;
+    if (!walletSnap.exists) {
+      transaction.set(walletRef, { ...wallet, ...updatedWalletData });
+    } else {
+      transaction.update(walletRef, updatedWalletData);
+    }
+
+    // Update user cache
+    transaction.update(userRef, {
+      diamonds: newDiamonds,
+      updatedAt: currentTimestamp,
     });
 
-    console.log(`[IAP] Successfully credited ${totalDiamonds} diamonds to user ${userId} for order ${orderId}`);
+    // Transaction log
+    const txData = {
+      id: txRef.id,
+      userId,
+      type: 'diamond_purchase',
+      direction: 'credit',
+      currencyType: 'diamonds',
+      amount: totalDiamonds,
+      balanceAfter: newDiamonds,
+      status: 'completed',
+      description: `Compra de paquete ${orderData.packageId}`,
+      relatedUserId: null,
+      relatedRoomId: null,
+      relatedLiveId: null,
+      relatedGiftId: null,
+      relatedGiftEventId: null,
+      relatedPurchaseId: orderId,
+      metadata: {
+        platform: 'android',
+        productId,
+        providerOrderId,
+        purchaseToken,
+      },
+      createdAt: currentTimestamp,
+      updatedAt: currentTimestamp,
+    };
+    transaction.set(txRef, txData);
 
-    // Track Revenue in analytics
-    try {
-      await recordDiamondPurchaseRevenue(priceUsd, totalDiamonds);
-      
-      // Fetch user profile to get country code
-      const userSnap = await db.collection('users').doc(userId).get();
-      const country = userSnap.exists ? (userSnap.data()?.country || 'CL') : 'CL';
-      
-      const { recordDiamondPurchase } = await import('./analyticsService');
-      await recordDiamondPurchase(userId, totalDiamonds, priceUsd, country);
-    } catch (revErr) {
-      console.error('Failed to log platform revenue summary or analytics purchase:', revErr);
-    }
+    // Record token
+    transaction.set(tokenRef, {
+      processedAt: currentTimestamp,
+      userId,
+      orderId,
+      providerOrderId,
+    });
 
-    // Acknowledge the purchase
-    try {
-      await acknowledgeAndroidPurchase(productId, purchaseToken);
-    } catch (ackError) {
-      console.error(`[IAP] Failed to acknowledge purchase ${orderId} with Google Play`, ackError);
-    }
+    // Update PurchaseOrder
+    transaction.update(orderRef, {
+      status: 'paid',
+      purchaseToken,
+      providerOrderId,
+      paidAt: currentTimestamp,
+      updatedAt: currentTimestamp,
+    });
 
-    return { purchase: finalPurchase!, wallet: updatedWallet! };
-  } catch (txError: any) {
-    console.error('[IAP] Transaction failed while crediting purchase:', txError);
-    if (!txError.message?.includes('DUPLICATE_PURCHASE')) {
-      await purchaseRef.update({
-        status: 'failed',
-        errorMessage: txError.message || 'Transaction failed in database',
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    }
-    throw txError;
+    updatedWallet = {
+      ...wallet,
+      ...updatedWalletData,
+    };
+  });
+
+  // Track Revenue & Analytics in background
+  try {
+    await recordDiamondPurchaseRevenue(orderData.priceUsd, totalDiamonds);
+    const userSnap = await db.collection('users').doc(userId).get();
+    const country = userSnap.exists ? (userSnap.data()?.country || 'CL') : 'CL';
+    const { recordDiamondPurchase } = await import('./analyticsService');
+    await recordDiamondPurchase(userId, totalDiamonds, orderData.priceUsd, country);
+  } catch (revErr) {
+    console.error('Failed to log platform revenue or analytics:', revErr);
   }
+
+  // Acknowledge the purchase
+  try {
+    await acknowledgeAndroidPurchase(productId, purchaseToken);
+  } catch (ackError) {
+    console.error(`[IAP] Failed to acknowledge purchase ${providerOrderId} with Google Play`, ackError);
+  }
+
+  return {
+    ok: true,
+    status: 'paid',
+    diamondsCredited: totalDiamonds,
+    wallet: updatedWallet,
+  };
 };
 
-export const getUserPurchaseHistory = async (userId: string, limit = 50): Promise<PurchaseData[]> => {
-  const snapshot = await db.collection('purchases')
+export const markOrderFailed = async (
+  userId: string,
+  orderId: string,
+  failureReason: string
+): Promise<void> => {
+  const orderRef = db.collection('purchaseOrders').doc(orderId);
+  const orderSnap = await orderRef.get();
+  if (!orderSnap.exists) {
+    throw new Error(`ORDER_NOT_FOUND: Order ${orderId} does not exist`);
+  }
+  const order = orderSnap.data() as PurchaseOrder;
+  if (order.userId !== userId) {
+    throw new Error('UNAUTHORIZED: Order does not belong to the user');
+  }
+
+  await orderRef.update({
+    status: 'failed',
+    failureReason,
+    failedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+};
+
+export const adminRefundPurchase = async (orderId: string, refundReason: string): Promise<any> => {
+  const orderRef = db.collection('purchaseOrders').doc(orderId);
+  const orderSnap = await orderRef.get();
+  if (!orderSnap.exists) {
+    throw new Error(`ORDER_NOT_FOUND: Order ${orderId} does not exist`);
+  }
+  const order = orderSnap.data() as PurchaseOrder;
+  if (order.status !== 'paid') {
+    throw new Error(`INVALID_STATUS: Can only refund paid orders. Current: ${order.status}`);
+  }
+
+  const userId = order.userId;
+  const walletRef = db.collection('wallets').doc(userId);
+  const userRef = db.collection('users').doc(userId);
+  const txRef = db.collection('walletTransactions').doc();
+
+  let updatedWallet: any = null;
+
+  await db.runTransaction(async (transaction) => {
+    const walletSnap = await transaction.get(walletRef);
+    if (!walletSnap.exists) {
+      throw new Error('WALLET_NOT_FOUND: User wallet not found');
+    }
+    const wallet = walletSnap.data()!;
+    const totalDiamondsToDeduct = order.totalDiamonds;
+    const currentDiamonds = wallet.diamonds || 0;
+
+    // Deduct diamonds. If diamonds insufficient, we allow negative balance or lock wallet
+    const newDiamonds = currentDiamonds - totalDiamondsToDeduct;
+    const currentTimestamp = admin.firestore.FieldValue.serverTimestamp();
+
+    const walletUpdate: Record<string, any> = {
+      diamonds: newDiamonds,
+      updatedAt: currentTimestamp,
+    };
+
+    // If new balance is negative, block the wallet
+    if (newDiamonds < 0) {
+      walletUpdate.status = 'locked';
+    }
+
+    transaction.update(walletRef, walletUpdate);
+    transaction.update(userRef, {
+      diamonds: newDiamonds,
+      updatedAt: currentTimestamp,
+    });
+
+    // Transaction log
+    transaction.set(txRef, {
+      id: txRef.id,
+      userId,
+      type: 'refund',
+      direction: 'debit',
+      currencyType: 'diamonds',
+      amount: totalDiamondsToDeduct,
+      balanceAfter: newDiamonds,
+      status: 'completed',
+      description: `Reembolso de compra ${orderId}: ${refundReason}`,
+      relatedUserId: null,
+      relatedRoomId: null,
+      relatedLiveId: null,
+      relatedGiftId: null,
+      relatedGiftEventId: null,
+      relatedPurchaseId: orderId,
+      createdAt: currentTimestamp,
+      updatedAt: currentTimestamp,
+    });
+
+    transaction.update(orderRef, {
+      status: 'refunded',
+      refundReason,
+      refundedAt: currentTimestamp,
+      updatedAt: currentTimestamp,
+    });
+
+    updatedWallet = {
+      ...wallet,
+      ...walletUpdate,
+    };
+  });
+
+  return updatedWallet;
+};
+
+export const adminDisputePurchase = async (orderId: string): Promise<any> => {
+  const orderRef = db.collection('purchaseOrders').doc(orderId);
+  const orderSnap = await orderRef.get();
+  if (!orderSnap.exists) {
+    throw new Error(`ORDER_NOT_FOUND: Order ${orderId} does not exist`);
+  }
+  const order = orderSnap.data() as PurchaseOrder;
+  if (order.status !== 'paid') {
+    throw new Error(`INVALID_STATUS: Can only dispute paid orders. Current: ${order.status}`);
+  }
+
+  const userId = order.userId;
+  const walletRef = db.collection('wallets').doc(userId);
+  const userRef = db.collection('users').doc(userId);
+  const txRef = db.collection('walletTransactions').doc();
+
+  let updatedWallet: any = null;
+
+  await db.runTransaction(async (transaction) => {
+    const walletSnap = await transaction.get(walletRef);
+    if (!walletSnap.exists) {
+      throw new Error('WALLET_NOT_FOUND: User wallet not found');
+    }
+    const wallet = walletSnap.data()!;
+    const totalDiamondsToDeduct = order.totalDiamonds;
+    const currentDiamonds = wallet.diamonds || 0;
+
+    const newDiamonds = currentDiamonds - totalDiamondsToDeduct;
+    const currentTimestamp = admin.firestore.FieldValue.serverTimestamp();
+
+    const walletUpdate: Record<string, any> = {
+      diamonds: newDiamonds,
+      // Dispute locks the wallet immediately for security
+      status: 'locked',
+      updatedAt: currentTimestamp,
+    };
+
+    transaction.update(walletRef, walletUpdate);
+    transaction.update(userRef, {
+      diamonds: newDiamonds,
+      updatedAt: currentTimestamp,
+    });
+
+    // Transaction log
+    transaction.set(txRef, {
+      id: txRef.id,
+      userId,
+      type: 'dispute_hold',
+      direction: 'debit',
+      currencyType: 'diamonds',
+      amount: totalDiamondsToDeduct,
+      balanceAfter: newDiamonds,
+      status: 'completed',
+      description: `Contracargo / Disputa de compra ${orderId}. Cartera bloqueada por seguridad.`,
+      relatedUserId: null,
+      relatedRoomId: null,
+      relatedLiveId: null,
+      relatedGiftId: null,
+      relatedGiftEventId: null,
+      relatedPurchaseId: orderId,
+      createdAt: currentTimestamp,
+      updatedAt: currentTimestamp,
+    });
+
+    transaction.update(orderRef, {
+      status: 'disputed',
+      updatedAt: currentTimestamp,
+    });
+
+    updatedWallet = {
+      ...wallet,
+      ...walletUpdate,
+    };
+  });
+
+  return updatedWallet;
+};
+
+export const getUserPurchaseHistory = async (userId: string, limit = 50): Promise<PurchaseOrder[]> => {
+  const snapshot = await db.collection('purchaseOrders')
     .where('userId', '==', userId)
     .orderBy('createdAt', 'desc')
     .limit(limit)
     .get();
 
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseData));
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
 };

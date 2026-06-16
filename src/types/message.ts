@@ -22,6 +22,9 @@ export interface GiftEvent {
   giftId: string;
   giftName: string;
   giftIconUrl?: string;
+  giftEmoji?: string;
+  roomEffectType?: string;
+  animationType?: 'small' | 'big' | 'global';
   senderId: string;
   senderName: string;
   receiverId: string;
@@ -34,4 +37,5 @@ export interface GiftEvent {
   totalBeans?: number;
   createdAt: any; // Firestore Timestamp
 }
+
 

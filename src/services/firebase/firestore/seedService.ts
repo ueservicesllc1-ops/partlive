@@ -4,12 +4,12 @@ import { nowServerTimestamp } from '../../../utils/firestoreDates';
 import { buildKaraokeSongKeywords } from '../../../utils/karaokeSearch';
 
 const GIFTS = [
-  { id: 'gift_rose', name: 'Rose', priceCoins: 10, valueDiamonds: 5, rarity: 'common', iconUrl: '🌹' },
-  { id: 'gift_heart', name: 'Heart', priceCoins: 50, valueDiamonds: 25, rarity: 'common', iconUrl: '❤️' },
-  { id: 'gift_crown', name: 'Crown', priceCoins: 500, valueDiamonds: 250, rarity: 'rare', iconUrl: '👑' },
-  { id: 'gift_car', name: 'Sports Car', priceCoins: 5000, valueDiamonds: 2500, rarity: 'epic', iconUrl: '🏎️' },
-  { id: 'gift_castle', name: 'Castle', priceCoins: 20000, valueDiamonds: 10000, rarity: 'legendary', iconUrl: '🏰' },
-  { id: 'gift_dragon', name: 'Dragon', priceCoins: 50000, valueDiamonds: 25000, rarity: 'legendary', iconUrl: '🐉' },
+  { id: 'heart', name: 'Corazón', priceDiamonds: 1, rarity: 'common', iconEmoji: '❤️', animationType: 'small', isActive: true, sortOrder: 1 },
+  { id: 'rose', name: 'Rosa', priceDiamonds: 10, rarity: 'common', iconEmoji: '🌹', animationType: 'small', isActive: true, sortOrder: 2 },
+  { id: 'crown', name: 'Corona', priceDiamonds: 100, rarity: 'rare', iconEmoji: '👑', animationType: 'medium', isActive: true, sortOrder: 3 },
+  { id: 'sports_car', name: 'Carro deportivo', priceDiamonds: 999, rarity: 'epic', iconEmoji: '🏎️', animationType: 'big', isActive: true, sortOrder: 4 },
+  { id: 'dragon', name: 'Dragón', priceDiamonds: 4999, rarity: 'legendary', iconEmoji: '🐉', animationType: 'global', isActive: true, sortOrder: 5 },
+  { id: 'castle', name: 'Castillo', priceDiamonds: 4999, rarity: 'legendary', iconEmoji: '🏰', animationType: 'global', isActive: true, sortOrder: 6 },
 ];
 
 const GAMES = [
@@ -29,13 +29,12 @@ const MISSIONS = [
   { id: 'mission_game', title: 'Jugador', description: 'Juega 2 partidas', type: 'play_game', targetValue: 2, rewardType: 'coins', rewardAmount: 150 },
 ];
 
-const COIN_PACKAGES = [
-  { id: 'coins_100', title: '100 Coins', coins: 100, bonusCoins: 0, totalCoins: 100, priceUsd: 0.99, productId: 'coins_100', googlePlayProductId: 'coins_100', sortOrder: 1 },
-  { id: 'coins_550', title: '550 Coins', coins: 500, bonusCoins: 50, totalCoins: 550, priceUsd: 4.99, productId: 'coins_550', googlePlayProductId: 'coins_550', sortOrder: 2 },
-  { id: 'coins_1200', title: '1,200 Coins', coins: 1000, bonusCoins: 200, totalCoins: 1200, priceUsd: 9.99, productId: 'coins_1200', googlePlayProductId: 'coins_1200', sortOrder: 3 },
-  { id: 'coins_2800', title: '2,800 Coins', coins: 2500, bonusCoins: 300, totalCoins: 2800, priceUsd: 19.99, productId: 'coins_2800', googlePlayProductId: 'coins_2800', sortOrder: 4 },
-  { id: 'coins_7000', title: '7,000 Coins', coins: 6000, bonusCoins: 1000, totalCoins: 7000, priceUsd: 49.99, productId: 'coins_7000', googlePlayProductId: 'coins_7000', sortOrder: 5 },
-  { id: 'coins_15000', title: '15,000 Coins', coins: 12000, bonusCoins: 3000, totalCoins: 15000, priceUsd: 99.99, productId: 'coins_15000', googlePlayProductId: 'coins_15000', sortOrder: 6 },
+const DIAMOND_PACKAGES = [
+  { id: 'diamonds_100', title: 'Básico', diamonds: 100, bonusDiamonds: 0, totalDiamonds: 100, priceUsd: 0.99, googlePlayProductId: 'diamonds_100', isPopular: false, isActive: true, sortOrder: 1 },
+  { id: 'diamonds_550', title: 'Popular', diamonds: 500, bonusDiamonds: 50, totalDiamonds: 550, priceUsd: 4.99, googlePlayProductId: 'diamonds_550', isPopular: true, isActive: true, sortOrder: 2 },
+  { id: 'diamonds_1200', title: 'Premium', diamonds: 1000, bonusDiamonds: 200, totalDiamonds: 1200, priceUsd: 9.99, googlePlayProductId: 'diamonds_1200', isPopular: false, isActive: true, sortOrder: 3 },
+  { id: 'diamonds_6500', title: 'Mega', diamonds: 5500, bonusDiamonds: 1000, totalDiamonds: 6500, priceUsd: 49.99, googlePlayProductId: 'diamonds_6500', isPopular: false, isActive: true, sortOrder: 4 },
+  { id: 'diamonds_15000', title: 'Agencia / Host', diamonds: 12000, bonusDiamonds: 3000, totalDiamonds: 15000, priceUsd: 99.99, googlePlayProductId: 'diamonds_15000', isPopular: false, isActive: true, sortOrder: 5 },
 ];
 
 
@@ -49,11 +48,12 @@ export const seedInitialData = async () => {
       const ref = firestore().collection(FirestoreCollections.GIFTS).doc(g.id);
       batch.set(ref, {
         name: g.name,
-        priceCoins: g.priceCoins,
-        valueDiamonds: g.valueDiamonds,
+        priceDiamonds: g.priceDiamonds,
         rarity: g.rarity,
-        iconUrl: g.iconUrl,
-        isActive: true,
+        iconEmoji: g.iconEmoji,
+        animationType: g.animationType,
+        sortOrder: g.sortOrder,
+        isActive: g.isActive,
         createdAt: timestamp,
         updatedAt: timestamp,
       }, { merge: true });
@@ -92,19 +92,19 @@ export const seedInitialData = async () => {
       }, { merge: true });
     }
 
-    // Seed Coin Packages
-    for (const cp of COIN_PACKAGES) {
-      const ref = firestore().collection(FirestoreCollections.COIN_PACKAGES).doc(cp.id);
+    // Seed Diamond Packages
+    for (const dp of DIAMOND_PACKAGES) {
+      const ref = firestore().collection(FirestoreCollections.DIAMOND_PACKAGES).doc(dp.id);
       batch.set(ref, {
-        title: cp.title,
-        coins: cp.coins,
-        bonusCoins: cp.bonusCoins,
-        totalCoins: cp.totalCoins,
-        priceUsd: cp.priceUsd,
-        productId: cp.productId,
-        googlePlayProductId: cp.googlePlayProductId,
-        sortOrder: cp.sortOrder,
-        isActive: true,
+        title: dp.title,
+        diamonds: dp.diamonds,
+        bonusDiamonds: dp.bonusDiamonds,
+        totalDiamonds: dp.totalDiamonds,
+        priceUsd: dp.priceUsd,
+        googlePlayProductId: dp.googlePlayProductId,
+        isPopular: dp.isPopular,
+        sortOrder: dp.sortOrder,
+        isActive: dp.isActive,
         createdAt: timestamp,
         updatedAt: timestamp,
       }, { merge: true });

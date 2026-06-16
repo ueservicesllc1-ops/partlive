@@ -11,6 +11,7 @@ import {
 } from '../services/iap/iapService';
 import { getIapErrorMessage } from '../utils/iapErrors';
 import { useAuth } from '../store/AuthContext';
+import { purchaseApi } from '../services/api/purchaseApi';
 
 /**
  * Custom hook to manage Google Play Billing operations within the Wallet screen.
@@ -34,7 +35,7 @@ export const useInAppPurchases = (diamondPackages: DiamondPackage[]) => {
       
       Alert.alert(
         '¡Compra Completada!',
-        `Se han acreditado ${purchase.totalDiamonds || purchase.diamondsCredited} diamantes a tu billetera exitosamente.`
+        `Se han acreditado ${purchase.totalDiamonds || purchase.diamondsCredited || 0} diamantes a tu billetera exitosamente.`
       );
 
       try {
@@ -129,12 +130,17 @@ export const useInAppPurchases = (diamondPackages: DiamondPackage[]) => {
 
       setPurchasing(true);
       setIapError(null);
-      setPurchaseStatus('Iniciando pago con Google Play...');
+      setPurchaseStatus('Iniciando orden...');
 
       try {
-        await buyProduct(pkg.googlePlayProductId);
+        // 1. Create purchase order in backend
+        const order = await purchaseApi.createPurchaseOrder(pkg.id, 'google_play');
+        
+        setPurchaseStatus('Iniciando pago con Google Play...');
+        // 2. Buy product passing orderId
+        await buyProduct(pkg.googlePlayProductId, order.orderId);
       } catch (err: any) {
-        console.error('[IAP Hook] requestPurchase call threw error:', err);
+        console.error('[IAP Hook] Request purchase order flow failed:', err);
         handlePurchaseError(err);
       }
     },

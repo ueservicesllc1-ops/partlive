@@ -219,7 +219,7 @@ payoutRoutes.post(
       const { adminNotes } = req.body;
 
       const result = await payoutService.rejectPayout(payoutId as string, adminId as string, adminNotes);
-      res.json({ success: true, message: 'Retiro rechazado. Diamantes reembolsados.', data: result });
+      res.json({ success: true, message: 'Retiro rechazado. Beans reembolsados.', data: result });
     } catch (error: any) {
       console.error('Error rejecting payout (admin):', error);
       res.status(400).json({ error: error.message || 'Error al rechazar la solicitud' });

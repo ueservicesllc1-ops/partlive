@@ -8,6 +8,7 @@ export type FraudSignalType =
   | 'suspicious_ip'
   | 'chargeback_risk'
   | 'new_account_high_spend'
+  | 'suspicious_gift'
   | 'payout_risk';
 
 export interface FraudSignal {

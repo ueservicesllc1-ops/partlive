@@ -6,7 +6,7 @@ export const getActiveGifts = async (): Promise<Gift[]> => {
   const snapshot = await firestore()
     .collection(FirestoreCollections.GIFTS)
     .where('isActive', '==', true)
-    .orderBy('priceCoins', 'asc')
+    .orderBy('priceDiamonds', 'asc')
     .get();
 
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Gift));

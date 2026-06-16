@@ -26,9 +26,23 @@ export const validateUsernameFormat = (username: string): { valid: boolean; erro
 };
 
 export const isUsernameAvailable = async (username: string): Promise<boolean> => {
-  const normalized = normalizeUsername(username);
-  const docSnap = await firestore().collection('usernames').doc(normalized).get();
-  return !docSnap.exists;
+  try {
+    const normalized = normalizeUsername(username);
+    if (!normalized) {
+      console.log('[UsernameCheck] Empty username, returning false');
+      return false;
+    }
+    const docSnap = await firestore().collection('usernames').doc(normalized).get();
+    console.log('[UsernameCheck] checked:', normalized, 'exists:', docSnap.exists);
+    return !docSnap.exists;
+  } catch (error: any) {
+    console.error('Error checking username availability:', error);
+    // Explicitly check for permission errors to guide the developer/user
+    if (error.code === 'firestore/permission-denied' || error.message?.includes('permission')) {
+      throw new Error('Error de seguridad/permisos en Firestore. Asegúrate de haber desplegado las reglas más recientes.');
+    }
+    throw error;
+  }
 };
 
 export const reserveUsername = async (uid: string, username: string): Promise<void> => {

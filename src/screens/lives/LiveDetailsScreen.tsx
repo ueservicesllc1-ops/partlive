@@ -15,9 +15,11 @@ import {
   LiveActionsBar,
   LiveModerationMenu,
   LiveEndedState,
-  GiftCatalogModal
 } from '../../components/lives';
+import { GiftStoreModal } from '../../components/store/GiftStoreModal';
 import { ReportModal } from '../../components/moderation/ReportModal';
+import { useGiftEvents } from '../../hooks/useGiftEvents';
+import { GiftAnimationLayer, GiftReceivedToast, GlobalGiftBanner, TopGiftersPanel } from '../../components/gifts';
 
 export const LiveDetailsScreen = ({ route, navigation }: any) => {
   const { liveId } = route.params || {};
@@ -61,6 +63,14 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
     pendingInvite,
     timeLeft,
   } = usePkBattle(liveId, isHost ? userProfile?.uid : undefined);
+
+  const {
+    lastEvent,
+    activeToasts,
+    activeBanners,
+    dismissToast,
+    dismissBanner,
+  } = useGiftEvents('live', liveId);
 
   const [giftModalVisible, setGiftModalVisible] = useState(false);
   const [modMenuVisible, setModMenuVisible] = useState(false);
@@ -187,15 +197,16 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
 
       {/* Gifting Modal overlay */}
       {live && userProfile && (
-        <GiftCatalogModal
+        <GiftStoreModal
           visible={giftModalVisible}
           onClose={() => setGiftModalVisible(false)}
-          roomId={liveId}
-          members={mappedMembers}
-          currentUserId={userProfile.uid}
-          currentMember={currentViewer as any}
-          wallet={wallet}
-          isLive={true}
+          targetType="live"
+          targetId={liveId}
+          receivers={mappedMembers.filter(v => v.userId !== userProfile.uid && !v.isKicked)}
+          onGoToPayout={() => {
+            setGiftModalVisible(false);
+            navigation.navigate(MAIN_ROUTES.REQUEST_PAYOUT);
+          }}
         />
       )}
 

@@ -143,10 +143,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const cred = await authService.signUpWithEmail(email, password);
     // ensureUserProfile in the listener might have created a basic profile, so we just update it
     await ensureUserProfile(cred.user);
-    const { updateUserProfile } = await import('../services/firebase/firestore/usersService');
-    await updateUserProfile(cred.user.uid, {
+    const { completeUserProfile } = await import('../services/firebase/firestore/usersService');
+    await completeUserProfile(cred.user.uid, {
       ...data,
-      displayName: data.firstName ? `${data.firstName} ${data.lastName || ''}`.trim() : cred.user.displayName || email.split('@')[0],
+      displayName: data.displayName || cred.user.displayName || email.split('@')[0],
     });
     await refreshUserProfile();
   };

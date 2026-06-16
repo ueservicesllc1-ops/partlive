@@ -45,6 +45,16 @@ service cloud.firestore {
       }
     }
 
+    // USERNAMES RESERVATION SECURITY RULES:
+    // Anyone can read (get) a username document to check its availability.
+    // Only the authenticated user can create/reserve a username with their own UID, or delete their own reservation.
+    match /usernames/{username} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
     // GLOBAL READ-ONLY PARA CLIENTES:
     // Juegos, Regalos, Banners, Eventos, Misiones y Rankings son administrados por backend/admin
     match /games/{document=**} { allow read: if true; allow write: if false; }
