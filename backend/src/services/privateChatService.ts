@@ -245,7 +245,7 @@ export async function sendPrivateMessage(
     unreadCountsUpdate[targetUserId] = (unreadCountsUpdate[targetUserId] || 0) + 1;
   }
 
-  const convoUpdate: Partial<PrivateConversation> = {
+  const convoUpdate: any = {
     status: statusToSet,
     lastMessageText: messageText || messageEmoji || '[Emoji]',
     lastMessageType: data.type,
@@ -257,6 +257,14 @@ export async function sendPrivateMessage(
 
   if (requestStatusToSet !== undefined) {
     convoUpdate.requestStatus = requestStatusToSet;
+  }
+
+  if (isNew) {
+    convoUpdate.id = conversation.id;
+    convoUpdate.participantIds = conversation.participantIds;
+    convoUpdate.participantAId = conversation.participantAId;
+    convoUpdate.participantBId = conversation.participantBId;
+    convoUpdate.createdAt = conversation.createdAt;
   }
 
   if (requestStatusToSet === 'pending' && (!conversation.requestedBy || conversation.status !== 'pending')) {
