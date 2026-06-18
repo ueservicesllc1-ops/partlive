@@ -25,14 +25,15 @@ export async function registerDeviceToken(
     userId,
     token: data.token,
     platform: data.platform,
-    deviceId: data.deviceId || undefined,
-    deviceName: data.deviceName || undefined,
-    appVersion: data.appVersion || undefined,
     isActive: true,
     lastSeenAt: now,
     createdAt: now,
     updatedAt: now,
   };
+
+  if (data.deviceId) tokenData.deviceId = data.deviceId;
+  if (data.deviceName) tokenData.deviceName = data.deviceName;
+  if (data.appVersion) tokenData.appVersion = data.appVersion;
 
   // Run in a transaction to handle token reassignments
   await db.runTransaction(async (transaction) => {

@@ -222,12 +222,17 @@ export async function sendPrivateMessage(
     senderId: currentUserId,
     receiverId: targetUserId,
     type: data.type,
-    text: messageText || undefined,
-    emoji: messageEmoji || undefined,
     status: 'sent',
     createdAt: timestamp,
     updatedAt: timestamp,
   };
+
+  if (messageText) {
+    newMessage.text = messageText;
+  }
+  if (messageEmoji) {
+    newMessage.emoji = messageEmoji;
+  }
 
   const batch = db.batch();
 
@@ -242,7 +247,6 @@ export async function sendPrivateMessage(
 
   const convoUpdate: Partial<PrivateConversation> = {
     status: statusToSet,
-    requestStatus: requestStatusToSet,
     lastMessageText: messageText || messageEmoji || '[Emoji]',
     lastMessageType: data.type,
     lastMessageSenderId: currentUserId,
@@ -250,6 +254,10 @@ export async function sendPrivateMessage(
     unreadCounts: unreadCountsUpdate,
     updatedAt: timestamp,
   };
+
+  if (requestStatusToSet !== undefined) {
+    convoUpdate.requestStatus = requestStatusToSet;
+  }
 
   if (requestStatusToSet === 'pending' && (!conversation.requestedBy || conversation.status !== 'pending')) {
     convoUpdate.requestedBy = currentUserId;
