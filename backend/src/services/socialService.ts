@@ -46,14 +46,19 @@ export const followUser = async (followerId: string, followingId: string) => {
   const followingRef = db.collection('users').doc(followingId);
 
   await db.runTransaction(async transaction => {
+    // 1. Perform all reads first
     const followSnap = await transaction.get(followRef);
+    const reverseFollowSnap = await transaction.get(reverseFollowRef);
+
+    // 2. Perform validations/checks
     if (followSnap.exists && followSnap.data()?.status === 'active') {
       return; // Already active
     }
 
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
 
-    // 1. Create or set follow document
+    // 3. Perform all writes
+    // Set follow document
     transaction.set(followRef, {
       id: `${followerId}_${followingId}`,
       followerId,
@@ -63,7 +68,7 @@ export const followUser = async (followerId: string, followingId: string) => {
       updatedAt: timestamp,
     }, { merge: true });
 
-    // 2. Increment counters
+    // Increment counters
     transaction.update(followerRef, {
       followingCount: admin.firestore.FieldValue.increment(1),
       updatedAt: timestamp,
@@ -73,8 +78,7 @@ export const followUser = async (followerId: string, followingId: string) => {
       updatedAt: timestamp,
     });
 
-    // 3. Check mutual follow
-    const reverseFollowSnap = await transaction.get(reverseFollowRef);
+    // Check mutual follow
     if (reverseFollowSnap.exists && reverseFollowSnap.data()?.status === 'active') {
       // Create mutual friendship
       transaction.set(friendRef, {
@@ -136,23 +140,27 @@ export const unfollowUser = async (followerId: string, followingId: string) => {
   const followingRef = db.collection('users').doc(followingId);
 
   await db.runTransaction(async transaction => {
+    // 1. Perform all reads first
     const followSnap = await transaction.get(followRef);
+    const followerSnap = await transaction.get(followerRef);
+    const followingSnap = await transaction.get(followingRef);
+    const friendSnap = await transaction.get(friendRef);
+
+    // 2. Perform validations/checks
     if (!followSnap.exists || followSnap.data()?.status === 'removed') {
       return; // Already removed
     }
 
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
 
-    // 1. Mark follow removed
+    // 3. Perform all writes
+    // Mark follow removed
     transaction.update(followRef, {
       status: 'removed',
       updatedAt: timestamp,
     });
 
-    // 2. Decrement counters
-    const followerSnap = await transaction.get(followerRef);
-    const followingSnap = await transaction.get(followingRef);
-
+    // Decrement counters
     const followerData = followerSnap.data() || {};
     const followingData = followingSnap.data() || {};
 
@@ -168,8 +176,7 @@ export const unfollowUser = async (followerId: string, followingId: string) => {
       updatedAt: timestamp,
     });
 
-    // 3. Mark friend removed if it exists and decrement friend count
-    const friendSnap = await transaction.get(friendRef);
+    // Mark friend removed if it exists and decrement friend count
     if (friendSnap.exists && friendSnap.data()?.status === 'active') {
       transaction.update(friendRef, {
         status: 'removed',
