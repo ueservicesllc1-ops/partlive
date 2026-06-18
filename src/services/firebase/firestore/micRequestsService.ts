@@ -65,17 +65,22 @@ export const approveMicRequest = async (
   const db = firestore();
   const requestRef = db.collection(getRoomMicRequestsPath(roomId)).doc(requestId);
 
-  // 1. Update request status to approved
-  await requestRef.update({
-    status: 'approved',
-    updatedAt: firestore.FieldValue.serverTimestamp(),
-  });
+  const doc = await requestRef.get();
+  if (doc.exists) {
+    // 1. Update request status to approved
+    await requestRef.update({
+      status: 'approved',
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    });
+  }
 
   // 2. Assign seat to user (will handle role change and update counts)
   await assignSeat(roomId, requestId, seatIndex);
 
   // 3. Remove request document
-  await requestRef.delete();
+  if (doc.exists) {
+    await requestRef.delete();
+  }
 };
 
 export const rejectMicRequest = async (roomId: string, requestId: string, moderatorId: string): Promise<void> => {
