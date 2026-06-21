@@ -297,34 +297,42 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         </Text>
       </View>
 
-      <View style={{ flex: 1, paddingHorizontal: spacing.lg }}>
-        {/* Seats Grid & Listeners at the top */}
-        <MicSeatsGrid
-          members={enrichedMembers}
-          onSeatPress={handleSeatPress}
-          maxMics={room.maxMics || 8}
-        />
-        <RoomMembersList members={enrichedMembers} onMemberPress={handleMemberPress} />
+      <View style={styles.mainContainer}>
+        {/* Background Content: Seats Grid & Listeners */}
+        <ScrollView 
+          style={styles.backgroundContent}
+          contentContainerStyle={styles.backgroundContentScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <MicSeatsGrid
+            members={enrichedMembers}
+            onSeatPress={handleSeatPress}
+            maxMics={room.maxMics || 8}
+          />
+          <RoomMembersList members={enrichedMembers} onMemberPress={handleMemberPress} />
+        </ScrollView>
 
-        {/* Real-time Moderable Chat Panel */}
-        <RoomChatPanel
-          roomId={roomId}
-          currentUserId={user?.uid || ''}
-          currentMember={currentMember}
-          actorRole={currentUserRole}
-          messages={messages}
-          onSendMessage={sendMessage}
-          onSendEmoji={sendEmoji}
-          onLoadOlder={loadOlderMessages}
-          onHideMessage={hideMessage}
-          onDeleteMessage={deleteOwnMessage}
-          onReportMessage={async (msgId, reason) => {
-            await reportMessage(msgId, reason);
-          }}
-          onBlockUser={blockUserFromRoom}
-          onKickMember={kickMember}
-          canModerate={isPrivileged}
-        />
+        {/* Real-time Moderable Chat Panel (Floating Layer on top) */}
+        <View style={styles.chatFloatingContainer}>
+          <RoomChatPanel
+            roomId={roomId}
+            currentUserId={user?.uid || ''}
+            currentMember={currentMember}
+            actorRole={currentUserRole}
+            messages={messages}
+            onSendMessage={sendMessage}
+            onSendEmoji={sendEmoji}
+            onLoadOlder={loadOlderMessages}
+            onHideMessage={hideMessage}
+            onDeleteMessage={deleteOwnMessage}
+            onReportMessage={async (msgId, reason) => {
+              await reportMessage(msgId, reason);
+            }}
+            onBlockUser={blockUserFromRoom}
+            onKickMember={kickMember}
+            canModerate={isPrivileged}
+          />
+        </View>
       </View>
 
       {/* Tool bar actions */}
@@ -661,5 +669,25 @@ const styles = StyleSheet.create({
     bottom: 220, // Sit above the chat input
     zIndex: 9999,
     gap: spacing.sm,
+  },
+  mainContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  backgroundContent: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+  },
+  backgroundContentScroll: {
+    paddingBottom: 400,
+  },
+  chatFloatingContainer: {
+    position: 'absolute',
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: 0,
+    top: 210,
+    zIndex: 100,
+    elevation: 10,
   },
 });
