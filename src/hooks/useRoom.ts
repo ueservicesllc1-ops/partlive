@@ -294,9 +294,9 @@ export const useRoom = (roomId: string) => {
     if (!roomId || messages.length === 0 || messagesLoading) return;
     setMessagesLoading(true);
     try {
-      const oldestMessage = messages[0];
+      const oldestMessage = messages[messages.length - 1];
       const older = await getOlderRoomMessages(roomId, oldestMessage.createdAt);
-      setMessages(prev => [...older, ...prev]);
+      setMessages(prev => [...prev, ...older]);
     } catch (e) {
       console.error('Error loading older messages:', e);
     } finally {

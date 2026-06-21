@@ -48,7 +48,29 @@ export const sendRoomEmoji = async (
   return ref.id;
 };
 
-// 3. Send notification/system logs inside chat
+// 3. Send sticker message
+export const sendRoomSticker = async (
+  roomId: string,
+  senderProfile: { uid: string; displayName: string; photoURL?: string; username?: string },
+  stickerUrl: string,
+  senderRole?: ChatMessage['senderRole']
+): Promise<string> => {
+  const ref = await firestore().collection(getRoomMessagesPath(roomId)).add({
+    roomId,
+    senderId: senderProfile.uid,
+    senderName: senderProfile.displayName,
+    senderUsername: senderProfile.username || '',
+    senderPhotoURL: senderProfile.photoURL || '',
+    senderRole: senderRole || 'listener',
+    text: stickerUrl,
+    type: 'sticker',
+    status: 'active',
+    createdAt: nowServerTimestamp(),
+  });
+  return ref.id;
+};
+
+// 4. Send notification/system logs inside chat
 export const sendRoomSystemMessage = async (
   roomId: string,
   text: string,
@@ -104,8 +126,7 @@ export const listenToRoomMessages = (
     .limit(limitCount)
     .onSnapshot(snap => {
       if (snap) {
-        // Reverse array to show older messages first
-        const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage)).reverse();
+        const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
         // Return only non-hidden/non-deleted messages to standard callback
         callback(msgs);
       }
@@ -125,7 +146,7 @@ export const getOlderRoomMessages = async (
     .limit(limitCount)
     .get();
 
-  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage)).reverse();
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
 };
 
 // 7. Hide/Moderation toggle (Admin method)
@@ -224,5 +245,5 @@ export const getRoomMessages = async (roomId: string, limitCount: number = 50): 
     .orderBy('createdAt', 'desc')
     .limit(limitCount)
     .get();
-  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage)).reverse();
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
 };
