@@ -7,7 +7,7 @@ export interface ChatMessage {
   senderPhotoURL?: string;
   senderRole?: 'owner' | 'host' | 'moderator' | 'speaker' | 'listener';
   text?: string;
-  type: 'text' | 'emoji' | 'system' | 'gift' | 'moderation';
+  type: 'text' | 'emoji' | 'system' | 'gift' | 'moderation' | 'sticker';
   status: 'active' | 'hidden' | 'deleted';
   metadata?: Record<string, any>;
   replyToMessageId?: string;

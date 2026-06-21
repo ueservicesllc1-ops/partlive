@@ -6,6 +6,7 @@ import { ChatMessageList } from './ChatMessageList';
 import { EmojiQuickBar } from './EmojiQuickBar';
 import { ChatInputBar } from './ChatInputBar';
 import { ChatModerationMenu } from './ChatModerationMenu';
+import { EmojiStickerPicker } from './EmojiStickerPicker';
 import { colors, spacing } from '../../theme';
 import { checkChatRateLimit } from '../../utils/chatRateLimit';
 import { validateChatText } from '../../utils/chatValidation';
@@ -17,6 +18,7 @@ interface RoomChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (text: string) => Promise<void>;
   onSendEmoji: (emoji: string) => Promise<void>;
+  onSendSticker: (stickerUrl: string) => Promise<void>;
   onLoadOlder: () => void;
   onHideMessage: (messageId: string, reason: string) => Promise<void>;
   onDeleteMessage: (messageId: string) => Promise<void>;
@@ -35,6 +37,7 @@ export const RoomChatPanel: React.FC<RoomChatPanelProps> = ({
   messages,
   onSendMessage,
   onSendEmoji,
+  onSendSticker,
   onLoadOlder,
   onHideMessage,
   onDeleteMessage,
@@ -48,6 +51,8 @@ export const RoomChatPanel: React.FC<RoomChatPanelProps> = ({
   const [selectedMessage, setSelectedMessage] = useState<ChatMessage | undefined>(undefined);
   const [menuVisible, setMenuVisible] = useState(false);
   const [offlineError, setOfflineError] = useState<string | null>(null);
+  const [inputText, setInputText] = useState('');
+  const [pickerVisible, setPickerVisible] = useState(false);
 
   const handleSendMessage = async (text: string) => {
     // 1. Enforce rate limiting local checks
@@ -67,9 +72,30 @@ export const RoomChatPanel: React.FC<RoomChatPanelProps> = ({
     setOfflineError(null);
     try {
       await onSendMessage(text);
+      setInputText('');
     } catch (e: any) {
       setOfflineError('No se pudo enviar el mensaje.');
     }
+  };
+
+  const handleSendSticker = async (stickerUrl: string) => {
+    const rateLimit = checkChatRateLimit(currentUserId, false);
+    if (!rateLimit.allowed) {
+      Alert.alert('Calma', `Estás enviando stickers muy rápido. Espera ${rateLimit.waitSeconds}s.`);
+      return;
+    }
+
+    setOfflineError(null);
+    try {
+      await onSendSticker(stickerUrl);
+      setPickerVisible(false);
+    } catch (e: any) {
+      setOfflineError('No se pudo enviar el sticker.');
+    }
+  };
+
+  const handleSelectEmoji = (emoji: string) => {
+    setInputText(prev => prev + emoji);
   };
 
   const handleSendEmoji = async (emoji: string) => {
@@ -113,7 +139,21 @@ export const RoomChatPanel: React.FC<RoomChatPanelProps> = ({
       <EmojiQuickBar onSendEmoji={handleSendEmoji} disabled={disabled || !currentMember} />
 
       {/* TextInput compose row */}
-      <ChatInputBar onSend={handleSendMessage} disabled={disabled || !currentMember} />
+      <ChatInputBar 
+        onSend={handleSendMessage} 
+        disabled={disabled || !currentMember} 
+        text={inputText}
+        onChangeText={setInputText}
+        onTogglePicker={() => setPickerVisible(prev => !prev)}
+        showPicker={pickerVisible}
+      />
+
+      {/* Emoji & Sticker Picker */}
+      <EmojiStickerPicker
+        visible={pickerVisible}
+        onSelectEmoji={handleSelectEmoji}
+        onSelectSticker={handleSendSticker}
+      />
 
       {/* Message action sheet options */}
       {selectedMessage && (

@@ -60,6 +60,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
     leave,
     sendMessage,
     sendEmoji,
+    sendSticker,
     hideMessage,
     deleteOwnMessage,
     reportMessage,
@@ -322,6 +323,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
             messages={messages}
             onSendMessage={sendMessage}
             onSendEmoji={sendEmoji}
+            onSendSticker={sendSticker}
             onLoadOlder={loadOlderMessages}
             onHideMessage={hideMessage}
             onDeleteMessage={deleteOwnMessage}

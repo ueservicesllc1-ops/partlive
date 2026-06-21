@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { ChatMessage } from '../../types';
 import { colors, spacing } from '../../theme';
 import { Avatar } from '../Avatar';
@@ -97,6 +97,40 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
       return '';
     }
   };
+
+  // 6. Sticker Message Render
+  if (message.type === 'sticker') {
+    return (
+      <TouchableOpacity
+        style={[styles.msgContainer, isOwn && styles.ownRow]}
+        onLongPress={onLongPress}
+        activeOpacity={0.8}
+      >
+        {!isOwn && (
+          <Avatar source={message.senderPhotoURL} emoji="👤" size={32} />
+        )}
+        
+        <View style={[styles.stickerBubble, isOwn ? styles.ownSticker : styles.otherSticker]}>
+          <View style={styles.headerRow}>
+            <Text style={styles.senderName}>{message.senderName}</Text>
+            {getRoleBadge()}
+          </View>
+          
+          <Image 
+            source={{ uri: message.text }} 
+            style={styles.stickerImage} 
+            resizeMode="contain"
+          />
+          
+          <Text style={styles.timeText}>{formattedTime()}</Text>
+        </View>
+
+        {isOwn && (
+          <Avatar source={message.senderPhotoURL} emoji="👤" size={32} />
+        )}
+      </TouchableOpacity>
+    );
+  }
 
   return (
     <TouchableOpacity
@@ -247,5 +281,21 @@ const styles = StyleSheet.create({
   },
   emojiText: {
     fontSize: 32,
+  },
+  stickerBubble: {
+    borderRadius: 16,
+    padding: spacing.xs,
+    maxWidth: '75%',
+  },
+  ownSticker: {
+    alignItems: 'flex-end',
+  },
+  otherSticker: {
+    alignItems: 'flex-start',
+  },
+  stickerImage: {
+    width: 90,
+    height: 90,
+    marginVertical: 4,
   },
 });

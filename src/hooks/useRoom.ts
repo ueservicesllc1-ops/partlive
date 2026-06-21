@@ -25,6 +25,7 @@ import {
 import {
   sendRoomMessage,
   sendRoomEmoji,
+  sendRoomSticker,
   listenToRoomMessages,
   getOlderRoomMessages,
   hideRoomMessage,
@@ -224,6 +225,17 @@ export const useRoom = (roomId: string) => {
     await sendRoomEmoji(roomId, senderProfile, emoji, currentUserRole || 'listener');
   }, [roomId, userProfile, currentUserRole]);
 
+  const sendSticker = useCallback(async (stickerUrl: string) => {
+    if (!roomId || !userProfile) return;
+    const senderProfile = {
+      uid: userProfile.uid,
+      displayName: userProfile.displayName,
+      photoURL: userProfile.photoURL,
+      username: userProfile.username,
+    };
+    await sendRoomSticker(roomId, senderProfile, stickerUrl, currentUserRole || 'listener');
+  }, [roomId, userProfile, currentUserRole]);
+
   const hideMessageAction = useCallback(async (messageId: string, reason: string) => {
     if (!roomId || !userProfile) return;
     await hideRoomMessage(roomId, messageId, userProfile.uid, reason);
@@ -384,6 +396,7 @@ export const useRoom = (roomId: string) => {
     leave,
     sendMessage,
     sendEmoji,
+    sendSticker,
     hideMessage: hideMessageAction,
     deleteOwnMessage: deleteOwnMessageAction,
     reportMessage: reportMessageAction,

@@ -1,24 +1,47 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TextInput, TouchableOpacity, Text, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useRef } from 'react';
+import { View, StyleSheet, TextInput, TouchableOpacity, Text, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { colors, spacing } from '../../theme';
 
 interface ChatInputBarProps {
   onSend: (text: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  text: string;
+  onChangeText: (text: string) => void;
+  onTogglePicker: () => void;
+  showPicker: boolean;
 }
 
 export const ChatInputBar: React.FC<ChatInputBarProps> = ({
   onSend,
   disabled = false,
   placeholder = 'Escribe un mensaje...',
+  text,
+  onChangeText,
+  onTogglePicker,
+  showPicker,
 }) => {
-  const [text, setText] = useState('');
+  const inputRef = useRef<TextInput>(null);
 
   const handleSend = () => {
     if (disabled || text.trim().length === 0) return;
     onSend(text);
-    setText('');
+  };
+
+  const handleToggle = () => {
+    if (showPicker) {
+      onTogglePicker();
+      inputRef.current?.focus();
+    } else {
+      Keyboard.dismiss();
+      onTogglePicker();
+    }
+  };
+
+  const handleFocus = () => {
+    if (showPicker) {
+      onTogglePicker();
+    }
   };
 
   const isNearLimit = text.length > 250;
@@ -30,15 +53,27 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
       style={styles.keyboardView}
     >
       <View style={[styles.container, disabled && styles.disabledContainer]}>
+        {/* Toggle Picker Button */}
+        <TouchableOpacity
+          style={styles.toggleBtn}
+          onPress={handleToggle}
+          disabled={disabled}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.toggleIcon}>{showPicker ? '⌨️' : '😊'}</Text>
+        </TouchableOpacity>
+
         <TextInput
+          ref={inputRef}
           style={[styles.input, { maxHeight: 100 }]}
           placeholder={disabled ? 'Chat deshabilitado' : placeholder}
           placeholderTextColor={colors.textMuted}
           value={text}
-          onChangeText={setText}
+          onChangeText={onChangeText}
           maxLength={300}
           multiline
           editable={!disabled}
+          onFocus={handleFocus}
         />
         
         {isNearLimit && (
@@ -75,6 +110,15 @@ const styles = StyleSheet.create({
   disabledContainer: {
     opacity: 0.5,
     backgroundColor: '#151221',
+  },
+  toggleBtn: {
+    paddingHorizontal: spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.xs,
+  },
+  toggleIcon: {
+    fontSize: 20,
   },
   input: {
     flex: 1,
