@@ -134,6 +134,15 @@ export const RoomsScreen = ({ navigation }: any) => {
       <Header
         title="Salas de Voz 🎙️"
         subtitle="Entra, habla y comparte momentos increíbles"
+        rightComponent={
+          <TouchableOpacity
+            style={styles.createRoomHeaderBtn}
+            onPress={() => navigation.navigate(MAIN_ROUTES.CREATE_ROOM)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.createRoomHeaderBtnText}>+ Crear</Text>
+          </TouchableOpacity>
+        }
       />
 
       {/* Text Search Bar */}
@@ -373,5 +382,18 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: '#FFF',
     lineHeight: 30,
+  },
+  createRoomHeaderBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createRoomHeaderBtnText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
