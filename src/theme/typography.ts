@@ -49,6 +49,11 @@ export const presets = {
     fontWeight: typography.weights.regular,
     lineHeight: 20,
   } as TextStyle,
+  body: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.regular,
+    lineHeight: 20,
+  } as TextStyle,
   bodySmall: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.regular,

@@ -66,7 +66,7 @@ export const GiftReceivedToast: React.FC<GiftReceivedToastProps> = ({
     }, 3500);
 
     return () => clearTimeout(timer);
-  }, [toast, onDismiss, slideAnim, opacityAnim]);
+  }, [toast.id, onDismiss, slideAnim, opacityAnim]);
 
   return (
     <Animated.View

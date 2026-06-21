@@ -29,14 +29,7 @@ export const DiamondPackagesTab: React.FC<DiamondPackagesTabProps> = ({
 
   const sortedPackages = [...packages].sort((a, b) => a.sortOrder - b.sortOrder);
 
-  if (loadingProducts) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={styles.loadingText}>Obteniendo precios de Google Play...</Text>
-      </View>
-    );
-  }
+
 
   return (
     <View style={styles.container}>
@@ -64,8 +57,9 @@ export const DiamondPackagesTab: React.FC<DiamondPackagesTabProps> = ({
         renderItem={({ item }) => {
           // Check if Google Play loaded localized details, otherwise fallback to priceUsd
           const iapProduct = iapProducts[item.googlePlayProductId];
+          // localizedPrice exists on ProductAndroid; use optional chaining for safety
           const displayPrice = iapProduct
-            ? iapProduct.localizedPrice
+            ? ((iapProduct as any).localizedPrice ?? `$${item.priceUsd.toFixed(2)} USD`)
             : `$${item.priceUsd.toFixed(2)} USD`;
 
           return (
@@ -220,7 +214,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   purchasingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(11, 8, 19, 0.85)',
     zIndex: 999,
     justifyContent: 'center',

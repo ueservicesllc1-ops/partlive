@@ -57,6 +57,7 @@ export interface DiamondPackage {
   priceUsd: number;
   googlePlayProductId: string;
   isActive: boolean;
+  isPopular?: boolean;     // Optional flag for highlighted packages
   sortOrder: number;
   createdAt: any; // Firestore Timestamp
   updatedAt: any; // Firestore Timestamp

@@ -97,7 +97,7 @@ export const SearchFiltersSheet: React.FC<SearchFiltersSheetProps> = ({
                       style={[styles.badge, active && styles.badgeActive]}
                     >
                       <Text style={[styles.badgeText, active && styles.badgeTextActive]}>
-                        {country.flag} {country.name}
+                        {country.emoji} {country.name}
                       </Text>
                     </TouchableOpacity>
                   );

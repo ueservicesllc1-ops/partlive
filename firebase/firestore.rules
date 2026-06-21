@@ -1,0 +1,482 @@
+// Reglas de seguridad de Firestore - PartyLiveApp
+// Proyecto: party-79ae1
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función de ayuda: verificar si el usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Función de ayuda: verificar si el usuario está accediendo a su propio documento
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // USERS:
+    // - Todos pueden leer perfiles públicos.
+    // - Solo el propietario puede editar ciertos campos de su perfil.
+    match /users/{uid} {
+      allow read: if isAuthenticated();
+      // En el futuro, prohibir modificar saldo, rol o isVerified desde el cliente.
+      allow write: if isOwner(uid);
+      
+      // Subcolecciones privadas del usuario
+      match /walletTransactions/{txId} {
+        allow read: if isOwner(uid);
+        allow write: if false; // Solo el backend debe crear transacciones
+      }
+      match /notifications/{notifId} {
+        allow read, update: if isOwner(uid);
+        allow create: if isAuthenticated(); // Cualquiera puede enviar una notif (ej. follow), o limitar a backend
+        allow delete: if isOwner(uid);
+      }
+      match /blockedUsers/{blockId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /devices/{deviceId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /dailyMissions/{missionId} {
+        allow read: if isOwner(uid);
+        allow write: if isOwner(uid); // Idealmente validado por backend
+      }
+    }
+
+    // USERNAMES RESERVATION SECURITY RULES:
+    // Anyone can read (get) a username document to check its availability.
+    // Only the authenticated user can create/reserve a username with their own UID, or delete their own reservation.
+    match /usernames/{username} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // GLOBAL READ-ONLY PARA CLIENTES:
+    // Juegos, Regalos, Banners, Eventos, Misiones y Rankings son administrados por backend/admin
+    match /games/{document=**} { allow read: if true; allow write: if false; }
+    match /gifts/{document=**} { allow read: if true; allow write: if false; }
+    match /banners/{document=**} { allow read: if true; allow write: if false; }
+    match /events/{document=**} { allow read: if true; allow write: if false; }
+    match /missions/{document=**} { allow read: if isAuthenticated(); allow write: if false; }
+    match /rankings/{document=**} { allow read: if true; allow write: if false; }
+
+    // USER MISSIONS PROGRESS & REWARDS (Read-only for users, writes restricted to backend/admin)
+    match /userMissionProgress/{progressId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /missionRewards/{rewardId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    // ROOMS & LIVES:
+    // - Cualquiera puede leer.
+    // - Usuarios autenticados pueden crear.
+    // - Solo owner/host puede actualizar/borrar (requiere validación extra).
+    match /rooms/{roomId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        (resource.data.ownerId == request.auth.uid || resource.data.hostId == request.auth.uid) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['listenersCount', 'speakersCount', 'currentListenersCount', 'currentSpeakersCount', 'updatedAt']))
+      );
+      allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || resource.data.hostId == request.auth.uid);
+      
+      // Only authenticated room members can send messages.
+      // - Must set status initially to 'active'.
+      // - Must match senderId with request.auth.uid (or be type 'system').
+      // - Normal users cannot write hiddenBy metadata fields.
+      match /messages/{messageId} {
+        allow read: if true;
+        allow create: if isAuthenticated() 
+                      && exists(/databases/$(database)/documents/rooms/$(roomId)/members/$(request.auth.uid))
+                      && (request.resource.data.senderId == request.auth.uid || request.resource.data.type == 'system')
+                      && request.resource.data.status == 'active';
+        allow update: if isAuthenticated()
+                      && (request.resource.data.senderId == request.auth.uid || exists(/databases/$(database)/documents/rooms/$(roomId)/members/$(request.auth.uid))); // Admin hide or author delete
+      }
+      
+      // members subcollection rules
+      match /members/{memberId} {
+        allow read: if true;
+        // Rules ensuring role management constraints:
+        // - Anyone authenticated can create their own member document when joining (default role listener).
+        // - Creator of the room can set their role to 'owner'.
+        allow create: if isAuthenticated() && memberId == request.auth.uid && (
+          request.resource.data.role == 'listener' || 
+          (request.resource.data.role == 'owner' && getAfter(/databases/$(database)/documents/rooms/$(roomId)).data.ownerId == request.auth.uid)
+        );
+        allow update: if isAuthenticated() && (
+          // Allow users to update their own seatIndex (claiming mic/releasing seat) or isMuted self
+          (memberId == request.auth.uid && request.resource.data.role == resource.data.role) ||
+          // Allow elevated users (owner, host, moderator) to modify others based on hierarchy
+          exists(/databases/$(database)/documents/rooms/$(roomId)/members/$(request.auth.uid))
+        );
+        allow delete: if isAuthenticated() && memberId == request.auth.uid;
+      }
+
+      // micRequests subcollection rules
+      match /micRequests/{requestId} {
+        allow read: if true;
+        // Listeners can request mic
+        allow create: if isAuthenticated() && requestId == request.auth.uid;
+        // Owners, hosts and moderators can approve/reject/delete mic requests
+        allow update, delete: if isAuthenticated() && (
+          requestId == request.auth.uid ||
+          exists(/databases/$(database)/documents/rooms/$(roomId)/members/$(request.auth.uid))
+        );
+      }
+
+      // moderationLogs subcollection rules
+      match /moderationLogs/{logId} {
+        allow read: if isAuthenticated() && exists(/databases/$(database)/documents/rooms/$(roomId)/members/$(request.auth.uid));
+        // Client writes must match auth moderator
+        allow create: if isAuthenticated() && request.resource.data.moderatorId == request.auth.uid;
+        allow update, delete: if false; // Logs are immutable
+      }
+
+      // giftEvents subcollection rules
+      match /giftEvents/{eventId} {
+        allow read: if true;
+        allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // roomBans rules: client can only read, writing goes through backend
+    match /roomBans/{banId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // roomAccessRequests: client can request entry, reviewed by host on backend
+    match /roomAccessRequests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // roomInvites: client can read own invites, writes go through backend
+    match /roomInvites/{inviteId} {
+      allow read: if isAuthenticated() && (resource.data.invitedUserId == request.auth.uid || resource.data.invitedBy == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /lives/{liveId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        (resource.data.hostId == request.auth.uid) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewersCount', 'peakViewersCount', 'likesCount', 'giftsCount', 'beansEarned', 'updatedAt']))
+      );
+      allow delete: if false; // Streams should not be hard-deleted from client
+
+      // viewers subcollection rules
+      match /viewers/{viewerId} {
+        allow read: if true;
+        allow create, update: if isAuthenticated() && viewerId == request.auth.uid;
+        allow delete: if isAuthenticated() && viewerId == request.auth.uid;
+      }
+      
+      // messages rules: only authenticated users can write messages if allowChat is active
+      match /messages/{messageId} {
+        allow read: if true;
+        allow create: if isAuthenticated() 
+                      && (request.resource.data.senderId == request.auth.uid || request.resource.data.type == 'system')
+                      && request.resource.data.status == 'active';
+        allow update: if isAuthenticated() && (
+          request.resource.data.senderId == request.auth.uid ||
+          exists(/databases/$(database)/documents/lives/$(liveId)/viewers/$(request.auth.uid))
+        );
+      }
+
+      // giftEvents rules: client can create, but backend handles coin verification
+      match /giftEvents/{eventId} {
+        allow read: if true;
+        allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+
+    // RELACIONES Y REPORTES:
+    match /follows/{followId} {
+      allow read: if true;
+      allow write: if isAuthenticated(); // TODO: restringir a que followerId sea auth.uid
+    }
+    
+    match /blocks/{blockId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /reports/{reportId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if false; // Solo admins/moderadores
+    }
+
+    match /userModeration/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false; // Solo admin/backend
+    }
+
+    // ROOT NOTIFICATIONS (queried by userId from client)
+    // Client can read and update its own notifications, but cannot create or delete
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid; // Mark as read
+      allow create: if isAuthenticated(); // Backend creates, but also allow friend notifs
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // CARTERA Y MONETIZACIÓN (CRÍTICO):
+    match /wallets/{walletId} {
+      allow read: if isOwner(walletId); // Client reads its own wallet in real-time
+      allow write: if false; // Solo backend crea/modifica wallets
+    }
+    
+    match /walletTransactions/{txId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow write: if false; // Solo backend
+    }
+
+    match /coinPackages/{packageId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Solo admin/backend
+    }
+
+    match /diamondPackages/{packageId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Solo admin/backend
+    }
+
+    match /purchases/{purchaseId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow write: if false; // Solo backend
+    }
+
+    match /processedPurchaseTokens/{token} {
+      allow read, write: if false; // Solo backend
+    }
+
+    match /hostApplications/{appId} {
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update, delete: if false; // Solo admin
+    }
+
+    match /hostPayouts/{payoutId} {
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated() && resource.data.hostId == request.auth.uid;
+      allow update, delete: if false; // Solo admin
+    }
+
+    match /hostPayoutMethods/{methodId} {
+      allow read: if isAuthenticated() && resource.data.hostId == request.auth.uid;
+      allow write: if false; // Solo backend
+    }
+
+    match /moderationLogs/{logId} {
+      allow read, write: if false; // Solo backend/admins
+    }
+
+    // ─── CASUAL GAMES SECURITY RULES ──────────────────────────────────────────
+    match /gameSessions/{sessionId} {
+      allow read: if isAuthenticated() && (
+        resource == null ||
+        resource.data.visibility == 'public' ||
+        resource.data.hostId == request.auth.uid ||
+        (resource.data.invitedUserIds != null && request.auth.uid in resource.data.invitedUserIds)
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      
+      match /players/{playerId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() && (
+          playerId == request.auth.uid || 
+          get(/databases/$(database)/documents/gameSessions/$(sessionId)).data.hostId == request.auth.uid
+        );
+      }
+      
+      match /moves/{moveId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    match /gameInvites/{inviteId} {
+      allow read: if isAuthenticated() && (
+        resource.data.fromUserId == request.auth.uid || 
+        resource.data.toUserId == request.auth.uid
+      );
+      allow create: if isAuthenticated() && request.resource.data.fromUserId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.fromUserId == request.auth.uid && request.resource.data.status == 'cancelled') ||
+        (resource.data.toUserId == request.auth.uid && (request.resource.data.status == 'accepted' || request.resource.data.status == 'declined'))
+      );
+      allow delete: if false;
+    }
+
+    match /matchmakingRequests/{requestId} {
+      allow read, write: if isAuthenticated() && requestId == request.auth.uid;
+    }
+
+    // SEARCH SYSTEM SECURITY RULES
+    match /recentSearches/{searchId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update: if false; // Recents are not updated from client, just re-created/deleted
+    }
+
+    match /trendingSearches/{trendingId} {
+      allow read: if true; // Public listings
+      allow create, update: if isAuthenticated(); // Allows recording search terms
+      allow delete: if false; // Only admin (from backend)
+    }
+
+    match /blockedSearchTerms/{termId} {
+      allow read: if true; // Client queries can read to verify or bypass local warnings
+      allow write: if false; // Only admin can edit blocked terms
+    }
+
+    // SOCIAL SYSTEM SECURITY RULES
+    match /follows/{followId} {
+      allow read: if isAuthenticated();
+      // follow / unfollow writes go through backend in production, but let's allow read/write in dev stacks
+      allow write: if isAuthenticated() && (request.auth.uid == request.resource.data.followerId || request.auth.uid == resource.data.followerId);
+    }
+
+    match /friends/{friendId} {
+      allow read: if isAuthenticated() && (resource.data.userAId == request.auth.uid || resource.data.userBId == request.auth.uid);
+      allow write: if false; // Only backend can manage mutual friend connections
+    }
+
+    match /socialActivities/{activityId} {
+      allow read: if isAuthenticated() && (
+        resource.data.visibility == 'public' ||
+        (resource.data.visibility == 'followers' && exists(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + resource.data.userId))) ||
+        resource.data.userId == request.auth.uid
+      );
+      allow write: if false; // Only backend or cloud events can write activities
+    }
+
+    // ─── PRIVATE CHAT SECURITY RULES ──────────────────────────────────────────
+    match /privateConversations/{conversationId} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
+      allow write: if false;
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/privateConversations/$(conversationId)).data.participantIds;
+        allow write: if false;
+      }
+    }
+
+    match /messageRequests/{requestId} {
+      allow read: if isAuthenticated() && (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ─── KARAOKE SECURITY RULES ────────────────────────────────────────────────
+    match /karaokeSongs/{songId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /karaokeSessions/{sessionId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /karaokeQueue/{queueItemId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /karaokePerformances/{performanceId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /karaokeFavorites/{favId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || favId.matches(request.auth.uid + '.*'));
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /karaokeBattles/{battleId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /karaokeVotes/{voteId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // ─── PK BATTLES SECURITY RULES ─────────────────────────────────────────────
+    match /pkBattles/{battleId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+    match /pkInvites/{inviteId} {
+      allow read: if isAuthenticated() && (resource.data.fromHostId == request.auth.uid || resource.data.toHostId == request.auth.uid);
+      allow write: if false;
+    }
+    match /pkGiftContributions/{contributionId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // ─── AGENCY SYSTEM SECURITY RULES ──────────────────────────────────────────
+    match /agencies/{agencyId} {
+      allow read: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || request.auth.token.role == 'admin');
+      allow write: if false;
+    }
+    match /agencyHosts/{hostLinkId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+    match /agencyCommissions/{commissionId} {
+      allow read: if isAuthenticated() && (resource.data.hostId == request.auth.uid || request.auth.token.role == 'admin');
+      allow write: if false;
+    }
+
+    // ─── KYC VERIFICATION SECURITY RULES ───────────────────────────────────────
+    match /verifications/{requestId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || request.auth.token.role == 'admin');
+      allow write: if false;
+    }
+
+    // ─── ANALYTICS & METRICS SECURITY RULES ────────────────────────────────────
+    // All analytics data must only be written and read via the backend API / admin SDK
+    match /analyticsEvents/{id} {
+      allow read, write: if false;
+    }
+    match /dailyAnalytics/{id} {
+      allow read, write: if false;
+    }
+    match /countryAnalytics/{id} {
+      allow read, write: if false;
+    }
+    match /hostAnalytics/{id} {
+      allow read, write: if false;
+    }
+    match /agencyAnalytics/{id} {
+      allow read, write: if false;
+    }
+    match /giftAnalytics/{id} {
+      allow read, write: if false;
+    }
+    match /adminAlerts/{id} {
+      allow read, write: if false;
+    }
+  }
+}

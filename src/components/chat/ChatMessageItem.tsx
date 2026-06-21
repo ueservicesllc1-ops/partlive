@@ -85,9 +85,17 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
   const formattedTime = () => {
     if (!message.createdAt) return '';
-    // Format timestamp or date to HH:MM
-    const date = message.createdAt.toDate ? message.createdAt.toDate() : new Date(message.createdAt);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+      const date = typeof message.createdAt.toDate === 'function'
+        ? message.createdAt.toDate()
+        : new Date(message.createdAt);
+      if (isNaN(date.getTime())) {
+        return '';
+      }
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return '';
+    }
   };
 
   return (

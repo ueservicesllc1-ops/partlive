@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import firestore from '@react-native-firebase/firestore';
 import { getGiftById } from '../services/firebase/firestore/giftsService';
 
@@ -58,7 +58,7 @@ export const useGiftEvents = (
               try {
                 const gift = await getGiftById(data.giftId);
                 if (gift) {
-                  animationType = gift.animationType;
+                  animationType = gift.animationType || 'small';
                 }
               } catch (err) {
                 console.error('[useGiftEvents] Failed to fetch gift details:', err);
@@ -117,13 +117,13 @@ export const useGiftEvents = (
     return () => unsubscribe();
   }, [targetType, targetId]);
 
-  const dismissToast = (id: string) => {
+  const dismissToast = useCallback((id: string) => {
     setActiveToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  }, []);
 
-  const dismissBanner = (id: string) => {
+  const dismissBanner = useCallback((id: string) => {
     setActiveBanners((prev) => prev.filter((b) => b.id !== id));
-  };
+  }, []);
 
   return {
     lastEvent,

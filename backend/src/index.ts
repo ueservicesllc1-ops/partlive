@@ -27,6 +27,7 @@ import { pkBattleRoutes } from './routes/pkBattleRoutes';
 import { verificationRoutes } from './routes/verificationRoutes';
 import { sessionRoutes } from './routes/sessionRoutes';
 import { analyticsRoutes } from './routes/analyticsRoutes';
+import { roomAccessRoutes } from './routes/roomAccessRoutes';
 import { cleanupAbandonedSessions } from './services/sessionTrackingService';
 import {
   generalLimiter,
@@ -44,10 +45,16 @@ const PORT = process.env.PORT || 4000;
 
 app.use(express.json());
 
-// Temporal para desarrollo. En producción, limitar al dominio real de la app.
+// React Native apps do NOT send an Origin header, so strict origin filtering
+// would reject all mobile requests. We allow any origin here since auth is
+// handled via Firebase ID tokens (not session cookies).
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:8081'],
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, curl)
+    // or any origin for now (admin panel, web clients)
+    callback(null, true);
+  },
+  credentials: true,
 }));
 
 // Apply general rate limit to all API routes
@@ -88,6 +95,7 @@ app.use('/api/sessions/start', sessionStartLimiter);
 app.use('/api/sessions/heartbeat', heartbeatLimiter);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/rooms', roomAccessRoutes);
 
 app.listen(PORT, () => {
   console.log(`🚀 Backend running on http://localhost:${PORT}`);

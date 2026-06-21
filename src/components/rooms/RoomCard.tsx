@@ -12,7 +12,7 @@ interface RoomCardProps {
 
 export const RoomCard: React.FC<RoomCardProps> = ({ room, onPress }) => {
   return (
-    <Card variant="gradient" style={styles.card} onPress={onPress}>
+    <TouchableOpacity activeOpacity={0.85} style={styles.card} onPress={onPress}>
       <View style={styles.row}>
         {/* Left: Cover Image/Avatar & Live Badge */}
         <View style={styles.imageContainer}>
@@ -59,12 +59,12 @@ export const RoomCard: React.FC<RoomCardProps> = ({ room, onPress }) => {
             <Text style={styles.statsText}>🎙️ {room.speakersCount || 0}</Text>
             <Text style={styles.statsText}>👥 {room.listenersCount || 0}</Text>
           </View>
-          <TouchableOpacity style={styles.joinButton} onPress={onPress} activeOpacity={0.8}>
+          <View style={styles.joinButton}>
             <Text style={styles.joinButtonText}>Entrar</Text>
-          </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </Card>
+    </TouchableOpacity>
   );
 };
 
@@ -72,6 +72,15 @@ const styles = StyleSheet.create({
   card: {
     padding: spacing.md,
     marginBottom: spacing.md,
+    backgroundColor: colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: colors.primary + '33', // Subtle violet tint
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
   },
   row: {
     flexDirection: 'row',

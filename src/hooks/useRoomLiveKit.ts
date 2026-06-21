@@ -8,12 +8,20 @@ import {
   RoomOptions,
   RemoteParticipant,
   LocalParticipant,
-  ConnectionState,
+  ConnectionState as LKConnectionState,
 } from 'livekit-client';
 import { registerGlobals } from '@livekit/react-native-webrtc';
 import { RoomMember } from '../types';
 import { getLiveKitRoomToken } from '../services/api/livekitApi';
 import { requestMicrophonePermission } from '../utils/permissions';
+
+// Safe fallback for ConnectionState if undefined in livekit-client
+const ConnectionState = LKConnectionState || {
+  Disconnected: 'disconnected',
+  Connecting: 'connecting',
+  Connected: 'connected',
+  Reconnecting: 'reconnecting',
+};
 
 // Register WebRTC Globals for React Native WebRTC engine
 if (Platform.OS !== 'web') {
@@ -28,7 +36,7 @@ export const useRoomLiveKit = (
   enabled: boolean = true
 ) => {
   const [livekitRoom, setLivekitRoom] = useState<Room | null>(null);
-  const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.Disconnected);
+  const [connectionState, setConnectionState] = useState<any>(ConnectionState.Disconnected);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localMuted, setLocalMuted] = useState(false);
@@ -36,10 +44,12 @@ export const useRoomLiveKit = (
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [activeSpeakers, setActiveSpeakers] = useState<Participant[]>([]);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
   // Keep references to prevent loop closures
   const isMutedFirestoreRef = useRef(currentMember?.isMuted || false);
   const roleFirestoreRef = useRef(currentUserRole);
+  const isReconnectingRef = useRef(false);
   const roomRef = useRef<Room | null>(null);
 
   useEffect(() => {
@@ -70,7 +80,7 @@ export const useRoomLiveKit = (
       roomRef.current = roomInstance;
 
       // 3. Register Event Listeners
-      roomInstance.on(RoomEvent.ConnectionStateChanged, (state: ConnectionState) => {
+      roomInstance.on(RoomEvent.ConnectionStateChanged, (state: typeof ConnectionState[keyof typeof ConnectionState]) => {
         setConnectionState(state);
       });
 
@@ -150,7 +160,12 @@ export const useRoomLiveKit = (
       const roomInstance = roomRef.current;
       if (roomInstance && isPublishing) {
         const shouldMute = currentMember?.isMuted || false;
+        // Fix: isMicrophoneEnabled is the OPPOSITE of muted state
+        // We only apply if the current state does NOT match the desired state
         if (roomInstance.localParticipant.isMicrophoneEnabled === shouldMute) {
+          // isMicrophoneEnabled === shouldMute means:
+          //   - if shouldMute=true and mic is enabled → need to disable
+          //   - if shouldMute=false and mic is disabled → need to enable
           await roomInstance.localParticipant.setMicrophoneEnabled(!shouldMute);
           setLocalMuted(shouldMute);
         }
@@ -160,29 +175,54 @@ export const useRoomLiveKit = (
   }, [currentMember?.isMuted, isPublishing]);
 
   // Handle dynamic Role Upgrade/Downgrade (eg. Listener <=> Speaker)
+  // Uses a ref to prevent infinite reconnect loops
   useEffect(() => {
     if (!livekitRoom || connectionState !== ConnectionState.Connected) return;
+    if (isReconnectingRef.current) return;
+
+    const prevRole = roleFirestoreRef.current;
+    const newRole = currentUserRole;
+
+    // Only reconnect when role actually changed
+    if (prevRole === newRole) return;
+    roleFirestoreRef.current = newRole;
 
     const handleRoleUpdate = async () => {
-      const isPrivileged = ['owner', 'host', 'moderator', 'speaker'].includes(currentUserRole || '');
-      
-      // If upgraded and not yet publishing, request token and reconnect to publish
-      if (isPrivileged && !isPublishing) {
-        await disconnect();
-        await connect();
+      const isPrivileged = ['owner', 'host', 'moderator', 'speaker'].includes(newRole || '');
+      const wasPrivileged = ['owner', 'host', 'moderator', 'speaker'].includes(prevRole || '');
+
+      // Role went from unprivileged → privileged: reconnect to get publish token
+      if (isPrivileged && !wasPrivileged) {
+        isReconnectingRef.current = true;
+        setIsReconnecting(true);
+        try {
+          await disconnect();
+          await connect();
+        } finally {
+          isReconnectingRef.current = false;
+          setIsReconnecting(false);
+        }
       }
-      // If downgraded to listener and publishing, disable track
-      else if (!isPrivileged && isPublishing) {
-        await livekitRoom.localParticipant.setMicrophoneEnabled(false);
-        setIsPublishing(false);
-        setCanPublish(false);
-        await disconnect();
-        await connect();
+      // Role went from privileged → unprivileged: stop mic and reconnect as listener
+      else if (!isPrivileged && wasPrivileged && isPublishing) {
+        isReconnectingRef.current = true;
+        setIsReconnecting(true);
+        try {
+          await livekitRoom.localParticipant.setMicrophoneEnabled(false);
+          setIsPublishing(false);
+          setCanPublish(false);
+          await disconnect();
+          await connect();
+        } finally {
+          isReconnectingRef.current = false;
+          setIsReconnecting(false);
+        }
       }
     };
 
     handleRoleUpdate();
-  }, [currentUserRole, livekitRoom, connectionState, isPublishing, connect, disconnect]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserRole, connectionState]);
 
   // Toggle local mute
   const toggleMute = async () => {
@@ -201,7 +241,7 @@ export const useRoomLiveKit = (
   return {
     livekitRoom,
     connected: connectionState === ConnectionState.Connected,
-    connecting,
+    connecting: connecting || isReconnecting,
     error,
     localMuted,
     canPublish,

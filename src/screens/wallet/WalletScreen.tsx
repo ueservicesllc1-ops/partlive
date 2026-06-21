@@ -55,6 +55,7 @@ export const WalletScreen = ({ navigation }: any) => {
         showWallet={false}
         onSearchPress={() => navigation.navigate('Search')}
         onNotificationsPress={() => navigation.navigate('Notifications')}
+        onMessagesPress={() => navigation.navigate('PrivateConversations')}
       />
 
       <ScrollView

@@ -66,7 +66,7 @@ export const approveMicRequest = async (
   const requestRef = db.collection(getRoomMicRequestsPath(roomId)).doc(requestId);
 
   const doc = await requestRef.get();
-  if (doc.exists) {
+  if (doc.exists()) {
     // 1. Update request status to approved
     await requestRef.update({
       status: 'approved',
@@ -78,7 +78,7 @@ export const approveMicRequest = async (
   await assignSeat(roomId, requestId, seatIndex);
 
   // 3. Remove request document
-  if (doc.exists) {
+  if (doc.exists()) {
     await requestRef.delete();
   }
 };

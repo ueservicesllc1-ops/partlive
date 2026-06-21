@@ -225,13 +225,13 @@ const NeonLasersEffect = () => {
           Animated.timing(anim, {
             toValue: 1,
             duration: 1200 + index * 200,
-            easing: Easing.inOut(Easing.sine),
+            easing: Easing.inOut(Easing.sin),
             useNativeDriver: true,
           }),
           Animated.timing(anim, {
             toValue: 0,
             duration: 1200 + index * 200,
-            easing: Easing.inOut(Easing.sine),
+            easing: Easing.inOut(Easing.sin),
             useNativeDriver: true,
           }),
         ])
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   lightningStrike: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#FFF',
   },
 });

@@ -1,8 +1,13 @@
-// Local server configuration for LiveKit WebRTC server
-// IMPORTANT: Replace '10.0.2.2' or 'localhost' with your development machine's actual Local IP
-// if you are testing on a real physical Android tablet connected to the same WiFi.
-// For emulator, '10.0.2.2' works directly.
+import { API_BASE_URL } from '../services/api/apiClient';
+
+// LiveKit WebRTC server configuration
+// Token server uses the same production backend as all other API calls
 export const LIVEKIT_CONFIG = {
-  LIVEKIT_WS_URL: 'ws://192.168.1.51:7880', // Replace with your Local IP (e.g. 192.168.X.X)
-  LIVEKIT_TOKEN_SERVER_URL: 'http://192.168.1.51:4000/api/livekit/token', // Replace with your Local IP
+  // LiveKit Cloud WebSocket URL
+  LIVEKIT_WS_URL: 'wss://partylive-0bhcjwz0.livekit.cloud',
+  // Token server: uses API_BASE_URL which points to Railway in production
+  // Falls back to local dev server IP for local testing
+  get LIVEKIT_TOKEN_SERVER_URL() {
+    return `${API_BASE_URL}/livekit/token`;
+  },
 };

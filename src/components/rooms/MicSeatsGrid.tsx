@@ -6,11 +6,12 @@ import { MicSeatCard } from './MicSeatCard';
 interface MicSeatsGridProps {
   members: RoomMember[];
   onSeatPress: (index: number, occupant?: RoomMember) => void;
+  maxMics?: number;
 }
 
-export const MicSeatsGrid: React.FC<MicSeatsGridProps> = ({ members, onSeatPress }) => {
-  // Create 8 microphone seats
-  const seats = Array.from({ length: 8 }, (_, index) => {
+export const MicSeatsGrid: React.FC<MicSeatsGridProps> = ({ members, onSeatPress, maxMics = 8 }) => {
+  // Create dynamic microphone seats based on room config
+  const seats = Array.from({ length: maxMics }, (_, index) => {
     const occupant = members.find(m => m.seatIndex === index);
     return { index, occupant };
   });

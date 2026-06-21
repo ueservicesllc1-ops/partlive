@@ -12,6 +12,7 @@ export const EventsScreen = ({ navigation }: any) => {
         onSearchPress={() => navigation.navigate('Search')}
         onNotificationsPress={() => navigation.navigate('Notifications')}
         onWalletPress={() => navigation.navigate('Wallet')}
+        onMessagesPress={() => navigation.navigate('PrivateConversations')}
       />
       
       <ScrollView contentContainerStyle={styles.scrollContent}>

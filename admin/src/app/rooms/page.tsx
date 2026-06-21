@@ -63,17 +63,27 @@ export default function RoomsPage() {
         {!loading && !error && rooms.length === 0 && <EmptyState icon="🏠" title="No hay salas" />}
 
         {!loading && !error && rooms.length > 0 && (
-          <Table headers={['Sala', 'Owner', 'Oyentes', 'Estado', 'Fecha', 'Acciones']}>
+          <Table headers={['Sala', 'Categoría', 'País/Idioma', 'Acceso/Visib.', 'Oyentes', 'Estado', 'Fecha', 'Acciones']}>
             {rooms.map((r: any) => (
               <tr key={r.id} className="hover:bg-gray-900/40 transition-colors">
                 <td className="px-6 py-4">
                   <div>
                     <p className="text-sm font-semibold text-white">{r.title || 'Sin título'}</p>
-                    <p className="text-xs text-gray-500">{r.category || '—'}</p>
+                    <p className="text-xs text-gray-500">Host: {r.ownerName || r.ownerId || '—'}</p>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-400">{r.ownerId || '—'}</td>
-                <td className="px-6 py-4 text-sm text-gray-300">{r.listenersCount || 0}</td>
+                <td className="px-6 py-4 text-sm text-gray-400">{r.category || '—'}</td>
+                <td className="px-6 py-4 text-xs text-gray-400">
+                  <p>{r.countryName || r.countryCode || '—'}</p>
+                  <p className="text-gray-600">{r.languageName || r.languageCode || '—'}</p>
+                </td>
+                <td className="px-6 py-4 text-xs text-gray-400">
+                  <p className="font-semibold text-white">{r.visibility ? r.visibility.toUpperCase() : 'PUBLIC'}</p>
+                  <p className="text-gray-600">{r.accessType || 'open'}</p>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-300">
+                  {r.listenersUnlimited ? `${r.currentListenersCount || 0}/∞` : `${r.listenersCount || 0}/${r.maxListeners || '—'}`}
+                </td>
                 <td className="px-6 py-4">
                   {r.status === 'active' ? <Badge variant="success" dot>Activa</Badge> :
                    r.status === 'suspended' ? <Badge variant="danger">Suspendida</Badge> :

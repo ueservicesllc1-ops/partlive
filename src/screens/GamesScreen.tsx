@@ -73,6 +73,7 @@ export const GamesScreen = ({ navigation }: any) => {
         onSearchPress={() => navigation.navigate(MAIN_ROUTES.SEARCH)}
         onNotificationsPress={() => navigation.navigate(MAIN_ROUTES.NOTIFICATIONS)}
         onWalletPress={() => navigation.navigate(MAIN_ROUTES.WALLET)}
+        onMessagesPress={() => navigation.navigate(MAIN_ROUTES.PRIVATE_CONVERSATIONS)}
       />
 
       <ScrollView

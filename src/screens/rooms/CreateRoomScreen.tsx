@@ -29,16 +29,19 @@ export const CreateRoomScreen = ({ navigation }: any) => {
         title: formData.title,
         description: formData.description,
         category: formData.category,
-        language: formData.language,
-        country: formData.country,
-        maxSpeakers: formData.maxSpeakers,
-        maxUsers: formData.maxUsers,
-        isPrivate: formData.isPrivate,
+        countryCode: formData.countryCode,
+        countryName: formData.countryName,
+        languageCode: formData.languageCode,
+        languageName: formData.languageName,
+        visibility: formData.visibility,
+        accessType: formData.accessType,
         password: formData.password,
+        maxMics: formData.maxMics,
+        listenersUnlimited: formData.listenersUnlimited,
         tags: formData.tags,
         hostIds: [ownerProfile.uid],
         moderatorIds: [],
-      });
+      } as any);
 
       navigation.replace(MAIN_ROUTES.ROOM_DETAILS, { roomId });
     } catch (error: any) {

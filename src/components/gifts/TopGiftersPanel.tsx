@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   title: {
-    ...textPresets.h4,
+    ...textPresets.h3,
     color: colors.text,
     fontWeight: '700',
     paddingHorizontal: spacing.md,
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   gifts: {
-    ...textPresets.bodyXS,
+    ...textPresets.caption,
     color: colors.secondary,
     marginTop: 2,
     fontWeight: '600',

@@ -49,6 +49,7 @@ export const NotificationsScreen = ({ navigation }: any) => {
         showNotifications={false} 
         onSearchPress={() => navigation.navigate('Search')}
         onWalletPress={() => navigation.navigate('Wallet')}
+        onMessagesPress={() => navigation.navigate(MAIN_ROUTES.PRIVATE_CONVERSATIONS)}
       />
 
       {renderGameInvitesBanner()}

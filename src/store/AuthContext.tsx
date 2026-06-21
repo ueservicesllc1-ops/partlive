@@ -61,7 +61,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const setupWallet = async () => {
       try {
-        await ensureUserWallet(user.uid);
+        const existingWallet = await ensureUserWallet(user.uid);
+        if (existingWallet) {
+          setUserWallet(existingWallet);
+        }
+        // Always set up the real-time listener regardless of whether wallet existed
         unsubscribe = listenToUserWallet(user.uid, (wallet) => {
           setUserWallet(wallet);
         });
@@ -166,7 +170,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const refreshWallet = async () => {
     if (user && user.uid !== 'guest_user') {
       const wallet = await ensureUserWallet(user.uid);
-      setUserWallet(wallet);
+      if (wallet) setUserWallet(wallet);
     }
   };
 

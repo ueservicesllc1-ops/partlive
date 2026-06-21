@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Room, RoomMember, ChatMessage, MicRequest } from '../types';
 import { useAuth } from '../store/AuthContext';
 import {
@@ -31,14 +31,19 @@ import {
   deleteOwnRoomMessage,
   reportRoomMessage,
 } from '../services/firebase/firestore/messagesService';
-import {
-  sendUserJoinedMessage,
-  sendUserLeftMessage,
-} from '../services/firebase/firestore/roomSystemMessages';
+import { sendUserJoinedMessage, sendUserLeftMessage } from '../services/firebase/firestore/roomSystemMessages';
 import { blockUser, listenToBlockedUsers } from '../services/firebase/firestore/blocksService';
+import { apiFetch } from '../services/api/apiClient';
 
 export const useRoom = (roomId: string) => {
   const { userProfile } = useAuth();
+  const profileRef = useRef(userProfile);
+  
+  useEffect(() => {
+    profileRef.current = userProfile;
+  }, [userProfile]);
+
+  const userUid = userProfile?.uid;
   const [room, setRoom] = useState<Room | null>(null);
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -50,21 +55,21 @@ export const useRoom = (roomId: string) => {
 
   // Listen to blocked users list in real-time
   useEffect(() => {
-    if (!userProfile) {
+    if (!userUid) {
       setBlockedUserIds([]);
       return;
     }
-    const unsubscribe = listenToBlockedUsers(userProfile.uid, (ids) => {
+    const unsubscribe = listenToBlockedUsers(userUid, (ids) => {
       setBlockedUserIds(ids);
     });
     return () => unsubscribe();
-  }, [userProfile]);
+  }, [userUid]);
 
   // Get current member inside this room
   const currentMember = useMemo(() => {
-    if (!userProfile) return null;
-    return members.find(m => m.userId === userProfile.uid) || null;
-  }, [members, userProfile]);
+    if (!userUid) return null;
+    return members.find(m => m.userId === userUid) || null;
+  }, [members, userUid]);
 
   // Role helper
   const currentUserRole = useMemo(() => {
@@ -87,7 +92,7 @@ export const useRoom = (roomId: string) => {
 
   // First fetch and join
   useEffect(() => {
-    if (!roomId || !userProfile) return;
+    if (!roomId || !userUid) return;
 
     let active = true;
     setLoading(true);
@@ -95,6 +100,9 @@ export const useRoom = (roomId: string) => {
 
     const initRoom = async () => {
       try {
+        const currentProfile = profileRef.current;
+        if (!currentProfile) return;
+
         const roomData = await getRoomById(roomId);
         if (!roomData) {
           if (active) {
@@ -106,13 +114,13 @@ export const useRoom = (roomId: string) => {
 
         // Join room in firestore
         const profileData = {
-          uid: userProfile.uid,
-          displayName: userProfile.displayName,
-          photoURL: userProfile.photoURL,
-          username: userProfile.username,
+          uid: currentProfile.uid,
+          displayName: currentProfile.displayName,
+          photoURL: currentProfile.photoURL,
+          username: currentProfile.username,
         };
         await joinRoom(roomId, profileData);
-        await sendUserJoinedMessage(roomId, userProfile.displayName);
+        await sendUserJoinedMessage(roomId, currentProfile.displayName);
 
         if (active) setLoading(false);
       } catch (err: any) {
@@ -129,7 +137,7 @@ export const useRoom = (roomId: string) => {
     return () => {
       active = false;
     };
-  }, [roomId, userProfile]);
+  }, [roomId, userUid]);
 
   // Real-time subscriptions
   useEffect(() => {
@@ -154,8 +162,9 @@ export const useRoom = (roomId: string) => {
       unsubscribeRoom();
       unsubscribeMembers();
       unsubscribeMessages();
-      if (userProfile) {
-        sendUserLeftMessage(roomId, userProfile.displayName).catch(console.error);
+      const currentProfile = profileRef.current;
+      if (currentProfile) {
+        sendUserLeftMessage(roomId, currentProfile.displayName).catch(console.error);
       }
     };
   }, [roomId, loading, error]);
@@ -235,6 +244,39 @@ export const useRoom = (roomId: string) => {
     await blockUser(userProfile.uid, targetUserId);
     setBlockedUserIds(prev => [...prev, targetUserId]);
   }, [userProfile]);
+
+  const banMember = useCallback(async (targetUserId: string, reason?: string) => {
+    if (!userProfile) return;
+    try {
+      await apiFetch(`/rooms/${roomId}/ban`, {
+        method: 'POST',
+        body: JSON.stringify({
+          actorId: userProfile.uid,
+          targetUserId,
+          isPermanent: true,
+          reason: reason || 'Bloqueado por el anfitrión',
+        }),
+      });
+    } catch (e) {
+      console.error('Failed to ban member:', e);
+    }
+  }, [roomId, userProfile]);
+
+  const kickMember = useCallback(async (targetUserId: string, reason?: string) => {
+    if (!userProfile) return;
+    try {
+      await apiFetch(`/rooms/${roomId}/kick`, {
+        method: 'POST',
+        body: JSON.stringify({
+          actorId: userProfile.uid,
+          targetUserId,
+          reason: reason || 'Expulsado por el anfitrión',
+        }),
+      });
+    } catch (e) {
+      console.error('Failed to kick member:', e);
+    }
+  }, [roomId, userProfile]);
 
   const loadOlderMessages = useCallback(async () => {
     if (!roomId || messages.length === 0 || messagesLoading) return;
@@ -322,10 +364,6 @@ export const useRoom = (roomId: string) => {
     await removeFromSeat(roomId, userId, userProfile.uid);
   }, [roomId, userProfile]);
 
-  const kickUser = useCallback(async (userId: string) => {
-    if (!roomId || !userProfile) return;
-    await kickMember(roomId, userId, userProfile.uid);
-  }, [roomId, userProfile]);
 
   const endRoom = useCallback(async () => {
     if (!roomId || !userProfile) return;
@@ -363,7 +401,8 @@ export const useRoom = (roomId: string) => {
     removeSpeaker: removeSpeakerAction,
     muteMember: muteUser,
     removeFromSeat: removeUserFromSeat,
-    kickMember: kickUser,
+    kickMember,
+    banMember,
     endRoom,
   };
 };

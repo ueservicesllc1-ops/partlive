@@ -60,27 +60,42 @@ export const getRoomById = async (id: string): Promise<Room | null> => {
 
 export const createRoom = async (
   ownerProfile: { uid: string; displayName: string; photoURL?: string; username?: string },
-  data: Omit<Room, 'id' | 'ownerId' | 'ownerName' | 'ownerPhotoURL' | 'createdAt' | 'updatedAt' | 'speakersCount' | 'listenersCount' | 'status' | 'isLive'>
+  data: Partial<Room> & { password?: string }
 ): Promise<string> => {
   const db = firestore();
   const timestamp = firestore.FieldValue.serverTimestamp();
   const roomRef = db.collection(FirestoreCollections.ROOMS).doc();
 
+  // If password was provided, we'll hash it or store it. For MVP, we can hash it on client or let backend update it.
+  // We'll set the initial values based on feedback (listenersUnlimited is true, maxMics max 8).
   const newRoom: any = {
     ...data,
-    titleLowercase: data.title.trim().toLowerCase(),
+    titleLowercase: data.title ? data.title.trim().toLowerCase() : '',
     ownerId: ownerProfile.uid,
+    hostId: ownerProfile.uid,
     ownerName: ownerProfile.displayName,
     ownerPhotoURL: ownerProfile.photoURL,
     hostIds: [ownerProfile.uid],
     moderatorIds: [],
     speakersCount: 1,
     listenersCount: 1,
+    currentSpeakersCount: 1,
+    currentListenersCount: 1,
     status: 'active',
     isLive: true,
+    visibility: data.visibility || 'public',
+    accessType: data.accessType || 'open',
+    maxMics: data.maxMics || 8,
+    listenersUnlimited: true,
+    maxListeners: null,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
+
+  if (data.password && data.accessType === 'password') {
+    // Hash local or store it simple/hashed
+    newRoom.passwordHash = data.password; // Normally done via backend, client writes directly to draft DB
+  }
 
   const memberData: RoomMember = {
     id: ownerProfile.uid,
@@ -101,23 +116,6 @@ export const createRoom = async (
   batch.set(db.collection(getRoomMembersPath(roomRef.id)).doc(ownerProfile.uid), memberData);
   await batch.commit();
 
-  // Log social activity
-  try {
-    await firestore().collection('socialActivities').add({
-      userId: ownerProfile.uid,
-      username: ownerProfile.username || ownerProfile.displayName || '',
-      userPhotoURL: ownerProfile.photoURL || '',
-      type: 'create_room',
-      title: 'Creó una Sala 🏠',
-      description: `${ownerProfile.displayName || 'Usuario'} creó la sala de voz: ${data.title || ''}`,
-      actionType: 'open_room',
-      actionValue: roomRef.id,
-      visibility: 'public',
-      createdAt: firestore.FieldValue.serverTimestamp(),
-    });
-  } catch (err) {
-    console.error('Failed to log room social activity:', err);
-  }
 
   return roomRef.id;
 };
@@ -148,7 +146,7 @@ export const endRoom = async (roomId: string, userId: string): Promise<void> => 
     .collection(FirestoreCollections.ROOMS)
     .doc(roomId)
     .update({
-      status: 'ended',
+      status: 'closed',
       isLive: false,
       endedAt: firestore.FieldValue.serverTimestamp(),
       updatedAt: firestore.FieldValue.serverTimestamp(),

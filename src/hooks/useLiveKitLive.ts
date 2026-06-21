@@ -6,11 +6,19 @@ import {
   Track,
   Participant,
   RoomOptions,
-  ConnectionState,
+  ConnectionState as LKConnectionState,
 } from 'livekit-client';
 import { registerGlobals } from '@livekit/react-native-webrtc';
 import { getLiveKitLiveToken } from '../services/api/livekitApi';
 import { requestCameraAndMicrophonePermissions } from '../utils/permissions';
+
+// Safe fallback for ConnectionState if undefined in livekit-client
+const ConnectionState = LKConnectionState || {
+  Disconnected: 'disconnected',
+  Connecting: 'connecting',
+  Connected: 'connected',
+  Reconnecting: 'reconnecting',
+};
 
 if (Platform.OS !== 'web') {
   registerGlobals();
@@ -24,7 +32,7 @@ export const useLiveKitLive = (
   enabled: boolean = true
 ) => {
   const [livekitRoom, setLivekitRoom] = useState<Room | null>(null);
-  const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.Disconnected);
+  const [connectionState, setConnectionState] = useState<any>(ConnectionState.Disconnected);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -58,7 +66,7 @@ export const useLiveKitLive = (
       roomRef.current = roomInstance;
 
       // 3. Register listeners
-      roomInstance.on(RoomEvent.ConnectionStateChanged, (state: ConnectionState) => {
+      roomInstance.on(RoomEvent.ConnectionStateChanged, (state: typeof ConnectionState[keyof typeof ConnectionState]) => {
         setConnectionState(state);
       });
 

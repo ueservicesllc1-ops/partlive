@@ -31,7 +31,22 @@ export const useRoomsList = () => {
       } else if (selectedCategory === 'Popular') {
         data = await getPopularRooms();
       } else {
-        data = await getRoomsByCategory(selectedCategory);
+        const categoryMap: Record<string, string> = {
+          'Música': 'music',
+          'Karaoke': 'karaoke',
+          'Fiesta': 'party',
+          'Juegos': 'games',
+          'Conversación': 'talk',
+          'Talentos': 'talents',
+          'Cristiana': 'christian',
+          'Podcast': 'podcast',
+          'Debate': 'debate',
+          'Amistad': 'friends',
+          'Privada': 'private',
+          'VIP': 'vip',
+        };
+        const categoryId = categoryMap[selectedCategory] || selectedCategory.toLowerCase();
+        data = await getRoomsByCategory(categoryId);
       }
 
       setRooms(data);

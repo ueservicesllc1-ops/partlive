@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
+  Alert,
 } from 'react-native';
 import { colors, spacing, textPresets } from '../theme';
 import { Header } from '../components/Header';
@@ -17,6 +18,13 @@ import { MainHeader } from '../components/navigation/MainHeader';
 import { useRoomsList } from '../hooks/useRoomsList';
 import { RoomCard } from '../components/rooms/RoomCard';
 import { MAIN_ROUTES } from '../app/routes';
+import { useAuth } from '../store/AuthContext';
+import { EnterRoomPasswordModal } from '../components/rooms/EnterRoomPasswordModal';
+import { RequestRoomAccessModal } from '../components/rooms/RequestRoomAccessModal';
+import { BannedFromRoomMessage } from '../components/rooms/BannedFromRoomMessage';
+import { InviteOnlyMessage } from '../components/rooms/InviteOnlyMessage';
+
+const CATEGORIES = ['Popular', 'Música', 'Fiesta', 'Juegos', 'Karaoke', 'Amistad', 'Debate'];
 
 export const RoomsScreen = ({ navigation }: any) => {
   const {
@@ -31,17 +39,96 @@ export const RoomsScreen = ({ navigation }: any) => {
     setSearchQuery,
   } = useRoomsList();
 
-  const CATEGORIES = ['Popular', 'Música', 'Fiesta', 'Juegos', 'Karaoke', 'Amistad', 'Debate'];
+  const { user } = useAuth();
+  const [selectedRoomId, setSelectedRoomId] = React.useState<string | null>(null);
+  const [passwordModalVisible, setPasswordModalVisible] = React.useState(false);
+  const [requestModalVisible, setRequestModalVisible] = React.useState(false);
+  const [banModalVisible, setBanModalVisible] = React.useState(false);
+  const [inviteModalVisible, setInviteModalVisible] = React.useState(false);
+  const [banMsg, setBanMsg] = React.useState('');
+  const [validationLoading, setValidationLoading] = React.useState(false);
+
+  // Backend base URL - falls back gracefully if backend not running
+  const BACKEND_URL = 'http://192.168.1.240:4000';
+
+  const checkRoomAccess = async (roomId: string, password?: string) => {
+    if (!user) {
+      Alert.alert('Inicia sesión', 'Debes estar autenticado para entrar a una sala.');
+      return;
+    }
+    setValidationLoading(true);
+
+    // Add a 3-second timeout for the backend fetch to prevent hanging on physical devices
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/rooms/${roomId}/can-enter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid, password }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const resData = await response.json();
+      setValidationLoading(false);
+
+      if (resData.canEnter) {
+        setPasswordModalVisible(false);
+        navigation.navigate(MAIN_ROUTES.ROOM_DETAILS, { roomId });
+      } else {
+        setSelectedRoomId(roomId);
+        if (resData.reason === 'password_required' || resData.reason === 'wrong_password') {
+          setPasswordModalVisible(true);
+        } else if (resData.reason === 'approval_required') {
+          setRequestModalVisible(true);
+        } else if (resData.reason === 'invite_only') {
+          setInviteModalVisible(true);
+        } else if (resData.reason === 'banned') {
+          setBanMsg(resData.message || 'Estás bloqueado de esta sala.');
+          setBanModalVisible(true);
+        }
+      }
+    } catch (_err) {
+      clearTimeout(timeoutId);
+      setValidationLoading(false);
+      // Fallback: navigate directly if backend not running or unreachable (dev mode)
+      navigation.navigate(MAIN_ROUTES.ROOM_DETAILS, { roomId });
+    }
+  };
+
+  const handleRequestAccess = async () => {
+    if (!selectedRoomId || !user) return;
+    setValidationLoading(true);
+    try {
+      await fetch(`${BACKEND_URL}/api/rooms/${selectedRoomId}/access/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.uid,
+          userName: user.displayName || 'Usuario',
+          userPhotoURL: user.photoURL || '',
+        }),
+      });
+      setValidationLoading(false);
+      setRequestModalVisible(false);
+      Alert.alert('Solicitud Enviada', 'Espera a que el host apruebe tu acceso.');
+    } catch (_err) {
+      setValidationLoading(false);
+      Alert.alert('Error', 'No se pudo enviar la solicitud.');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-      
-      <MainHeader 
+
+      <MainHeader
         title="Salas de Voz"
         onSearchPress={() => navigation.navigate(MAIN_ROUTES.SEARCH)}
         onNotificationsPress={() => navigation.navigate(MAIN_ROUTES.NOTIFICATIONS)}
         onWalletPress={() => navigation.navigate(MAIN_ROUTES.WALLET)}
+        onMessagesPress={() => navigation.navigate(MAIN_ROUTES.PRIVATE_CONVERSATIONS)}
       />
 
       <Header
@@ -89,7 +176,7 @@ export const RoomsScreen = ({ navigation }: any) => {
         />
       </View>
 
-      {/* List / Loading / Empty Fallback */}
+      {/* List / Loading / Error / Empty Fallback */}
       {loading && !refreshing ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -133,11 +220,36 @@ export const RoomsScreen = ({ navigation }: any) => {
           renderItem={({ item }) => (
             <RoomCard
               room={item}
-              onPress={() => navigation.navigate(MAIN_ROUTES.ROOM_DETAILS, { roomId: item.id })}
+              onPress={() => checkRoomAccess(item.id)}
             />
           )}
         />
       )}
+
+      <EnterRoomPasswordModal
+        visible={passwordModalVisible}
+        onClose={() => setPasswordModalVisible(false)}
+        onSubmit={(pass) => checkRoomAccess(selectedRoomId!, pass)}
+        loading={validationLoading}
+      />
+
+      <RequestRoomAccessModal
+        visible={requestModalVisible}
+        onClose={() => setRequestModalVisible(false)}
+        onRequest={handleRequestAccess}
+        loading={validationLoading}
+      />
+
+      <BannedFromRoomMessage
+        visible={banModalVisible}
+        onClose={() => setBanModalVisible(false)}
+        message={banMsg}
+      />
+
+      <InviteOnlyMessage
+        visible={inviteModalVisible}
+        onClose={() => setInviteModalVisible(false)}
+      />
 
       {/* Floating Create Room Button */}
       <TouchableOpacity
@@ -196,7 +308,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: 90, // Avoid overlapping FAB
+    paddingBottom: 90,
   },
   centerContainer: {
     flex: 1,

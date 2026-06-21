@@ -4,7 +4,7 @@ import { Wallet, WalletTransaction } from '../../../types/wallet';
 import { FirestoreCollections } from '../../../constants/firestoreCollections';
 import { apiFetch } from '../../api/apiClient';
 
-export const ensureUserWallet = async (userId: string): Promise<Wallet> => {
+export const ensureUserWallet = async (userId: string): Promise<Wallet | null> => {
   const db = firebaseFirestore();
   const walletRef = db.collection(FirestoreCollections.WALLETS).doc(userId);
   const doc = await walletRef.get();
@@ -13,25 +13,9 @@ export const ensureUserWallet = async (userId: string): Promise<Wallet> => {
     return { id: doc.id, ...doc.data() } as Wallet;
   }
 
-  const timestamp = firebaseFirestore.FieldValue.serverTimestamp();
-  const newWallet: Wallet = {
-    id: userId,
-    userId,
-    diamonds: 0,
-    beans: 0,
-    lifetimeDiamondsPurchased: 0,
-    lifetimeDiamondsSpent: 0,
-    lifetimeBeansEarned: 0,
-    lifetimeBeansWithdrawn: 0,
-    pendingBeans: 0,
-    lockedBeans: 0,
-    status: 'active',
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
-
-  await walletRef.set(newWallet);
-  return newWallet;
+  // Wallet not found — the backend creates it automatically on user registration.
+  // Do NOT create it from the client to avoid Firestore permission errors.
+  return null;
 };
 
 export const getUserWallet = async (userId: string): Promise<Wallet | null> => {

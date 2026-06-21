@@ -38,6 +38,7 @@ export const RankingsScreen = ({ navigation }: any) => {
         onSearchPress={() => navigation.navigate('Search')}
         onNotificationsPress={() => navigation.navigate('Notifications')}
         onWalletPress={() => navigation.navigate('Wallet')}
+        onMessagesPress={() => navigation.navigate('PrivateConversations')}
       />
       
       <View style={styles.tabsContainer}>

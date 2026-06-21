@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { LiveStream, LiveViewer, LiveMessage } from '../types/live';
 import { useAuth } from '../store/AuthContext';
 import {
@@ -34,6 +34,13 @@ import { listenToBlockedUsers } from '../services/firebase/firestore/blocksServi
 
 export const useLive = (liveId: string) => {
   const { userProfile } = useAuth();
+  const profileRef = useRef(userProfile);
+
+  useEffect(() => {
+    profileRef.current = userProfile;
+  }, [userProfile]);
+
+  const userUid = userProfile?.uid;
   const [live, setLive] = useState<LiveStream | null>(null);
   const [viewers, setViewers] = useState<LiveViewer[]>([]);
   const [messages, setMessages] = useState<LiveMessage[]>([]);
@@ -46,27 +53,27 @@ export const useLive = (liveId: string) => {
 
   // Listen to blocked users list in real-time
   useEffect(() => {
-    if (!userProfile) {
+    if (!userUid) {
       setBlockedUserIds([]);
       return;
     }
-    const unsubscribe = listenToBlockedUsers(userProfile.uid, (ids) => {
+    const unsubscribe = listenToBlockedUsers(userUid, (ids) => {
       setBlockedUserIds(ids);
     });
     return () => unsubscribe();
-  }, [userProfile]);
+  }, [userUid]);
 
   // Get current user viewer document
   const currentViewer = useMemo(() => {
-    if (!userProfile) return null;
-    return viewers.find(v => v.userId === userProfile.uid) || null;
-  }, [viewers, userProfile]);
+    if (!userUid) return null;
+    return viewers.find(v => v.userId === userUid) || null;
+  }, [viewers, userUid]);
 
   // Evaluate current user role
   const currentUserRole = useMemo(() => {
-    if (live?.hostId === userProfile?.uid) return 'host';
+    if (live?.hostId === userUid) return 'host';
     return currentViewer?.role || 'viewer';
-  }, [live, currentViewer, userProfile]);
+  }, [live, currentViewer, userUid]);
 
   // Filter messages dynamically (by blocked status, hidden status, etc.)
   const filteredMessages = useMemo(() => {
@@ -78,7 +85,7 @@ export const useLive = (liveId: string) => {
 
   // Join live stream automatically
   useEffect(() => {
-    if (!liveId || !userProfile) return;
+    if (!liveId || !userUid) return;
 
     let active = true;
     setLoading(true);
@@ -86,6 +93,9 @@ export const useLive = (liveId: string) => {
 
     const initLive = async () => {
       try {
+        const currentProfile = profileRef.current;
+        if (!currentProfile) return;
+
         const liveData = await getLiveById(liveId);
         if (!liveData) {
           if (active) {
@@ -96,10 +106,10 @@ export const useLive = (liveId: string) => {
         }
 
         const profileData = {
-          uid: userProfile.uid,
-          displayName: userProfile.displayName || 'User',
-          photoURL: userProfile.photoURL,
-          username: userProfile.username,
+          uid: currentProfile.uid,
+          displayName: currentProfile.displayName || 'User',
+          photoURL: currentProfile.photoURL,
+          username: currentProfile.username,
         };
 
         await joinLive(liveId, profileData);
@@ -121,7 +131,7 @@ export const useLive = (liveId: string) => {
     return () => {
       active = false;
     };
-  }, [liveId, userProfile]);
+  }, [liveId, userUid]);
 
   // Real-time subscriptions
   useEffect(() => {
@@ -148,11 +158,12 @@ export const useLive = (liveId: string) => {
       unsubscribeViewers();
       unsubscribeMessages();
       unsubscribeGifts();
-      if (userProfile) {
-        leaveLive(liveId, userProfile.uid).catch(console.error);
+      const currentProfile = profileRef.current;
+      if (currentProfile) {
+        leaveLive(liveId, currentProfile.uid).catch(console.error);
       }
     };
-  }, [liveId, loading, error, userProfile]);
+  }, [liveId, loading, error]);
 
   // Actions
   const join = useCallback(async () => {

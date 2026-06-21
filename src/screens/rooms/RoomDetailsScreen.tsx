@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { colors, textPresets, spacing } from '../../theme';
+import { MAIN_ROUTES } from '../../app/routes';
 import { useRoom } from '../../hooks/useRoom';
 import { useRoomLiveKit } from '../../hooks/useRoomLiveKit';
 import { useAuth } from '../../store/AuthContext';
@@ -71,6 +72,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
     muteMember,
     removeFromSeat,
     kickMember,
+    banMember,
     endRoom,
     promoteToHost,
     removeHost,
@@ -106,6 +108,26 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
   const [memberActionsVisible, setMemberActionsVisible] = useState(false);
   const [giftModalVisible, setGiftModalVisible] = useState(false);
 
+  // Handle kicked user - must use useEffect to avoid calling Alert during render
+  useEffect(() => {
+    if (currentMember?.isKicked) {
+      Alert.alert('Expulsado', 'Fuiste expulsado de la sala.', [
+        { text: 'Aceptar', onPress: () => navigation.goBack() },
+      ]);
+    }
+  }, [currentMember?.isKicked, navigation]);
+
+  // Handle room ending - must use useEffect
+  useEffect(() => {
+    if (room?.status === 'closed') {
+      Alert.alert('Sala finalizada', 'Esta sala de voz ha sido cerrada por el anfitrión.', [
+        { text: 'Aceptar', onPress: () => navigation.goBack() },
+      ]);
+    }
+  }, [room?.status, navigation]);
+
+
+
   if (socialLoading) {
     return <ScreenLoading message="Entrando a la sala..." />;
   }
@@ -119,21 +141,11 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
     );
   }
 
-  // Handle kicked user
-  if (currentMember?.isKicked) {
-    Alert.alert('Expulsado', 'Fuiste expulsado de la sala.', [
-      { text: 'Aceptar', onPress: () => navigation.goBack() },
-    ]);
+  // Inactive room guard (already handled by useEffect above, but also block render)
+  if (currentMember?.isKicked || room.status === 'closed') {
     return null;
   }
 
-  // Handle room ending
-  if (room.status === 'ended') {
-    Alert.alert('Sala finalizada', 'Esta sala de voz ha sido cerrada por el anfitrión.', [
-      { text: 'Aceptar', onPress: () => navigation.goBack() },
-    ]);
-    return null;
-  }
 
   const handleLeave = async () => {
     if (currentUserRole === 'owner') {
@@ -287,7 +299,11 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
 
       <View style={{ flex: 1, paddingHorizontal: spacing.lg }}>
         {/* Seats Grid & Listeners at the top */}
-        <MicSeatsGrid members={enrichedMembers} onSeatPress={handleSeatPress} />
+        <MicSeatsGrid
+          members={enrichedMembers}
+          onSeatPress={handleSeatPress}
+          maxMics={room.maxMics || 8}
+        />
         <RoomMembersList members={enrichedMembers} onMemberPress={handleMemberPress} />
 
         {/* Real-time Moderable Chat Panel */}
@@ -319,7 +335,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         onMicPress={handleMicAction}
         onGiftPress={() => setGiftModalVisible(true)}
         onSharePress={() => Alert.alert('Compartir', 'Enlace de sala copiado al portapapeles.')}
-        onMorePress={hasSeat ? handleLowerMic : () => setAdminPanelVisible(true)}
+        onMorePress={hasSeat ? handleLowerMic : (isPrivileged ? () => setAdminPanelVisible(true) : () => setRoomMenuVisible(true))}
         requestsCount={micRequests.length}
         localMuted={localMuted}
       />
@@ -435,6 +451,14 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         onViewProfile={(targetId) => {
           navigation.navigate('PublicProfile', { userId: targetId });
         }}
+        onBan={async (targetId) => {
+          try {
+            await banMember(targetId);
+            Alert.alert('Bloqueado', 'Usuario bloqueado de esta sala.');
+          } catch (e: any) {
+            Alert.alert('Error', e.message || 'No se pudo bloquear al usuario');
+          }
+        }}
       />
 
       {/* Gift Store Modal */}
@@ -480,6 +504,28 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
               }}
             >
               <Text style={styles.sheetBtnText}>🎤 Entrar al Karaoke</Text>
+            </TouchableOpacity>
+
+            {hasSeat && (
+              <TouchableOpacity
+                style={styles.sheetBtn}
+                onPress={() => {
+                  setRoomMenuVisible(false);
+                  handleLowerMic();
+                }}
+              >
+                <Text style={[styles.sheetBtnText, { color: colors.secondary }]}>🎙️ Bajar del Escenario</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.sheetBtn}
+              onPress={() => {
+                setRoomMenuVisible(false);
+                navigation.navigate(MAIN_ROUTES.PRIVATE_CONVERSATIONS);
+              }}
+            >
+              <Text style={styles.sheetBtnText}>💬 Chat Privado</Text>
             </TouchableOpacity>
 
             {room.ownerId !== user?.uid && (

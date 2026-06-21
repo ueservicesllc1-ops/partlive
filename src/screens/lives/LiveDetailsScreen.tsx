@@ -17,6 +17,7 @@ import {
   LiveEndedState,
 } from '../../components/lives';
 import { GiftStoreModal } from '../../components/store/GiftStoreModal';
+import { ScreenError } from '../../components/ScreenError';
 import { ReportModal } from '../../components/moderation/ReportModal';
 import { useGiftEvents } from '../../hooks/useGiftEvents';
 import { GiftAnimationLayer, GiftReceivedToast, GlobalGiftBanner, TopGiftersPanel } from '../../components/gifts';
@@ -119,6 +120,15 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
     );
   }
 
+  if (error) {
+    return (
+      <ScreenError
+        message={error}
+        onRetry={() => navigation.goBack()}
+      />
+    );
+  }
+
   // If live ended, show summaries
   if (live?.status === 'ended') {
     return (
@@ -128,6 +138,14 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
       />
     );
   }
+
+  const handleSendMessage = async (text: string) => {
+    try {
+      await sendMessage(text);
+    } catch (e: any) {
+      Alert.alert('Error al enviar', e.message || 'No se pudo enviar el mensaje.');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -174,7 +192,7 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
             </View>
 
             <LiveActionsBar
-              onSendMessage={sendMessage}
+              onSendMessage={handleSendMessage}
               onGiftPress={() => setGiftModalVisible(true)}
               onLikePress={liked ? unlike : like}
               onMorePress={() => {

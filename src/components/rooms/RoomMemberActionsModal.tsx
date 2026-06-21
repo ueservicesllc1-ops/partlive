@@ -22,6 +22,7 @@ interface RoomMemberActionsModalProps {
   onMoveToSpeaker: (targetId: string) => void;
   onRemoveFromSpeaker: (targetId: string) => void;
   onViewProfile?: (targetId: string) => void;
+  onBan?: (targetId: string) => void;
 }
 
 export const RoomMemberActionsModal: React.FC<RoomMemberActionsModalProps> = ({
@@ -39,6 +40,7 @@ export const RoomMemberActionsModal: React.FC<RoomMemberActionsModalProps> = ({
   onMoveToSpeaker,
   onRemoveFromSpeaker,
   onViewProfile,
+  onBan,
 }) => {
   if (!targetMember) return null;
 
@@ -165,6 +167,16 @@ export const RoomMemberActionsModal: React.FC<RoomMemberActionsModalProps> = ({
                   onPress={() => handleAction(() => onKick(targetMember.userId))}
                 >
                   <Text style={styles.dangerText}>🥾 Expulsar de la Sala</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Ban (Bloquear de la sala) */}
+              {actions.canKick && onBan && (
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.dangerBtn]}
+                  onPress={() => handleAction(() => onBan(targetMember.userId))}
+                >
+                  <Text style={styles.dangerText}>🚫 Bloquear de esta Sala</Text>
                 </TouchableOpacity>
               )}
             </View>
