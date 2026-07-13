@@ -1,4 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
+import { docExists } from '../../../utils/firestore';
 import { MatchmakingRequest, GameSession, GameType } from '../../../types/game';
 import { FirestoreCollections, getGameSessionPlayersPath } from '../../../constants/firestoreCollections';
 import { createPublicSession, joinGameSession } from './gameSessionsService';
@@ -47,7 +48,7 @@ export const findAvailablePublicSession = async (
         .doc(userProfile.uid)
         .get();
 
-      if (!playerSnap.exists) {
+      if (!docExists(playerSnap)) {
         return session;
       }
     }
@@ -130,7 +131,7 @@ export const createMatchmakingRequest = async (
  */
 export const cancelMatchmakingRequest = async (requestId: string, userId: string): Promise<void> => {
   const requestDoc = await db().collection(FirestoreCollections.MATCHMAKING_REQUESTS).doc(requestId).get();
-  if (!requestDoc.exists) return;
+  if (!docExists(requestDoc)) return;
 
   const data = requestDoc.data() as MatchmakingRequest;
   if (data.userId !== userId) {
@@ -159,7 +160,7 @@ export const listenToMatchmakingRequest = (
     .doc(requestId)
     .onSnapshot(
       doc => {
-        if (doc.exists()) {
+        if (docExists(doc)) {
           onUpdate({ id: doc.id, ...doc.data() } as MatchmakingRequest);
         }
       },

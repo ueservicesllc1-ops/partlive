@@ -53,4 +53,18 @@ export interface UserProfile {
   allowMessagesFrom?: 'everyone' | 'followers' | 'friends' | 'none';
   isKycVerified?: boolean;
   kycStatus?: 'pending' | 'approved' | 'rejected' | 'not_verified';
+  savedRoomConfig?: {
+    title: string;
+    description: string;
+    category: any;
+    countryCode?: string;
+    countryName?: string;
+    languageCode?: string;
+    languageName?: string;
+    visibility: any;
+    accessType: any;
+    password?: string;
+    maxMics: number;
+    tags?: string[];
+  };
 }

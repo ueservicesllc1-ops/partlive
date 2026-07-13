@@ -43,7 +43,9 @@ export const getLiveKitRoomToken = async (roomId: string): Promise<LiveKitTokenR
     throw new Error(errorMsg);
   }
 
-  return response.json() as Promise<LiveKitTokenResponse>;
+  const data = await response.json() as LiveKitTokenResponse;
+  console.log('[LiveKitAPI] Token response received:', JSON.stringify(data));
+  return data;
 };
 
 export const getLiveKitLiveToken = async (liveId: string): Promise<LiveKitTokenResponse> => {

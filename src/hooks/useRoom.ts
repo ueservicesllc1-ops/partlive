@@ -8,6 +8,8 @@ import {
   listenToRoom,
   listenToRoomMembers,
   endRoom as apiEndRoom,
+  lockSeat as apiLockSeat,
+  unlockSeat as apiUnlockSeat,
 } from '../services/firebase/firestore/roomsService';
 import {
   assignSeat,
@@ -116,14 +118,17 @@ export const useRoom = (roomId: string) => {
         // Join room in firestore
         const profileData = {
           uid: currentProfile.uid,
-          displayName: currentProfile.displayName,
+          displayName: currentProfile.displayName || currentProfile.username || 'Usuario',
           photoURL: currentProfile.photoURL,
           username: currentProfile.username,
         };
         await joinRoom(roomId, profileData);
         await sendUserJoinedMessage(roomId, currentProfile.displayName);
 
-        if (active) setLoading(false);
+        if (active) {
+          setRoom(roomData);
+          setLoading(false);
+        }
       } catch (err: any) {
         console.error('Error joining room:', err);
         if (active) {
@@ -170,9 +175,12 @@ export const useRoom = (roomId: string) => {
     };
   }, [roomId, loading, error]);
 
-  // Real-time subscription to Mic Requests (only for privileged users)
+  // Real-time subscription to Mic Requests
+  // NOTE: We subscribe for ALL members so that the owner/host receives requests
+  // as soon as their role resolves from Firestore. The privileged-only UI gate
+  // is enforced at the screen/component level, not here.
   useEffect(() => {
-    if (!roomId || !isPrivileged || loading || error) {
+    if (!roomId || loading || error) {
       setMicRequests([]);
       return;
     }
@@ -184,14 +192,14 @@ export const useRoom = (roomId: string) => {
     return () => {
       unsubscribeMicRequests();
     };
-  }, [roomId, isPrivileged, loading, error]);
+  }, [roomId, loading, error]);
 
   // Actions
   const join = useCallback(async () => {
     if (!roomId || !userProfile) return;
     const profileData = {
       uid: userProfile.uid,
-      displayName: userProfile.displayName,
+      displayName: userProfile.displayName || userProfile.username || 'Usuario',
       photoURL: userProfile.photoURL,
       username: userProfile.username,
     };
@@ -382,6 +390,16 @@ export const useRoom = (roomId: string) => {
     await apiEndRoom(roomId, userProfile.uid);
   }, [roomId, userProfile]);
 
+  const lockSeat = useCallback(async (seatIndex: number) => {
+    if (!roomId || !userProfile) return;
+    await apiLockSeat(roomId, seatIndex, userProfile.uid);
+  }, [roomId, userProfile]);
+
+  const unlockSeat = useCallback(async (seatIndex: number) => {
+    if (!roomId || !userProfile) return;
+    await apiUnlockSeat(roomId, seatIndex, userProfile.uid);
+  }, [roomId, userProfile]);
+
   return {
     room,
     members,
@@ -417,5 +435,7 @@ export const useRoom = (roomId: string) => {
     kickMember,
     banMember,
     endRoom,
+    lockSeat,
+    unlockSeat,
   };
 };

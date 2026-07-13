@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, SafeAreaView, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, textPresets, spacing } from '../../theme';
 import { CreateRoomForm } from '../../components/rooms/CreateRoomForm';
 import { createRoom } from '../../services/firebase/firestore/roomsService';
+import { updateUserProfile } from '../../services/firebase/firestore/usersService';
 import { useAuth } from '../../store/AuthContext';
 import { MAIN_ROUTES } from '../../app/routes';
 
@@ -43,6 +45,28 @@ export const CreateRoomScreen = ({ navigation }: any) => {
         moderatorIds: [],
       } as any);
 
+      // Guardar la configuración de la sala en el perfil del usuario para autoguardado
+      try {
+        await updateUserProfile(userProfile.uid, {
+          savedRoomConfig: {
+            title: formData.title,
+            description: formData.description,
+            category: formData.category,
+            countryCode: formData.countryCode,
+            countryName: formData.countryName,
+            languageCode: formData.languageCode,
+            languageName: formData.languageName,
+            visibility: formData.visibility,
+            accessType: formData.accessType,
+            password: formData.password,
+            maxMics: formData.maxMics,
+            tags: formData.tags,
+          },
+        });
+      } catch (saveError) {
+        console.error('Error auto-saving room configuration:', saveError);
+      }
+
       navigation.replace(MAIN_ROUTES.ROOM_DETAILS, { roomId });
     } catch (error: any) {
       console.error('Error creating room:', error);
@@ -62,7 +86,7 @@ export const CreateRoomScreen = ({ navigation }: any) => {
         <View style={styles.placeholder} />
       </View>
 
-      <CreateRoomForm onSubmit={handleSubmit} loading={loading} />
+      <CreateRoomForm onSubmit={handleSubmit} loading={loading} initialValues={userProfile?.savedRoomConfig} />
     </SafeAreaView>
   );
 };

@@ -23,6 +23,9 @@ export interface LiveStream {
   allowChat: boolean;
   allowGifts: boolean;
   moderatorIds: string[];
+  streamMode?: 'solo' | 'battle' | 'group';
+  maxGuests?: number;
+  coHostIds?: string[];
   startedAt?: any; // Firestore Timestamp
   endedAt?: any; // Firestore Timestamp
   createdAt: any; // Firestore Timestamp
@@ -43,7 +46,7 @@ export interface LiveViewer {
   displayName: string;
   username?: string;
   photoURL?: string;
-  role: 'host' | 'moderator' | 'viewer';
+  role: 'host' | 'moderator' | 'cohost' | 'viewer';
   joinedAt: any; // Firestore Timestamp
   lastActiveAt: any; // Firestore Timestamp
   isMuted?: boolean;
@@ -57,7 +60,7 @@ export interface LiveMessage {
   senderName: string;
   senderUsername?: string;
   senderPhotoURL?: string;
-  senderRole?: 'host' | 'moderator' | 'viewer';
+  senderRole?: 'host' | 'moderator' | 'cohost' | 'viewer';
   text?: string;
   type: 'text' | 'emoji' | 'system' | 'gift' | 'moderation';
   status: 'active' | 'hidden' | 'deleted';

@@ -82,6 +82,10 @@ export const ROOM_ROLE_PERMISSIONS: Record<RoomRole, RoomPermission[]> = {
     'SEND_EMOJI',
     'REQUEST_MIC',
     'SEND_GIFT_MOCK',
+    'REMOVE_SPEAKER',
+    'ASSIGN_SPEAKER',
+    'LOCK_MIC_SEAT',
+    'UNLOCK_MIC_SEAT',
   ],
   speaker: [
     'SEND_MESSAGE',

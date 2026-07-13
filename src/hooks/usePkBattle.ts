@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PkBattle, PkInvite, PkGiftContribution } from '../types/pk';
-import { getActivePkBattleByLive } from '../services/api/pkApi';
+import { getActivePkBattleByLive, rollPkDice } from '../services/api/pkApi';
 import {
   subscribeToPkBattle,
   subscribeToPkContributions,
@@ -87,6 +87,19 @@ export const usePkBattle = (liveId?: string, currentHostId?: string) => {
     return () => clearInterval(interval);
   }, [activeBattle]);
 
+  const rollDice = async () => {
+    if (!activeBattle) return;
+    try {
+      setLoading(true);
+      const updated = await rollPkDice(activeBattle.id);
+      setActiveBattle(updated);
+    } catch (err: any) {
+      setError(err.message || 'Error al lanzar el dado');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     activeBattle,
     contributions,
@@ -95,5 +108,6 @@ export const usePkBattle = (liveId?: string, currentHostId?: string) => {
     loading,
     error,
     setError,
+    rollDice,
   };
 };

@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, SafeAreaView, StatusBar, ScrollView, RefreshControl, View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, StatusBar, ScrollView, RefreshControl, View, Text, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, textPresets, spacing } from '../theme';
 import { MainHeader } from '../components/navigation/MainHeader';
 import { MAIN_ROUTES, TAB_ROUTES } from '../app/routes';
@@ -19,6 +20,7 @@ import { DailyMissionsSection } from '../components/home/DailyMissionsSection';
 import { FloatingCreateButton } from '../components/home/FloatingCreateButton';
 import { useSocialFeed } from '../hooks/useSocialFeed';
 import { RecommendedUsersCarousel } from '../components/social/RecommendedUsersCarousel';
+import { HomeScreenSkeleton } from '../components/home/HomeScreenSkeleton';
 
 export const HomeScreen = ({ navigation }: any) => {
   const { 
@@ -59,9 +61,7 @@ export const HomeScreen = ({ navigation }: any) => {
       />
       
       {loading && !refreshing ? (
-        <View style={styles.centerBox}>
-          <Text style={styles.loadingText}>Cargando...</Text>
-        </View>
+        <HomeScreenSkeleton />
       ) : error ? (
         <View style={styles.centerBox}>
           <Text style={styles.errorText}>{error}</Text>
@@ -116,8 +116,8 @@ export const HomeScreen = ({ navigation }: any) => {
             >
               <Text style={styles.hostBannerEmoji}>🌟</Text>
               <View style={styles.hostBannerText}>
-                <Text style={styles.hostBannerTitle}>Host Center</Text>
-                <Text style={styles.hostBannerSub}>Ver stats, earnings y actividad</Text>
+                <Text style={styles.hostBannerTitle}>Centro de Host</Text>
+                <Text style={styles.hostBannerSub}>Ver estadísticas, ganancias y actividad</Text>
               </View>
               <Text style={styles.hostBannerArrow}>→</Text>
             </TouchableOpacity>
@@ -179,10 +179,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingText: {
-    ...textPresets.bodyMedium,
-    color: colors.textMuted,
   },
   errorText: {
     ...textPresets.bodyMedium,

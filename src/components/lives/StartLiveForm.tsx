@@ -22,6 +22,8 @@ interface StartLiveFormProps {
     allowChat: boolean;
     allowGifts: boolean;
     isPrivate: boolean;
+    streamMode?: 'solo' | 'battle' | 'group';
+    maxGuests?: number;
   }) => void;
   loading?: boolean;
 }
@@ -37,6 +39,8 @@ export const StartLiveForm: React.FC<StartLiveFormProps> = ({ onSubmit, loading 
   const [allowChat, setAllowChat] = useState(true);
   const [allowGifts, setAllowGifts] = useState(true);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [streamMode, setStreamMode] = useState<'solo' | 'battle' | 'group'>('solo');
+  const [maxGuests, setMaxGuests] = useState(4);
 
   const handleStart = () => {
     if (!title.trim()) {
@@ -52,6 +56,8 @@ export const StartLiveForm: React.FC<StartLiveFormProps> = ({ onSubmit, loading 
       allowChat,
       allowGifts,
       isPrivate,
+      streamMode,
+      maxGuests,
     });
   };
 
@@ -96,6 +102,47 @@ export const StartLiveForm: React.FC<StartLiveFormProps> = ({ onSubmit, loading 
           );
         })}
       </View>
+
+      <Text style={styles.label}>Modo de Transmisión</Text>
+      <View style={styles.categoryRow}>
+        {(['solo', 'battle', 'group'] as const).map(mode => {
+          const isSelected = streamMode === mode;
+          const label = mode === 'solo' ? 'Solo' : mode === 'battle' ? 'Modo Batalla (Máx 4)' : 'Modo Grupal';
+          return (
+            <TouchableOpacity
+              key={mode}
+              style={[styles.categoryBadge, isSelected && styles.categoryBadgeActive]}
+              onPress={() => setStreamMode(mode)}
+            >
+              <Text style={[styles.categoryText, isSelected && styles.categoryTextActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {streamMode === 'group' && (
+        <View style={styles.modeContainer}>
+          <Text style={styles.label}>Límite de Invitados: {maxGuests}</Text>
+          <View style={styles.guestsCounterRow}>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+              <TouchableOpacity
+                key={num}
+                style={[
+                  styles.numBadge,
+                  maxGuests === num && styles.numBadgeActive
+                ]}
+                onPress={() => setMaxGuests(num)}
+              >
+                <Text style={[styles.numText, maxGuests === num && styles.numTextActive]}>
+                  {num}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
 
       <View style={styles.settingsRow}>
         <Text style={styles.settingsLabel}>Permitir Chat en vivo</Text>
@@ -221,5 +268,35 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 15,
     fontWeight: 'bold',
+  },
+  modeContainer: {
+    marginVertical: spacing.xs,
+  },
+  numBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#1E1B30',
+    borderWidth: 1,
+    borderColor: '#292440',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  numBadgeActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  numText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  numTextActive: {
+    color: '#FFF',
+  },
+  guestsCounterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: spacing.xs,
   },
 });

@@ -1,81 +1,112 @@
-import { PermissionsAndroid, Platform } from 'react-native';
+import { Platform, Alert, Linking } from 'react-native';
+import { check, request, PERMISSIONS, RESULTS, openSettings } from 'react-native-permissions';
+
+export type PermissionType = 'microphone' | 'camera';
+export type AppPermissionStatus = 'granted' | 'denied' | 'blocked' | 'unavailable';
+
+/**
+ * Gets the native permission string based on the platform and requested type.
+ */
+const getNativePermission = (type: PermissionType) => {
+  if (Platform.OS === 'ios') {
+    return type === 'camera' ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.IOS.MICROPHONE;
+  } else {
+    return type === 'camera' ? PERMISSIONS.ANDROID.CAMERA : PERMISSIONS.ANDROID.RECORD_AUDIO;
+  }
+};
+
+/**
+ * Checks the current device permission status without requesting it.
+ */
+export const checkDevicePermission = async (type: PermissionType): Promise<AppPermissionStatus> => {
+  try {
+    const nativePerm = getNativePermission(type);
+    const status = await check(nativePerm);
+    
+    switch (status) {
+      case RESULTS.GRANTED:
+      case RESULTS.LIMITED:
+        return 'granted';
+      case RESULTS.DENIED:
+        return 'denied';
+      case RESULTS.BLOCKED:
+        return 'blocked';
+      default:
+        return 'unavailable';
+    }
+  } catch (error) {
+    console.error(`[Permissions] Error checking ${type} permission:`, error);
+    return 'unavailable';
+  }
+};
+
+/**
+ * Requests the specified device permission.
+ */
+export const requestDevicePermission = async (type: PermissionType): Promise<AppPermissionStatus> => {
+  try {
+    const nativePerm = getNativePermission(type);
+    const status = await request(nativePerm);
+    
+    switch (status) {
+      case RESULTS.GRANTED:
+      case RESULTS.LIMITED:
+        return 'granted';
+      case RESULTS.DENIED:
+        return 'denied';
+      case RESULTS.BLOCKED:
+        return 'blocked';
+      default:
+        return 'unavailable';
+    }
+  } catch (error) {
+    console.error(`[Permissions] Error requesting ${type} permission:`, error);
+    return 'unavailable';
+  }
+};
+
+/**
+ * Displays an alert instructing the user to enable permissions in device settings.
+ */
+export const showPermissionBlockedAlert = (
+  message: string = 'Para usar esta función necesitamos permiso de micrófono y cámara. Actívalos para poder hablar o transmitir en vivo.'
+) => {
+  Alert.alert(
+    'Permisos Requeridos',
+    message,
+    [
+      {
+        text: 'Cancelar',
+        style: 'cancel',
+      },
+      {
+        text: 'Configuración',
+        onPress: () => {
+          openSettings().catch(() => {
+            Linking.openSettings();
+          });
+        },
+      },
+    ]
+  );
+};
+
+// ==========================================
+// Backward Compatibility / Legacy Fallbacks
+// ==========================================
 
 export const requestMicrophonePermission = async (): Promise<boolean> => {
-  if (Platform.OS !== 'android') {
-    return true;
-  }
-
-  try {
-    const hasPermission = await PermissionsAndroid.check(
-      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
-    );
-
-    if (hasPermission) {
-      return true;
-    }
-
-    const status = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-      {
-        title: 'Permiso de Micrófono',
-        message: 'PartyLiveApp necesita acceder a tu micrófono para que puedas hablar en las salas de voz en tiempo real.',
-        buttonNeutral: 'Preguntar luego',
-        buttonNegative: 'Cancelar',
-        buttonPositive: 'Aceptar',
-      }
-    );
-
-    return status === PermissionsAndroid.RESULTS.GRANTED;
-  } catch (error) {
-    console.error('Error requesting mic permission:', error);
-    return false;
-  }
+  const status = await requestDevicePermission('microphone');
+  return status === 'granted';
 };
 
 export const requestCameraPermission = async (): Promise<boolean> => {
-  if (Platform.OS !== 'android') {
-    return true;
-  }
-
-  try {
-    const hasPermission = await PermissionsAndroid.check(
-      PermissionsAndroid.PERMISSIONS.CAMERA
-    );
-
-    if (hasPermission) {
-      return true;
-    }
-
-    const status = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.CAMERA,
-      {
-        title: 'Permiso de Cámara',
-        message: 'PartyLiveApp necesita acceder a tu cámara para transmitir tu video en vivo.',
-        buttonNeutral: 'Preguntar luego',
-        buttonNegative: 'Cancelar',
-        buttonPositive: 'Aceptar',
-      }
-    );
-
-    return status === PermissionsAndroid.RESULTS.GRANTED;
-  } catch (error) {
-    console.error('Error requesting camera permission:', error);
-    return false;
-  }
+  const status = await requestDevicePermission('camera');
+  return status === 'granted';
 };
 
 export const requestCameraAndMicrophonePermissions = async (): Promise<boolean> => {
-  if (Platform.OS !== 'android') {
-    return true;
-  }
-
-  try {
-    const micGranted = await requestMicrophonePermission();
-    const camGranted = await requestCameraPermission();
-    return micGranted && camGranted;
-  } catch (error) {
-    console.error('Error requesting camera and mic permissions:', error);
-    return false;
-  }
+  const micGranted = await requestMicrophonePermission();
+  const camGranted = await requestCameraPermission();
+  return micGranted && camGranted;
 };
-

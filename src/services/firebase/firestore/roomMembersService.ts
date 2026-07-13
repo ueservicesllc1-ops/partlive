@@ -281,7 +281,8 @@ export const muteMember = async (
   if (!actor) throw new Error('Actor no encontrado.');
   if (!target) throw new Error('Miembro no encontrado.');
 
-  if (!hasRoomPermission(actor.role, 'MUTE_MEMBER') || !canManageRole(actor.role, target.role)) {
+  const isSelf = targetUserId === actorUserId;
+  if (!isSelf && (!hasRoomPermission(actor.role, 'MUTE_MEMBER') || !canManageRole(actor.role, target.role))) {
     throw new Error('No tienes permiso para silenciar a este miembro.');
   }
 
@@ -295,15 +296,17 @@ export const muteMember = async (
       lastActiveAt: firestore.FieldValue.serverTimestamp(),
     });
 
-  if (muted) {
+  if (muted && !isSelf) {
     await sendUserMutedMessage(roomId, target.displayName);
   }
 
-  await logRoomModerationAction(roomId, {
-    moderatorId: actorUserId,
-    action: muted ? 'mute_member' : 'unmute_member',
-    targetUserId,
-  });
+  if (!isSelf) {
+    await logRoomModerationAction(roomId, {
+      moderatorId: actorUserId,
+      action: muted ? 'mute_member' : 'unmute_member',
+      targetUserId,
+    });
+  }
 };
 
 export const kickMember = async (roomId: string, targetUserId: string, actorUserId: string): Promise<void> => {

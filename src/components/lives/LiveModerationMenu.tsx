@@ -5,12 +5,13 @@ import { colors, spacing, textPresets } from '../../theme';
 interface LiveModerationMenuProps {
   visible: boolean;
   onClose: () => void;
-  targetUser: { userId: string; displayName: string; role: 'host' | 'moderator' | 'viewer' } | null;
-  actorRole: 'host' | 'moderator' | 'viewer';
+  targetUser: { userId: string; displayName: string; role: 'host' | 'moderator' | 'cohost' | 'viewer' } | null;
+  actorRole: 'host' | 'moderator' | 'cohost' | 'viewer';
   onMuteToggle: (userId: string, isMuted: boolean) => void;
   onKick: (userId: string) => void;
   onAddModerator?: (userId: string) => void;
   onRemoveModerator?: (userId: string) => void;
+  onInviteCoHost?: (userId: string) => void;
   isTargetMuted?: boolean;
 }
 
@@ -23,6 +24,7 @@ export const LiveModerationMenu: React.FC<LiveModerationMenuProps> = ({
   onKick,
   onAddModerator,
   onRemoveModerator,
+  onInviteCoHost,
   isTargetMuted = false,
 }) => {
   if (!targetUser) return null;
@@ -68,6 +70,18 @@ export const LiveModerationMenu: React.FC<LiveModerationMenuProps> = ({
                 }}
               >
                 <Text style={[styles.optionText, styles.dangerText]}>🚪 Expulsar del Live</Text>
+              </TouchableOpacity>
+            )}
+
+            {isHost && isTargetViewer && onInviteCoHost && (
+              <TouchableOpacity
+                style={styles.optionBtn}
+                onPress={() => {
+                  onInviteCoHost(targetUser.userId);
+                  onClose();
+                }}
+              >
+                <Text style={styles.optionText}>🎙️ Invitar a Transmitir</Text>
               </TouchableOpacity>
             )}
 

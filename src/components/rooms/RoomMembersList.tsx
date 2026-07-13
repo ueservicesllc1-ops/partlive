@@ -41,7 +41,7 @@ export const RoomMembersList: React.FC<RoomMembersListProps> = ({ members, onMem
                   <RoomRoleBadge role={item.role} />
                 </View>
                 <Text style={styles.displayName} numberOfLines={1}>
-                  {item.displayName.split(' ')[0]}
+                  {(item.displayName ?? '').split(' ')[0]}
                 </Text>
               </TouchableOpacity>
             )}
@@ -71,7 +71,7 @@ export const RoomMembersList: React.FC<RoomMembersListProps> = ({ members, onMem
               >
                 <Avatar source={item.photoURL} emoji="👤" size={36} />
                 <Text style={styles.displayName} numberOfLines={1}>
-                  {item.displayName.split(' ')[0]}
+                   {(item.displayName ?? '').split(' ')[0]}
                 </Text>
               </TouchableOpacity>
             )}

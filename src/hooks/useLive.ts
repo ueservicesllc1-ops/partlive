@@ -115,6 +115,7 @@ export const useLive = (liveId: string) => {
         await joinLive(liveId, profileData);
         if (active) {
           setJoined(true);
+          setLive(liveData);
           setLoading(false);
         }
       } catch (err: any) {

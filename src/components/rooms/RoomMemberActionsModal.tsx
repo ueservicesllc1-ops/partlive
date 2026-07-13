@@ -86,7 +86,7 @@ export const RoomMemberActionsModal: React.FC<RoomMemberActionsModalProps> = ({
               )}
 
               {/* Mute / Unmute */}
-              {actions.canMute && (
+              {(actions.canMute || (isOwnUser && targetMember.seatIndex !== undefined)) && (
                 <TouchableOpacity
                   style={styles.actionBtn}
                   onPress={() =>
@@ -94,7 +94,13 @@ export const RoomMemberActionsModal: React.FC<RoomMemberActionsModalProps> = ({
                   }
                 >
                   <Text style={styles.actionText}>
-                    {targetMember.isMuted ? '🔊 Desactivar Silencio' : '🔇 Silenciar Usuario'}
+                    {targetMember.isMuted
+                      ? isOwnUser
+                        ? '🔊 Activar Micrófono'
+                        : '🔊 Desactivar Silencio'
+                      : isOwnUser
+                      ? '🔇 Silenciar Micrófono'
+                      : '🔇 Silenciar Usuario'}
                   </Text>
                 </TouchableOpacity>
               )}

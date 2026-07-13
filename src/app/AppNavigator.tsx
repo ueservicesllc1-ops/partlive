@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from '../theme';
+import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '../store/AuthContext';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 import { SplashScreen } from '../screens/SplashScreen';
 import { AuthNavigator } from './AuthNavigator';
@@ -27,9 +29,20 @@ const SetupNavigator = () => {
 
 export const AppNavigator = () => {
   const { isAuthenticated, isProfileCompleted, initializing, userProfile } = useAuth();
+  const { isOnline, wasOffline } = useNetworkStatus();
+  const [showReconnected, setShowReconnected] = useState(false);
   
   // Track active sessions and heartbeats
   useAppSessionTracking();
+
+  // Show "reconectado" banner briefly when recovering from offline
+  useEffect(() => {
+    if (isOnline && wasOffline) {
+      setShowReconnected(true);
+      const t = setTimeout(() => setShowReconnected(false), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [isOnline, wasOffline]);
 
   if (initializing) {
     return <SplashScreen navigation={null as any} />;
@@ -42,6 +55,17 @@ export const AppNavigator = () => {
   return (
     <NavigationContainer>
       <NotificationProvider>
+        {/* ─── Offline / Reconnected Banner ─── */}
+        {!isOnline && (
+          <View style={networkStyles.offlineBanner}>
+            <Text style={networkStyles.offlineText}>📡 Sin conexión a internet</Text>
+          </View>
+        )}
+        {showReconnected && (
+          <View style={networkStyles.reconnectedBanner}>
+            <Text style={networkStyles.reconnectedText}>✅ Conexión restaurada</Text>
+          </View>
+        )}
         <Stack.Navigator
           screenOptions={{
             headerShown: false,
@@ -64,3 +88,28 @@ export const AppNavigator = () => {
     </NavigationContainer>
   );
 };
+
+const networkStyles = StyleSheet.create({
+  offlineBanner: {
+    backgroundColor: colors.error,
+    paddingVertical: 8,
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  offlineText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  reconnectedBanner: {
+    backgroundColor: colors.success,
+    paddingVertical: 8,
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  reconnectedText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+});

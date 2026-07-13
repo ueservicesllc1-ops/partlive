@@ -62,6 +62,16 @@ export const cancelPkBattle = async (
   });
 };
 
+export const rollPkDice = async (
+  pkBattleId: string
+): Promise<PkBattle> => {
+  const data = await apiFetch('/pk/roll-dice', {
+    method: 'POST',
+    body: JSON.stringify({ pkBattleId }),
+  });
+  return data.battle;
+};
+
 export const getActivePkBattleByLive = async (
   liveId: string
 ): Promise<PkBattle | null> => {

@@ -25,6 +25,7 @@ export interface Room {
   listenersCount: number; // Maintain compatibility
   hostIds: string[];
   moderatorIds: string[];
+  lockedSeats?: number[];
   tags?: string[];
   coverImageUrl?: string;
   isPrivate?: boolean;

@@ -1,4 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
+import { docExists } from '../../../utils/firestore';
 import { LiveStream, LiveViewer } from '../../../types/live';
 import { FirestoreCollections, getLiveViewersPath } from '../../../constants/firestoreCollections';
 
@@ -20,7 +21,7 @@ export const getLiveStreams = async (): Promise<LiveStream[]> => {
  */
 export const getLiveById = async (id: string): Promise<LiveStream | null> => {
   const doc = await firestore().collection(FirestoreCollections.LIVES).doc(id).get();
-  if (doc.exists()) {
+  if (docExists(doc)) {
     return { id: doc.id, ...doc.data() } as LiveStream;
   }
   return null;
@@ -92,6 +93,9 @@ export const createLive = async (
     allowChat: data.allowChat !== undefined ? data.allowChat : true,
     allowGifts: data.allowGifts !== undefined ? data.allowGifts : true,
     moderatorIds: [],
+    streamMode: data.streamMode || 'solo',
+    maxGuests: data.streamMode === 'group' ? (data.maxGuests || 4) : data.streamMode === 'battle' ? 4 : 0,
+    coHostIds: [],
     startedAt: timestamp,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -165,7 +169,7 @@ export const updateLiveCounts = async (liveId: string): Promise<void> => {
 
   await db.runTransaction(async transaction => {
     const liveSnap = await transaction.get(liveRef);
-    if (!liveSnap.exists()) return;
+    if (!docExists(liveSnap)) return;
 
     const liveData = liveSnap.data() as LiveStream;
     const peak = Math.max(liveData.peakViewersCount || 0, currentCount);
@@ -210,7 +214,7 @@ export const joinLive = async (
   const viewerRef = db.collection(getLiveViewersPath(liveId)).doc(userProfile.uid);
   const viewerSnap = await viewerRef.get();
 
-  if (viewerSnap.exists()) {
+  if (docExists(viewerSnap)) {
     const viewerData = viewerSnap.data() as LiveViewer;
     if (viewerData.isBannedFromLive) {
       throw new Error('Has sido expulsado o baneado de este live.');
@@ -248,7 +252,7 @@ export const leaveLive = async (liveId: string, userId: string): Promise<void> =
   const viewerRef = db.collection(getLiveViewersPath(liveId)).doc(userId);
   const viewerSnap = await viewerRef.get();
 
-  if (viewerSnap.exists()) {
+  if (docExists(viewerSnap)) {
     await viewerRef.delete();
     await updateLiveCounts(liveId);
   }
@@ -262,7 +266,7 @@ export const listenToLive = (liveId: string, callback: (live: LiveStream | null)
     .collection(FirestoreCollections.LIVES)
     .doc(liveId)
     .onSnapshot(doc => {
-      if (doc.exists()) {
+      if (docExists(doc)) {
         callback({ id: doc.id, ...doc.data() } as LiveStream);
       } else {
         callback(null);
@@ -282,11 +286,11 @@ export const likeLive = async (
   const likeRef = db.collection(FirestoreCollections.LIVES).doc(liveId).collection('likes').doc(userProfile.uid);
   const likeSnap = await likeRef.get();
 
-  if (!likeSnap.exists()) {
+  if (!docExists(likeSnap)) {
     const liveRef = db.collection(FirestoreCollections.LIVES).doc(liveId);
     await db.runTransaction(async transaction => {
       const liveSnap = await transaction.get(liveRef);
-      if (!liveSnap.exists()) return;
+      if (!docExists(liveSnap)) return;
       const liveData = liveSnap.data() as LiveStream;
 
       transaction.set(likeRef, {
@@ -309,11 +313,11 @@ export const unlikeLive = async (liveId: string, userId: string): Promise<void> 
   const likeRef = db.collection(FirestoreCollections.LIVES).doc(liveId).collection('likes').doc(userId);
   const likeSnap = await likeRef.get();
 
-  if (likeSnap.exists()) {
+  if (docExists(likeSnap)) {
     const liveRef = db.collection(FirestoreCollections.LIVES).doc(liveId);
     await db.runTransaction(async transaction => {
       const liveSnap = await transaction.get(liveRef);
-      if (!liveSnap.exists()) return;
+      if (!docExists(liveSnap)) return;
       const liveData = liveSnap.data() as LiveStream;
 
       transaction.delete(likeRef);
@@ -321,5 +325,81 @@ export const unlikeLive = async (liveId: string, userId: string): Promise<void> 
         likesCount: Math.max(0, (liveData.likesCount || 0) - 1),
       });
     });
+  }
+};
+
+/**
+ * Send a co-host invite to a viewer.
+ */
+export const inviteCoHost = async (liveId: string, targetUserId: string, actorUserId: string): Promise<void> => {
+  const db = firestore();
+  await db.collection('liveInvites').add({
+    liveId,
+    invitedUserId: targetUserId,
+    invitedBy: actorUserId,
+    status: 'pending',
+    createdAt: firestore.FieldValue.serverTimestamp(),
+  });
+};
+
+/**
+ * Listen to pending co-host invites for a specific user.
+ */
+export const listenToCoHostInvites = (userId: string, callback: (invites: any[]) => void) => {
+  return firestore()
+    .collection('liveInvites')
+    .where('invitedUserId', '==', userId)
+    .where('status', '==', 'pending')
+    .onSnapshot(snap => {
+      if (snap) {
+        callback(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }
+    });
+};
+
+/**
+ * Accept or reject a co-host invite.
+ */
+export const respondToCoHostInvite = async (inviteId: string, accepted: boolean): Promise<void> => {
+  const db = firestore();
+  const inviteRef = db.collection('liveInvites').doc(inviteId);
+  const inviteSnap = await inviteRef.get();
+  
+  if (!docExists(inviteSnap)) {
+    throw new Error('La invitación no existe.');
+  }
+
+  const inviteData = inviteSnap.data();
+  const liveId = inviteData?.liveId;
+  const userId = inviteData?.invitedUserId;
+
+  if (accepted) {
+    // 1. Update invite status to accepted
+    await inviteRef.update({ status: 'accepted' });
+
+    // 2. Add user to coHostIds array in the live stream doc
+    const liveRef = db.collection(FirestoreCollections.LIVES).doc(liveId);
+    await db.runTransaction(async transaction => {
+      const liveSnap = await transaction.get(liveRef);
+      if (!docExists(liveSnap)) return;
+      const liveData = liveSnap.data() as any;
+      const coHostIds = liveData.coHostIds || [];
+      if (!coHostIds.includes(userId)) {
+        transaction.update(liveRef, {
+          coHostIds: [...coHostIds, userId],
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
+      }
+    });
+
+    // 3. Update viewer's role to 'cohost' in liveViewers subcollection
+    const viewerRef = db.collection(getLiveViewersPath(liveId)).doc(userId);
+    await viewerRef.update({
+      role: 'cohost',
+      lastActiveAt: firestore.FieldValue.serverTimestamp(),
+    });
+  } else {
+    // Update invite status to rejected
+    await inviteRef.update({ status: 'rejected' });
   }
 };

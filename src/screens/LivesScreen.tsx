@@ -4,12 +4,12 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
   TextInput,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, textPresets } from '../theme';
 import { LiveCard } from '../components/lives/LiveCard';
 import { MainHeader } from '../components/navigation/MainHeader';
@@ -40,6 +40,15 @@ export const LivesScreen = ({ navigation }: any) => {
         onNotificationsPress={() => navigation.navigate(MAIN_ROUTES.NOTIFICATIONS)}
         onWalletPress={() => navigation.navigate(MAIN_ROUTES.WALLET)}
         onMessagesPress={() => navigation.navigate(MAIN_ROUTES.PRIVATE_CONVERSATIONS)}
+        rightAction={
+          <TouchableOpacity 
+            style={styles.headerStartLiveBtn} 
+            onPress={() => navigation.navigate(MAIN_ROUTES.START_LIVE)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.headerStartLiveText}>➕ Iniciar</Text>
+          </TouchableOpacity>
+        }
       />
 
       {/* Search Bar */}
@@ -212,6 +221,18 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   fabText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  headerStartLiveBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 4,
+  },
+  headerStartLiveText: {
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 12,

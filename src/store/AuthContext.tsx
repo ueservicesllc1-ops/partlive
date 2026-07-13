@@ -99,10 +99,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Use a ref to store the guest-check flag to avoid stale closures in the auth listener
+  const isGuestRef = React.useRef(false);
+
   // Handle user state changes
-  async function onAuthStateChanged(usr: FirebaseAuthTypes.User | null) {
+  const onAuthStateChanged = React.useCallback(async (usr: FirebaseAuthTypes.User | null) => {
     // If we are currently a guest user, keep the guest session instead of wiping it
-    if (user && user.uid === 'guest_user') {
+    if (isGuestRef.current) {
       return;
     }
     setUser(usr);
@@ -111,11 +114,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setUserProfile(null);
     }
-    
-    if (initializing) {
-      setInitializing(false);
-    }
-  }
+    setInitializing(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const subscriber = authService.onAuthStateChangedListener(onAuthStateChanged);
@@ -129,7 +130,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       subscriber();
       clearTimeout(safetyTimeout);
     };
-  }, [user]);
+  // ✅ FIX: dependency was [user] causing the listener to resubscribe on every login/logout
+  // The listener must only mount once.
+  }, [onAuthStateChanged]);
 
   const loginWithEmail = async (email: string, password: string) => {
     return await authService.signInWithEmail(email, password);
@@ -176,6 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     if (user?.uid === 'guest_user') {
+      isGuestRef.current = false;
       setUser(null);
       setUserProfile(null);
       setUserWallet(null);
@@ -187,6 +191,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const loginAsGuest = () => {
+    isGuestRef.current = true;
     setUser({
       uid: 'guest_user',
       email: 'invitado@partylive.app',

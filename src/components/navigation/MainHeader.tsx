@@ -17,6 +17,7 @@ interface MainHeaderProps {
   onNotificationsPress?: () => void;
   onWalletPress?: () => void;
   onMessagesPress?: () => void;
+  rightAction?: React.ReactNode;
 }
 
 export const MainHeader = ({
@@ -29,6 +30,7 @@ export const MainHeader = ({
   onNotificationsPress,
   onWalletPress,
   onMessagesPress,
+  rightAction,
 }: MainHeaderProps) => {
   const { userProfile, userWallet } = useAuth();
   const diamondsBalance = userWallet ? userWallet.diamonds : (userProfile?.diamonds || 0);
@@ -44,6 +46,7 @@ export const MainHeader = ({
       )}
 
       <View style={styles.actions}>
+        {rightAction}
         {showWallet && userProfile !== null && (
           <TouchableOpacity style={styles.walletBadge} onPress={onWalletPress}>
             <Text style={styles.walletIcon}>💎</Text>

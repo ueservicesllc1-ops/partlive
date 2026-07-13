@@ -1,4 +1,7 @@
 import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
+import { docExists } from '../../../utils/firestore';
+
 
 export interface UsernameRecord {
   uid: string;
@@ -32,9 +35,40 @@ export const isUsernameAvailable = async (username: string): Promise<boolean> =>
       console.log('[UsernameCheck] Empty username, returning false');
       return false;
     }
+
     const docSnap = await firestore().collection('usernames').doc(normalized).get();
-    console.log('[UsernameCheck] checked:', normalized, 'exists:', docSnap.exists);
-    return !docSnap.exists;
+    console.log('[UsernameCheck] checked:', normalized, 'exists:', docExists(docSnap));
+
+    if (!docExists(docSnap)) {
+      // Username not registered at all
+      return true;
+    }
+
+    // Username document exists — verify the linked user actually exists in 'users'
+    const linkedUid = docSnap.data()?.uid as string | undefined;
+
+    // Si el nombre de usuario ya está reservado por el usuario autenticado actual, está disponible para él
+    const currentUid = auth().currentUser?.uid;
+    if (linkedUid && currentUid && linkedUid === currentUid) {
+      console.log('[UsernameCheck] El usuario actual ya tiene reservado este username:', normalized);
+      return true;
+    }
+
+    if (linkedUid) {
+      const userSnap = await firestore().collection('users').doc(linkedUid).get();
+      if (!docExists(userSnap)) {
+        // Orphaned username record — the user no longer exists. Clean it up and free the name.
+        console.warn('[UsernameCheck] Orphaned username found for uid:', linkedUid, '— deleting and freeing:', normalized);
+        try {
+          await firestore().collection('usernames').doc(normalized).delete();
+        } catch (cleanupErr) {
+          console.warn('[UsernameCheck] Could not delete orphaned record:', cleanupErr);
+        }
+        return true;
+      }
+    }
+
+    return false;
   } catch (error: any) {
     console.error('Error checking username availability:', error);
     // Explicitly check for permission errors to guide the developer/user

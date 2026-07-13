@@ -233,3 +233,20 @@ export const searchUsersByDisplayName = async (
 
   return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
 };
+
+/**
+ * Fetches featured/popular hosts for the home screen.
+ * Returns approved hosts ordered by follower count descending.
+ */
+export const getFeaturedHosts = async (limitCount = 10): Promise<UserProfile[]> => {
+  const snapshot = await firestore()
+    .collection(FirestoreCollections.USERS)
+    .where('isHost', '==', true)
+    .where('status', '==', 'active')
+    .orderBy('followersCount', 'desc')
+    .limit(limitCount)
+    .get();
+
+  return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+};
+

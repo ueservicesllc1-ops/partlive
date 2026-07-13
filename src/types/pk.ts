@@ -44,6 +44,14 @@ export interface PkBattle {
   winnerId?: string;
   result?: PkBattleResult;
   eventId?: string;
+  hostAPowerBar?: number;
+  hostBPowerBar?: number;
+  hostADiceAvailable?: boolean;
+  hostBDiceAvailable?: boolean;
+  hostAActivePower?: 'double_points' | 'shield' | 'block_gifts' | null;
+  hostBActivePower?: 'double_points' | 'shield' | 'block_gifts' | null;
+  hostAPowerExpiry?: any;
+  hostBPowerExpiry?: any;
   createdAt: any; // Timestamp
   updatedAt: any; // Timestamp
 }

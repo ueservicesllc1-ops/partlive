@@ -3,18 +3,24 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Alert,
   Modal,
   TouchableOpacity,
   ScrollView,
+  Share,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, textPresets, spacing } from '../../theme';
 import { MAIN_ROUTES } from '../../app/routes';
 import { useRoom } from '../../hooks/useRoom';
 import { useRoomLiveKit } from '../../hooks/useRoomLiveKit';
 import { useAuth } from '../../store/AuthContext';
+import {
+  checkDevicePermission,
+  requestDevicePermission,
+  showPermissionBlockedAlert,
+} from '../../utils/permissions';
 import { RoomHeader } from '../../components/rooms/RoomHeader';
 import { MicSeatsGrid } from '../../components/rooms/MicSeatsGrid';
 import { RoomMembersList } from '../../components/rooms/RoomMembersList';
@@ -38,6 +44,42 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
   
   const [roomMenuVisible, setRoomMenuVisible] = useState(false);
   const [roomReportVisible, setRoomReportVisible] = useState(false);
+  const [micPermissionDenied, setMicPermissionDenied] = useState(false);
+
+  // Check microphone permission upon entering the room
+  useEffect(() => {
+    const handleMicPermissionCheck = async () => {
+      const status = await checkDevicePermission('microphone');
+      if (status === 'granted') {
+        setMicPermissionDenied(false);
+      } else if (status === 'blocked') {
+        setMicPermissionDenied(true);
+        showPermissionBlockedAlert(
+          'Para usar esta función necesitamos permiso de micrófono. Actívalo para poder hablar en la sala de voz.'
+        );
+      } else {
+        // Status is 'denied' (promptable)
+        const reqStatus = await requestDevicePermission('microphone');
+        if (reqStatus === 'granted') {
+          setMicPermissionDenied(false);
+        } else {
+          setMicPermissionDenied(true);
+          if (reqStatus === 'blocked') {
+            showPermissionBlockedAlert(
+              'Para usar esta función necesitamos permiso de micrófono. Actívalo para poder hablar en la sala de voz.'
+            );
+          } else {
+            Alert.alert(
+              'Permiso de Micrófono',
+              'No has aceptado el permiso de micrófono. No podrás hablar en la sala de voz hasta activarlo.'
+            );
+          }
+        }
+      }
+    };
+    
+    handleMicPermissionCheck();
+  }, []);
 
   const {
     lastEvent,
@@ -81,6 +123,8 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
     removeModerator,
     promoteToSpeaker,
     removeSpeaker,
+    lockSeat,
+    unlockSeat,
   } = useRoom(roomId);
 
   // 2. Real-Time Audio (LiveKit) Integration
@@ -163,6 +207,14 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
             },
             style: 'destructive',
           },
+          {
+            text: 'Solo Salir',
+            onPress: async () => {
+              await lkDisconnect();
+              await leave();
+              navigation.goBack();
+            },
+          },
           { text: 'Cancelar', style: 'cancel' },
         ]
       );
@@ -182,13 +234,24 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
   };
 
   const handleSeatPress = (index: number, occupant?: RoomMember) => {
+    setSelectedSeatIndex(index);
+    setSelectedOccupant(occupant);
+
+    const isLocked = room?.lockedSeats?.includes(index);
+
     if (occupant) {
       setSelectedMember(occupant);
       setMemberActionsVisible(true);
     } else {
-      setSelectedSeatIndex(index);
-      setSelectedOccupant(undefined);
-      setSeatActionVisible(true);
+      if (isLocked) {
+        if (isPrivileged) {
+          setSeatActionVisible(true);
+        } else {
+          Alert.alert('Bloqueado', 'Este asiento está bloqueado por los moderadores.');
+        }
+      } else {
+        setSeatActionVisible(true);
+      }
     }
   };
 
@@ -197,7 +260,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
     setMemberActionsVisible(true);
   };
 
-  const handleSeatActionSubmit = async (action: 'mute' | 'unmute' | 'kick_mic' | 'kick_room' | 'claim_mic') => {
+  const handleSeatActionSubmit = async (action: 'claim_mic' | 'lock_seat' | 'unlock_seat') => {
     setSeatActionVisible(false);
 
     try {
@@ -205,29 +268,19 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         if (currentUserRole === 'listener') {
           // Listeners must request permission
           await requestMic();
-          Alert.alert('Solicitud enviada', 'Tu solicitud para hablar fue enviada.');
+          Alert.alert('Solicitud enviada', 'Tu solicitud de asiento fue enviada. Espera a que el anfitrión te apruebe.');
         } else {
           // If already speaker/mod/host, assign directly
           if (currentMember) {
             await approveMic(currentMember.userId, selectedSeatIndex!);
           }
         }
-      } else if (selectedOccupant) {
-        const targetId = selectedOccupant.userId;
-        switch (action) {
-          case 'mute':
-            await muteMember(targetId, true);
-            break;
-          case 'unmute':
-            await muteMember(targetId, false);
-            break;
-          case 'kick_mic':
-            await removeFromSeat(targetId);
-            break;
-          case 'kick_room':
-            await kickMember(targetId);
-            break;
-        }
+      } else if (action === 'lock_seat') {
+        await lockSeat(selectedSeatIndex!);
+        Alert.alert('Bloqueado', `El asiento ${selectedSeatIndex! + 1} ha sido bloqueado.`);
+      } else if (action === 'unlock_seat') {
+        await unlockSeat(selectedSeatIndex!);
+        Alert.alert('Desbloqueado', `El asiento ${selectedSeatIndex! + 1} ha sido desbloqueado.`);
       }
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Ocurrió un error');
@@ -240,8 +293,15 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
     const hasSeat = currentMember.seatIndex !== undefined;
 
     if (hasSeat) {
-      // Toggle local mic mute
-      await toggleMute();
+      try {
+        // 1. Toggle the LiveKit mic immediately (no delay)
+        await toggleMute();
+        // 2. Sync the new mute state to Firestore
+        const newMuteState = !localMuted;
+        await muteMember(currentMember.userId, newMuteState);
+      } catch (err: any) {
+        Alert.alert('Error', err.message || 'No se pudo silenciar el micrófono');
+      }
     } else {
       // Manage request flows
       const hasPendingRequest = micRequests.some(r => r.userId === currentMember.userId);
@@ -268,6 +328,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
 
   // Map active speakers IDs to check speaking state
   const speakingUids = activeSpeakers.map(s => s.identity);
+  const isLocalSpeaking = user ? speakingUids.includes(user.uid) : false;
 
   // Enrich members with speaking state from LiveKit
   const enrichedMembers = members.map(m => ({
@@ -283,20 +344,56 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
 
       {/* Audio Connection Status indicator */}
       <View style={styles.statusIndicator}>
-        <Text style={styles.statusText}>
-          {lkConnecting
-            ? '🎧 Conectando audio...'
-            : lkError
-            ? `⚠️ Error de audio: ${lkError}`
-            : lkConnected
-            ? canPublish
-              ? localMuted
-                ? '🔇 Micrófono silenciado'
-                : '🎤 Micrófono activo'
-              : '🎧 Solo escuchando'
-            : '🎧 Audio desconectado'}
-        </Text>
+        <View style={styles.statusContent}>
+          {lkConnected && canPublish && !localMuted && (
+            <View style={[
+              styles.statusPulseDot,
+              isLocalSpeaking ? styles.statusPulseDotSpeaking : styles.statusPulseDotActive
+            ]} />
+          )}
+          <Text style={[
+            styles.statusText,
+            isLocalSpeaking && { color: '#00E676' }
+          ]}>
+            {lkConnecting
+              ? '🎧 Conectando audio...'
+              : lkError
+              ? `⚠️ Error de audio: ${lkError}`
+              : lkConnected
+              ? canPublish
+                ? localMuted
+                  ? '🔇 Micrófono silenciado'
+                  : isLocalSpeaking
+                    ? '🔊 Transmitiendo voz...'
+                    : '🎤 Micrófono activo'
+                : '🎧 Solo escuchando'
+              : '🎧 Audio desconectado'}
+          </Text>
+        </View>
       </View>
+
+      {micPermissionDenied && (
+        <View style={styles.permissionWarningBanner}>
+          <Text style={styles.permissionWarningText}>
+            ⚠️ No podrás hablar hasta activar el permiso de micrófono.
+          </Text>
+          <TouchableOpacity
+            style={styles.permissionWarningBtn}
+            onPress={async () => {
+              const status = await requestDevicePermission('microphone');
+              if (status === 'granted') {
+                setMicPermissionDenied(false);
+              } else if (status === 'blocked') {
+                showPermissionBlockedAlert(
+                  'Para usar esta función necesitamos permiso de micrófono. Actívalo para poder hablar.'
+                );
+              }
+            }}
+          >
+            <Text style={styles.permissionWarningBtnText}>Activar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.mainContainer}>
         {/* Background Content: Seats Grid & Listeners */}
@@ -307,6 +404,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         >
           <MicSeatsGrid
             members={enrichedMembers}
+            lockedSeats={room.lockedSeats || []}
             onSeatPress={handleSeatPress}
             maxMics={room.maxMics || 8}
           />
@@ -344,7 +442,16 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         isPrivileged={isPrivileged}
         onMicPress={handleMicAction}
         onGiftPress={() => setGiftModalVisible(true)}
-        onSharePress={() => Alert.alert('Compartir', 'Enlace de sala copiado al portapapeles.')}
+        onSharePress={async () => {
+          try {
+            await Share.share({
+              message: `Únete a la sala "${room?.title}" en PartyLive 🎉\nhttps://partylive.app/rooms/${roomId}`,
+              title: room?.title || 'Sala de Voz',
+            });
+          } catch (e: any) {
+            console.warn('Error al compartir sala:', e);
+          }
+        }}
         onMorePress={hasSeat ? handleLowerMic : (isPrivileged ? () => setAdminPanelVisible(true) : () => setRoomMenuVisible(true))}
         requestsCount={micRequests.length}
         localMuted={localMuted}
@@ -381,9 +488,23 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
               Asiento {selectedSeatIndex! + 1}
             </Text>
 
-            <TouchableOpacity style={styles.sheetBtn} onPress={() => handleSeatActionSubmit('claim_mic')}>
-              <Text style={styles.sheetBtnText}>🎙️ Ocupar Asiento</Text>
-            </TouchableOpacity>
+            {room?.lockedSeats?.includes(selectedSeatIndex!) ? (
+              <TouchableOpacity style={styles.sheetBtn} onPress={() => handleSeatActionSubmit('unlock_seat')}>
+                <Text style={styles.sheetBtnText}>🔓 Desbloquear Asiento</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <TouchableOpacity style={styles.sheetBtn} onPress={() => handleSeatActionSubmit('claim_mic')}>
+                  <Text style={styles.sheetBtnText}>🎙️ Ocupar Asiento</Text>
+                </TouchableOpacity>
+
+                {isPrivileged && (
+                  <TouchableOpacity style={styles.sheetBtn} onPress={() => handleSeatActionSubmit('lock_seat')}>
+                    <Text style={[styles.sheetBtnText, { color: '#FF1744' }]}>🔒 Bloquear Asiento</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
 
             <TouchableOpacity style={styles.cancelSheetBtn} onPress={() => setSeatActionVisible(false)}>
               <Text style={styles.cancelSheetText}>Cancelar</Text>
@@ -459,7 +580,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
           }
         }}
         onViewProfile={(targetId) => {
-          navigation.navigate('PublicProfile', { userId: targetId });
+          navigation.navigate(MAIN_ROUTES.PUBLIC_PROFILE, { userId: targetId });
         }}
         onBan={async (targetId) => {
           try {
@@ -598,11 +719,34 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   statusIndicator: {
-    backgroundColor: '#1E1B30',
+    backgroundColor: colors.surface,
     paddingVertical: 6,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#292440',
+    borderBottomColor: colors.border,
+  },
+  statusContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusPulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusPulseDotActive: {
+    backgroundColor: '#00E676',
+    opacity: 0.6,
+  },
+  statusPulseDotSpeaking: {
+    backgroundColor: '#00E676',
+    opacity: 1,
+    shadowColor: '#00E676',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
   },
   statusText: {
     fontSize: 11,
@@ -615,12 +759,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   actionSheet: {
-    backgroundColor: '#1E1B30',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: spacing.xl,
     borderWidth: 1.5,
-    borderColor: '#292440',
+    borderColor: colors.border,
   },
   actionSheetTitle: {
     ...textPresets.bodyMedium,
@@ -632,7 +776,7 @@ const styles = StyleSheet.create({
   sheetBtn: {
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#292440',
+    borderBottomColor: colors.border,
     alignItems: 'center',
   },
   sheetBtnText: {
@@ -650,12 +794,12 @@ const styles = StyleSheet.create({
   },
   dangerBtnText: {
     fontSize: 14,
-    color: '#FF1744',
+    color: colors.error,
     fontWeight: 'bold',
   },
   cancelSheetBtn: {
     marginTop: spacing.md,
-    backgroundColor: '#151221',
+    backgroundColor: colors.background,
     paddingVertical: spacing.md,
     borderRadius: 12,
     alignItems: 'center',
@@ -691,5 +835,32 @@ const styles = StyleSheet.create({
     top: 210,
     zIndex: 100,
     elevation: 10,
+  },
+  permissionWarningBanner: {
+    backgroundColor: colors.error,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    zIndex: 99,
+  },
+  permissionWarningText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  permissionWarningBtn: {
+    backgroundColor: '#FFF',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginLeft: spacing.sm,
+  },
+  permissionWarningBtnText: {
+    color: '#FF1744',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });

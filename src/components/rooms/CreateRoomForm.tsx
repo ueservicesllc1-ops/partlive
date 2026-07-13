@@ -8,8 +8,8 @@ import { MaxMicSelector } from './MaxMicSelector';
 import { UnlimitedListenersInfo } from './UnlimitedListenersInfo';
 import { CountryPickerModal } from './CountryPickerModal';
 import { LanguagePickerModal } from './LanguagePickerModal';
-import { CountryOption } from '../../constants/countries';
-import { LanguageOption } from '../../constants/languages';
+import { CountryOption, COUNTRIES } from '../../constants/countries';
+import { LanguageOption, LANGUAGES } from '../../constants/languages';
 import { RoomCategoryType } from '../../constants/roomCategories';
 
 interface CreateRoomFormProps {
@@ -29,24 +29,50 @@ interface CreateRoomFormProps {
     tags: string[];
   }) => void;
   loading: boolean;
+  initialValues?: {
+    title?: string;
+    description?: string;
+    category?: RoomCategoryType;
+    countryCode?: string;
+    countryName?: string;
+    languageCode?: string;
+    languageName?: string;
+    visibility?: RoomVisibility;
+    accessType?: RoomAccessType;
+    password?: string;
+    maxMics?: number;
+    tags?: string[];
+  };
 }
 
-export const CreateRoomForm: React.FC<CreateRoomFormProps> = ({ onSubmit, loading }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<RoomCategoryType>('music');
+export const CreateRoomForm: React.FC<CreateRoomFormProps> = ({ onSubmit, loading, initialValues }) => {
+  const [title, setTitle] = useState(initialValues?.title || '');
+  const [description, setDescription] = useState(initialValues?.description || '');
+  const [category, setCategory] = useState<RoomCategoryType>(initialValues?.category || 'music');
   
-  const [country, setCountry] = useState<CountryOption>({ code: 'EC', name: 'Ecuador', emoji: '🇪🇨' });
+  const [country, setCountry] = useState<CountryOption>(() => {
+    if (initialValues?.countryCode) {
+      const found = COUNTRIES.find(c => c.code === initialValues.countryCode);
+      if (found) return found;
+    }
+    return { code: 'EC', name: 'Ecuador', emoji: '🇪🇨' };
+  });
   const [countryModalVisible, setCountryModalVisible] = useState(false);
 
-  const [language, setLanguage] = useState<LanguageOption>({ code: 'es', name: 'Español', nativeName: 'Español' });
+  const [language, setLanguage] = useState<LanguageOption>(() => {
+    if (initialValues?.languageCode) {
+      const found = LANGUAGES.find(l => l.code === initialValues.languageCode);
+      if (found) return found;
+    }
+    return { code: 'es', name: 'Español', nativeName: 'Español' };
+  });
   const [langModalVisible, setLangModalVisible] = useState(false);
 
-  const [visibility, setVisibility] = useState<RoomVisibility>('public');
-  const [accessType, setAccessType] = useState<RoomAccessType>('open');
-  const [password, setPassword] = useState('');
-  const [maxMics, setMaxMics] = useState(8);
-  const [tagsInput, setTagsInput] = useState('');
+  const [visibility, setVisibility] = useState<RoomVisibility>(initialValues?.visibility || 'public');
+  const [accessType, setAccessType] = useState<RoomAccessType>(initialValues?.accessType || 'open');
+  const [password, setPassword] = useState(initialValues?.password || '');
+  const [maxMics, setMaxMics] = useState(initialValues?.maxMics || 8);
+  const [tagsInput, setTagsInput] = useState(initialValues?.tags ? initialValues.tags.join(', ') : '');
 
   const handleSubmit = () => {
     if (!title.trim()) return;

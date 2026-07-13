@@ -66,10 +66,25 @@ export const createRoom = async (
   const timestamp = firestore.FieldValue.serverTimestamp();
   const roomRef = db.collection(FirestoreCollections.ROOMS).doc();
 
+  const defaultImages: Record<string, string> = {
+    music: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=250',
+    karaoke: 'https://images.unsplash.com/photo-1516280440614-37939bbacd6a?w=250',
+    party: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=250',
+    games: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=250',
+    talk: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=250',
+    christian: 'https://images.unsplash.com/photo-1447069387593-a5de0862481e?w=250',
+    podcast: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=250',
+    debate: 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=250',
+    friends: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=250',
+  };
+  const categoryKey = data.category || 'talk';
+  const coverImageUrl = data.coverImageUrl || defaultImages[categoryKey] || 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=250';
+
   // If password was provided, we'll hash it or store it. For MVP, we can hash it on client or let backend update it.
   // We'll set the initial values based on feedback (listenersUnlimited is true, maxMics max 8).
   const newRoom: any = {
     ...data,
+    coverImageUrl,
     titleLowercase: data.title ? data.title.trim().toLowerCase() : '',
     ownerId: ownerProfile.uid,
     hostId: ownerProfile.uid,
@@ -257,6 +272,23 @@ export const listenToRoom = (roomId: string, callback: (room: Room | null) => vo
     });
 };
 
+export const listenToActiveRooms = (callback: (rooms: Room[]) => void) => {
+  return firestore()
+    .collection(FirestoreCollections.ROOMS)
+    .where('status', '==', 'active')
+    .onSnapshot(
+      snapshot => {
+        if (snapshot) {
+          const rooms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
+          callback(rooms);
+        }
+      },
+      error => {
+        console.error('Error listening to active rooms:', error);
+      }
+    );
+};
+
 export const listenToRoomMembers = (roomId: string, callback: (members: RoomMember[]) => void) => {
   return firestore()
     .collection(getRoomMembersPath(roomId))
@@ -289,5 +321,73 @@ export const updateRoomCounts = async (roomId: string): Promise<void> => {
     speakersCount: speakers,
     listenersCount: listeners,
     updatedAt: firestore.FieldValue.serverTimestamp(),
+  });
+};
+
+export const lockSeat = async (roomId: string, seatIndex: number, actorUserId: string): Promise<void> => {
+  const db = firestore();
+  const roomRef = db.collection(FirestoreCollections.ROOMS).doc(roomId);
+  const memberRef = db.collection(getRoomMembersPath(roomId)).doc(actorUserId);
+
+  await db.runTransaction(async transaction => {
+    const roomSnap = await transaction.get(roomRef);
+    const memberSnap = await transaction.get(memberRef);
+
+    if (!roomSnap.exists() || !memberSnap.exists()) {
+      throw new Error('La sala o el miembro no existen.');
+    }
+
+    const roomData = roomSnap.data() as Room;
+    const actorData = memberSnap.data() as RoomMember;
+
+    const { hasRoomPermission } = require('../../../utils/roomPermissions');
+    if (!hasRoomPermission(actorData.role, 'LOCK_MIC_SEAT')) {
+      throw new Error('No tienes permisos para bloquear asientos.');
+    }
+
+    transaction.update(roomRef, {
+      lockedSeats: firestore.FieldValue.arrayUnion(seatIndex),
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  // If someone is occupying the seat, boot them off
+  const membersSnap = await db
+    .collection(getRoomMembersPath(roomId))
+    .where('seatIndex', '==', seatIndex)
+    .get();
+
+  if (!membersSnap.empty) {
+    const occupant = membersSnap.docs[0].data() as RoomMember;
+    const { removeFromSeat } = require('./roomMembersService');
+    await removeFromSeat(roomId, occupant.userId, actorUserId);
+  }
+};
+
+export const unlockSeat = async (roomId: string, seatIndex: number, actorUserId: string): Promise<void> => {
+  const db = firestore();
+  const roomRef = db.collection(FirestoreCollections.ROOMS).doc(roomId);
+  const memberRef = db.collection(getRoomMembersPath(roomId)).doc(actorUserId);
+
+  await db.runTransaction(async transaction => {
+    const roomSnap = await transaction.get(roomRef);
+    const memberSnap = await transaction.get(memberRef);
+
+    if (!roomSnap.exists() || !memberSnap.exists()) {
+      throw new Error('La sala o el miembro no existen.');
+    }
+
+    const roomData = roomSnap.data() as Room;
+    const actorData = memberSnap.data() as RoomMember;
+
+    const { hasRoomPermission } = require('../../../utils/roomPermissions');
+    if (!hasRoomPermission(actorData.role, 'UNLOCK_MIC_SEAT')) {
+      throw new Error('No tienes permisos para desbloquear asientos.');
+    }
+
+    transaction.update(roomRef, {
+      lockedSeats: firestore.FieldValue.arrayRemove(seatIndex),
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    });
   });
 };

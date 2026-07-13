@@ -26,7 +26,7 @@ export const canPromoteToRole = (actorRole: RoomRole | null, newRole: RoomRole):
     return ['host', 'moderator', 'speaker', 'listener'].includes(newRole);
   }
   if (actorRole === 'host') {
-    return ['speaker', 'listener'].includes(newRole);
+    return ['moderator', 'speaker', 'listener'].includes(newRole);
   }
   return false;
 };
@@ -64,8 +64,8 @@ export const getAvailableRoomActions = (
   return {
     canMute: !isOwnUser && canMuteMember(actorRole, targetRole),
     canKick: !isOwnUser && canKickMember(actorRole, targetRole),
-    canAssignSpeaker: canPromoteToRole(actorRole, 'speaker') && isSpeakerRole(targetRole),
+    canAssignSpeaker: !isOwnUser && hasRoomPermission(actorRole, 'ASSIGN_SPEAKER') && canManageRole(actorRole, targetRole),
     canAssignHost: actorRole === 'owner' && targetRole !== 'owner',
-    canAssignMod: actorRole === 'owner' && targetRole !== 'owner',
+    canAssignMod: (actorRole === 'owner' || actorRole === 'host') && !['owner', 'host'].includes(targetRole || ''),
   };
 };

@@ -1,32 +1,33 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Platform } from 'react-native';
 import {
   Room,
   RoomEvent,
-  Track,
   Participant,
   RoomOptions,
-  RemoteParticipant,
-  LocalParticipant,
-  ConnectionState as LKConnectionState,
+  LogLevel,
+  setLogLevel,
 } from 'livekit-client';
-import { registerGlobals } from '@livekit/react-native-webrtc';
+import { AudioSession } from '@livekit/react-native';
 import { RoomMember } from '../types';
 import { getLiveKitRoomToken } from '../services/api/livekitApi';
-import { requestMicrophonePermission } from '../utils/permissions';
+import {
+  checkDevicePermission,
+  requestDevicePermission,
+  showPermissionBlockedAlert,
+} from '../utils/permissions';
+import { LIVEKIT_CONFIG } from '../config/livekit';
 
-// Safe fallback for ConnectionState if undefined in livekit-client
-const ConnectionState = LKConnectionState || {
+// Enable verbose LiveKit logs to capture exact details in logcat
+setLogLevel(LogLevel.debug);
+
+// Safe local ConnectionState definition compatible with livekit-client ConnectionState strings
+const ConnectionState = {
   Disconnected: 'disconnected',
   Connecting: 'connecting',
   Connected: 'connected',
   Reconnecting: 'reconnecting',
-};
+} as const;
 
-// Register WebRTC Globals for React Native WebRTC engine
-if (Platform.OS !== 'web') {
-  registerGlobals();
-}
 
 export const useRoomLiveKit = (
   roomId: string,
@@ -80,7 +81,7 @@ export const useRoomLiveKit = (
       roomRef.current = roomInstance;
 
       // 3. Register Event Listeners
-      roomInstance.on(RoomEvent.ConnectionStateChanged, (state: typeof ConnectionState[keyof typeof ConnectionState]) => {
+      roomInstance.on(RoomEvent.ConnectionStateChanged, (state: any) => {
         setConnectionState(state);
       });
 
@@ -100,21 +101,47 @@ export const useRoomLiveKit = (
         setConnectionState(ConnectionState.Disconnected);
       });
 
-      // 4. Connect to WebRTC server
-      await roomInstance.connect(tokenData.url, tokenData.token);
+      // 3.5 Start native AudioSession before connecting (required for Android WebRTC)
+      try {
+        await AudioSession.startAudioSession();
+      } catch (audioErr) {
+        console.warn('[LiveKit] Failed to start native AudioSession:', audioErr);
+      }
+
+      // 4. Connect to WebRTC server (prioritize dynamic URL from token response)
+      const connectionUrl = tokenData.url || LIVEKIT_CONFIG.LIVEKIT_WS_URL;
+      await roomInstance.connect(connectionUrl, tokenData.token);
       setLivekitRoom(roomInstance);
       setParticipants(Array.from(roomInstance.remoteParticipants.values()));
 
       // 5. If role allows publishing, request mic permission and start audio track
       if (tokenData.canPublish) {
-        const hasMicPerm = await requestMicrophonePermission();
-        if (hasMicPerm) {
+        const micStatus = await checkDevicePermission('microphone');
+        if (micStatus === 'granted') {
           const shouldBeMuted = isMutedFirestoreRef.current;
           await roomInstance.localParticipant.setMicrophoneEnabled(!shouldBeMuted);
           setLocalMuted(shouldBeMuted);
           setIsPublishing(true);
+        } else if (micStatus === 'blocked') {
+          setError('Micrófono bloqueado en ajustes.');
+          showPermissionBlockedAlert(
+            'Para usar esta función necesitamos permiso de micrófono. Actívalo para poder hablar.'
+          );
         } else {
-          setError('Permiso de micrófono denegado. Solo escuchando.');
+          const reqStatus = await requestDevicePermission('microphone');
+          if (reqStatus === 'granted') {
+            const shouldBeMuted = isMutedFirestoreRef.current;
+            await roomInstance.localParticipant.setMicrophoneEnabled(!shouldBeMuted);
+            setLocalMuted(shouldBeMuted);
+            setIsPublishing(true);
+          } else {
+            setError('Permiso de micrófono denegado. Solo escuchando.');
+            if (reqStatus === 'blocked') {
+              showPermissionBlockedAlert(
+                'Para usar esta función necesitamos permiso de micrófono. Actívalo para poder hablar.'
+              );
+            }
+          }
         }
       }
     } catch (err: any) {
@@ -136,6 +163,11 @@ export const useRoomLiveKit = (
         console.error('Error disconnecting LiveKit room:', e);
       }
       roomRef.current = null;
+    }
+    try {
+      await AudioSession.stopAudioSession();
+    } catch (e) {
+      console.warn('[LiveKit] Error stopping AudioSession:', e);
     }
     setLivekitRoom(null);
     setConnectionState(ConnectionState.Disconnected);

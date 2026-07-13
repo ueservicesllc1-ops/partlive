@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
   ActivityIndicator,
@@ -12,6 +11,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, textPresets } from '../theme';
 import { Header } from '../components/Header';
 import { MainHeader } from '../components/navigation/MainHeader';

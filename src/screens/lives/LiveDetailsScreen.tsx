@@ -1,5 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator, Text, Alert, Modal, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Text, Alert, Modal, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { VideoView } from '@livekit/react-native';
 import { useAuth } from '../../store/AuthContext';
 import { useLive } from '../../hooks/useLive';
 import { useLiveKitLive } from '../../hooks/useLiveKitLive';
@@ -21,6 +23,7 @@ import { ScreenError } from '../../components/ScreenError';
 import { ReportModal } from '../../components/moderation/ReportModal';
 import { useGiftEvents } from '../../hooks/useGiftEvents';
 import { GiftAnimationLayer, GiftReceivedToast, GlobalGiftBanner, TopGiftersPanel } from '../../components/gifts';
+import { inviteCoHost, listenToCoHostInvites, respondToCoHostInvite, updateLive } from '../../services/firebase/firestore';
 
 export const LiveDetailsScreen = ({ route, navigation }: any) => {
   const { liveId } = route.params || {};
@@ -52,17 +55,202 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
     livekitRoom,
     connected: livekitConnected,
     isPublishing,
+    participants: livekitParticipants,
   } = useLiveKitLive(liveId, userProfile, currentViewer, currentUserRole, joined && live?.status === 'live');
 
   // Wallet support for gifts
   const { wallet } = useWallet();
 
   const isHost = currentUserRole === 'host';
+
+  // Listen to incoming co-host invites (for viewers)
+  useEffect(() => {
+    if (!userProfile?.uid || isHost || !liveId || !joined) return;
+
+    const unsubscribe = listenToCoHostInvites(userProfile.uid, (invites) => {
+      const matchingInvite = invites.find(
+        (inv) => inv.liveId === liveId && inv.status === 'pending'
+      );
+      if (matchingInvite) {
+        Alert.alert(
+          'Invitación a Transmitir',
+          'El anfitrión te ha invitado a co-transmitir en vivo. ¿Aceptas la invitación?',
+          [
+            {
+              text: 'Rechazar',
+              style: 'cancel',
+              onPress: () => respondToCoHostInvite(matchingInvite.id, false),
+            },
+            {
+              text: 'Aceptar',
+              onPress: () => respondToCoHostInvite(matchingInvite.id, true),
+            },
+          ],
+          { cancelable: false }
+        );
+      }
+    });
+
+    return () => unsubscribe();
+  }, [userProfile?.uid, isHost, liveId, joined]);
+
+  // Extract active video tracks for local and remote participants
+  const activeTracks = useMemo(() => {
+    if (!livekitRoom || !livekitConnected) return [];
+
+    const tracks: { participantSid: string; track: any; identity: string }[] = [];
+    const allParticipants = [livekitRoom.localParticipant, ...(livekitParticipants || [])];
+
+    for (const p of allParticipants) {
+      if (!p) continue;
+      // Get the first video track publication
+      const videoPub = Array.from(p.videoTrackPublications.values()).find(
+        (pub) => pub.track && pub.kind === 'video'
+      );
+      if (videoPub && videoPub.track) {
+        tracks.push({
+          participantSid: p.sid,
+          track: videoPub.track,
+          identity: p.identity,
+        });
+      }
+    }
+    return tracks;
+  }, [livekitRoom, livekitConnected, livekitParticipants]);
+
+  const renderVideoGrid = () => {
+    if (!livekitConnected || activeTracks.length === 0) {
+      return <LiveVideoPlaceholder title={live?.title} category={live?.category} />;
+    }
+
+    const count = activeTracks.length;
+
+    // Responsive split screen styles based on participant count
+    let itemStyle: any = { width: '100%', height: '100%' };
+    if (count === 2) {
+      itemStyle = { width: '50%', height: '100%' };
+    } else if (count >= 3 && count <= 4) {
+      itemStyle = { width: '50%', height: '50%' };
+    } else if (count >= 5 && count <= 6) {
+      itemStyle = { width: '50%', height: '33.33%' };
+    } else if (count > 6) {
+      itemStyle = { width: '33.33%', height: '33.33%' };
+    }
+
+    return (
+      <View style={styles.gridContainer}>
+        {activeTracks.map(({ participantSid, track, identity }) => {
+          const participantUser = viewers.find(v => v.userId === identity);
+          const displayName = identity === userProfile?.uid ? 'Tú' : (participantUser?.displayName || 'Co-Host');
+
+          // Power and Dice checks
+          const isParticipantHostA = activeBattle && identity === activeBattle.hostAId;
+          const isParticipantHostB = activeBattle && identity === activeBattle.hostBId;
+
+          const diceAvailable = isParticipantHostA ? activeBattle.hostADiceAvailable : (isParticipantHostB ? activeBattle.hostBDiceAvailable : false);
+          const isMe = identity === userProfile?.uid;
+
+          // Check if participant is frozen (opponent block_gifts is active)
+          let isFrozen = false;
+          if (activeBattle) {
+            if (isParticipantHostA) {
+              const oppPower = activeBattle.hostBActivePower;
+              const oppExpiry = activeBattle.hostBPowerExpiry;
+              if (oppPower === 'block_gifts' && oppExpiry) {
+                const expiryMs = oppExpiry.toMillis ? oppExpiry.toMillis() : new Date(oppExpiry).getTime();
+                isFrozen = Date.now() < expiryMs;
+              }
+            } else if (isParticipantHostB) {
+              const oppPower = activeBattle.hostAActivePower;
+              const oppExpiry = activeBattle.hostAPowerExpiry;
+              if (oppPower === 'block_gifts' && oppExpiry) {
+                const expiryMs = oppExpiry.toMillis ? oppExpiry.toMillis() : new Date(oppExpiry).getTime();
+                isFrozen = Date.now() < expiryMs;
+              }
+            }
+          }
+
+          // Check if participant has shield active
+          let hasShield = false;
+          if (activeBattle) {
+            const power = isParticipantHostA ? activeBattle.hostAActivePower : (isParticipantHostB ? activeBattle.hostBActivePower : null);
+            const expiry = isParticipantHostA ? activeBattle.hostAPowerExpiry : (isParticipantHostB ? activeBattle.hostBPowerExpiry : null);
+            if (power === 'shield' && expiry) {
+              const expiryMs = expiry.toMillis ? expiry.toMillis() : new Date(expiry).getTime();
+              hasShield = Date.now() < expiryMs;
+            }
+          }
+
+          // Check if participant has double points active
+          let hasDouble = false;
+          if (activeBattle) {
+            const power = isParticipantHostA ? activeBattle.hostAActivePower : (isParticipantHostB ? activeBattle.hostBActivePower : null);
+            const expiry = isParticipantHostA ? activeBattle.hostAPowerExpiry : (isParticipantHostB ? activeBattle.hostBPowerExpiry : null);
+            if (power === 'double_points' && expiry) {
+              const expiryMs = expiry.toMillis ? expiry.toMillis() : new Date(expiry).getTime();
+              hasDouble = Date.now() < expiryMs;
+            }
+          }
+
+          return (
+            <View key={participantSid} style={[styles.gridItem, itemStyle]}>
+              <VideoView
+                videoTrack={track}
+                style={styles.videoView}
+                mirror={identity === userProfile?.uid}
+              />
+              
+              {/* Frost Overlay */}
+              {isFrozen && (
+                <View style={styles.frostOverlay}>
+                  <Text style={styles.frostEmoji}>❄️</Text>
+                  <Text style={styles.frostText}>BLOQUEADO</Text>
+                </View>
+              )}
+
+              {/* Shield Glow aura */}
+              {hasShield && (
+                <View style={styles.shieldOverlay}>
+                  <Text style={styles.shieldEmoji}>🛡️</Text>
+                </View>
+              )}
+
+              {/* Double Points badge */}
+              {hasDouble && (
+                <View style={styles.doublePointsOverlay}>
+                  <Text style={styles.doublePointsText}>🔥 2x</Text>
+                </View>
+              )}
+
+              {/* Dice Overlay */}
+              {diceAvailable && (
+                <TouchableOpacity
+                  style={styles.floatingDice}
+                  onPress={isMe ? rollDice : undefined}
+                  disabled={!isMe}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.diceText}>❓</Text>
+                </TouchableOpacity>
+              )}
+
+              <View style={styles.participantNameTag}>
+                <Text style={styles.participantNameText} numberOfLines={1}>
+                  {displayName}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
   const {
     activeBattle,
     contributions,
     pendingInvite,
     timeLeft,
+    rollDice,
   } = usePkBattle(liveId, isHost ? userProfile?.uid : undefined);
 
   const {
@@ -147,6 +335,20 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
     }
   };
 
+  const handleModeChange = async (newMode: 'solo' | 'battle' | 'group') => {
+    if (!live) return;
+    try {
+      const maxGuests = newMode === 'group' ? 4 : newMode === 'battle' ? 4 : 0;
+      await updateLive(live.id, {
+        streamMode: newMode,
+        maxGuests,
+      });
+      Alert.alert('Modo Cambiado', `La transmisión ahora está en Modo ${newMode === 'solo' ? 'Solo' : newMode === 'battle' ? 'Batalla' : 'Grupal'}.`);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'No se pudo cambiar el modo de transmisión.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -155,7 +357,7 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
       >
         {/* Main video area */}
         <View style={styles.videoArea}>
-          <LiveVideoPlaceholder title={live?.title} category={live?.category} />
+          {renderVideoGrid()}
           
           {/* PK Battle Overlay */}
           {activeBattle && activeBattle.status === 'active' && (
@@ -196,12 +398,7 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
               onGiftPress={() => setGiftModalVisible(true)}
               onLikePress={liked ? unlike : like}
               onMorePress={() => {
-                if (isHost) {
-                  setModMenuVisible(true);
-                  setSelectedViewer(null);
-                } else {
-                  setLiveMenuVisible(true);
-                }
+                setLiveMenuVisible(true);
               }}
               liked={liked}
               likesCount={live?.likesCount || 0}
@@ -238,6 +435,17 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
         onKick={kickViewer}
         onAddModerator={addModerator}
         onRemoveModerator={removeModerator}
+        onInviteCoHost={(targetUserId) => {
+          if (userProfile?.uid) {
+            inviteCoHost(liveId, targetUserId, userProfile.uid)
+              .then(() => {
+                Alert.alert('Invitación Enviada', 'Se ha enviado la invitación a transmitir.');
+              })
+              .catch((err) => {
+                Alert.alert('Error', err.message || 'No se pudo enviar la invitación.');
+              });
+          }
+        }}
         isTargetMuted={selectedViewer?.isMuted}
       />
 
@@ -249,6 +457,40 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
 
             {isHost ? (
               <>
+                {/* Indicador de Estado de Modo */}
+                <View style={styles.modeStatusContainer}>
+                  <Text style={styles.modeStatusLabel}>
+                    Modo actual: <Text style={styles.modeStatusValue}>
+                      {live?.streamMode === 'solo' ? 'Solo' : live?.streamMode === 'battle' ? 'Batalla PK' : 'Grupal'}
+                    </Text>
+                  </Text>
+                </View>
+
+                {/* Selector de Cambiar Modo */}
+                <Text style={styles.sectionTitle}>Cambiar Modo de Transmisión</Text>
+                <View style={styles.modeSelectorRow}>
+                  <TouchableOpacity
+                    style={[styles.modeSelectBtn, live?.streamMode === 'solo' && styles.modeSelectBtnActive]}
+                    onPress={() => handleModeChange('solo')}
+                  >
+                    <Text style={[styles.modeSelectBtnText, live?.streamMode === 'solo' && styles.modeSelectBtnTextActive]}>👤 Solo</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.modeSelectBtn, live?.streamMode === 'battle' && styles.modeSelectBtnActive]}
+                    onPress={() => handleModeChange('battle')}
+                  >
+                    <Text style={[styles.modeSelectBtnText, live?.streamMode === 'battle' && styles.modeSelectBtnTextActive]}>⚔️ Batalla</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.modeSelectBtn, live?.streamMode === 'group' && styles.modeSelectBtnActive]}
+                    onPress={() => handleModeChange('group')}
+                  >
+                    <Text style={[styles.modeSelectBtnText, live?.streamMode === 'group' && styles.modeSelectBtnTextActive]}>👥 Grupal</Text>
+                  </TouchableOpacity>
+                </View>
+
                 <TouchableOpacity
                   style={styles.sheetBtn}
                   onPress={() => {
@@ -273,8 +515,7 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
                   style={styles.sheetBtn}
                   onPress={() => {
                     setLiveMenuVisible(false);
-                    setModMenuVisible(true);
-                    setSelectedViewer(null);
+                    Alert.alert('Moderar Espectadores', 'Toca el avatar de cualquier espectador en la barra superior para silenciarlo o expulsarlo.');
                   }}
                 >
                   <Text style={styles.sheetBtnText}>🚫 Moderar Espectadores</Text>
@@ -417,6 +658,170 @@ const styles = StyleSheet.create({
   cancelSheetText: {
     fontSize: 14,
     color: colors.textMuted,
+    fontWeight: 'bold',
+  },
+  gridContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    backgroundColor: '#0F0C1B',
+  },
+  gridItem: {
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    borderWidth: 1,
+    borderColor: '#1E1B30',
+  },
+  videoView: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  participantNameTag: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  participantNameText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  frostOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 229, 255, 0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  frostEmoji: {
+    fontSize: 32,
+    marginBottom: 4,
+  },
+  frostText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+  shieldOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#00AAFF',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+  },
+  shieldEmoji: {
+    fontSize: 14,
+    color: '#FFF',
+  },
+  doublePointsOverlay: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#FF8800',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: '#FFF',
+  },
+  doublePointsText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  floatingDice: {
+    position: 'absolute',
+    top: '35%',
+    left: '35%',
+    width: 56,
+    height: 56,
+    backgroundColor: '#FFCC00',
+    borderRadius: 16,
+    borderWidth: 2.5,
+    borderColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 15,
+    elevation: 8,
+    shadowColor: '#FFCC00',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+  },
+  diceText: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  modeStatusContainer: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.md,
+    alignItems: 'center',
+  },
+  modeStatusLabel: {
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  modeStatusValue: {
+    color: colors.accent,
+    fontWeight: 'bold',
+  },
+  sectionTitle: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  modeSelectorRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: spacing.lg,
+  },
+  modeSelectBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#151221',
+    borderWidth: 1,
+    borderColor: '#292440',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeSelectBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  modeSelectBtnText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  modeSelectBtnTextActive: {
+    color: '#FFF',
     fontWeight: 'bold',
   },
 });

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, SafeAreaView, StatusBar, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, ScrollView, StatusBar, TouchableOpacity, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../store/AuthContext';
 import { colors, spacing, textPresets } from '../theme';
 import { Button } from '../components/Button';
@@ -8,6 +9,7 @@ import { ProfileStats } from '../components/profile/ProfileStats';
 import { WalletSummary } from '../components/profile/WalletSummary';
 import { BadgesList } from '../components/profile/BadgesList';
 import { UserSocialStats } from '../components/social/UserSocialStats';
+import { ProfileActivityStats } from '../components/profile/ProfileActivityStats';
 import { MAIN_ROUTES } from '../app/routes';
 
 export const ProfileScreen = ({ navigation }: any) => {
@@ -82,6 +84,9 @@ export const ProfileScreen = ({ navigation }: any) => {
             ⚡ {userProfile.xp || 0} / {userProfile.nextRankXp || 100} XP para el siguiente rango
           </Text>
         </View>
+
+        {/* Actividad Histórica */}
+        <ProfileActivityStats profile={userProfile} />
 
         {/* Host badge (if approved host) */}
         {userProfile.isHost && (
