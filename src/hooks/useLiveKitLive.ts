@@ -8,6 +8,7 @@ import {
   setLogLevel,
 } from 'livekit-client';
 import { AudioSession } from '@livekit/react-native';
+import { mediaDevices } from '@livekit/react-native-webrtc';
 import { getLiveKitLiveToken } from '../services/api/livekitApi';
 import {
   checkDevicePermission,
@@ -43,6 +44,7 @@ export const useLiveKitLive = (
   const [isPublishing, setIsPublishing] = useState(false);
   const [localMuted, setLocalMuted] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [isFrontCamera, setIsFrontCamera] = useState(true);
 
   const roomRef = useRef<Room | null>(null);
   const roleRef = useRef(currentUserRole);
@@ -297,16 +299,34 @@ export const useLiveKitLive = (
     }
   };
 
-  // Switch camera
+  // Switch camera between front and back using LiveKit's room.switchActiveDevice
   const switchCamera = async () => {
     const roomInstance = roomRef.current;
-    if (!roomInstance) return;
+    if (!roomInstance || !isPublishing) return;
 
     try {
-      const videoPubs = Array.from(roomInstance.localParticipant.videoTrackPublications.values() as any) as any[];
-      for (const pub of videoPubs) {
-        if (pub && pub.track && pub.track.kind === 'video') {
-          await pub.track.switchCamera();
+      // Enumerate all video input devices
+      const allDevices = await mediaDevices.enumerateDevices() as any[];
+      const videoInputs = allDevices.filter((d: any) => d.kind === 'videoinput');
+
+      // Determine target facing mode (toggle front/back)
+      const targetFacing = isFrontCamera ? 'environment' : 'user';
+      const targetDevice = videoInputs.find(
+        (d: any) => d.facing === targetFacing || d.label?.toLowerCase().includes(isFrontCamera ? 'back' : 'front')
+      );
+
+      if (targetDevice) {
+        await roomInstance.switchActiveDevice('videoinput', targetDevice.deviceId);
+        setIsFrontCamera(!isFrontCamera);
+      } else if (videoInputs.length >= 2) {
+        // Fallback: pick the other device if facing mode labels aren't available
+        const currentDevice = videoInputs.find((d: any) =>
+          d.facing === (isFrontCamera ? 'user' : 'environment') || !d.facing
+        );
+        const otherDevice = videoInputs.find((d: any) => d !== currentDevice);
+        if (otherDevice) {
+          await roomInstance.switchActiveDevice('videoinput', otherDevice.deviceId);
+          setIsFrontCamera(!isFrontCamera);
         }
       }
     } catch (e) {

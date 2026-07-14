@@ -96,10 +96,15 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
     return () => unsubscribe();
   }, [userProfile?.uid, isHost, liveId, joined]);
 
-  // Prevent accidental close/back navigation for Host
+  // Prevent accidental close/back navigation for Host (Android back button only)
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      // Only block Android hardware back button (POP action), not programmatic navigation
       if (!isHost || live?.status === 'ended') {
+        return;
+      }
+      const actionType = e.data?.action?.type;
+      if (actionType === 'NAVIGATE' || actionType === 'RESET' || actionType === 'REPLACE') {
         return;
       }
 
@@ -233,16 +238,25 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
 
               {/* Filter Overlays */}
               {filter === 'retro' && (
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(139, 69, 19, 0.15)', zIndex: 1 }]} pointerEvents="none" />
+                <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(120, 60, 0, 0.28)', zIndex: 1 }]} />
               )}
               {filter === 'beauty' && (
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 192, 203, 0.08)', zIndex: 1 }]} pointerEvents="none" />
+                <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 180, 200, 0.18)', zIndex: 1 }]} />
               )}
               {filter === 'neon' && (
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(128, 0, 128, 0.12)', zIndex: 1 }]} pointerEvents="none" />
+                <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(100, 0, 200, 0.22)', zIndex: 1 }]} />
               )}
               {filter === 'neon_pro' && (
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0, 255, 255, 0.08)', zIndex: 1 }]} pointerEvents="none" />
+                <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0, 200, 255, 0.20)', zIndex: 1 }]} />
+              )}
+
+              {/* Active filter/frame badge (only visible to the streaming host) */}
+              {identity === userProfile?.uid && filter && filter !== 'none' && (
+                <View style={styles.filterActiveBadge} pointerEvents="none">
+                  <Text style={styles.filterActiveBadgeText}>
+                    {filter === 'retro' ? '📼 Retro' : filter === 'beauty' ? '✨ Belleza' : filter === 'neon' ? '⚡ Neon' : '🔮 Neon Pro'}
+                  </Text>
+                </View>
               )}
 
               {/* Frame Crown/Fire Badges */}
@@ -338,16 +352,35 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
   }, [viewers]);
 
   const handleClose = async () => {
-    try {
-      if (isHost) {
-        await endLive();
-      } else {
+    if (isHost && live?.status === 'live') {
+      Alert.alert(
+        'Finalizar Transmisión',
+        '¿Estás seguro de que deseas finalizar esta transmisión en vivo?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Finalizar',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await endLive();
+              } catch (e) {
+                console.error(e);
+              }
+              navigation.navigate(MAIN_ROUTES.MAIN_TABS as any);
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    } else {
+      try {
         await leave();
+      } catch (e) {
+        console.error(e);
       }
-    } catch (e) {
-      console.error(e);
+      navigation.goBack();
     }
-    navigation.goBack();
   };
 
   const handleViewerPress = (viewer: any) => {
@@ -891,6 +924,23 @@ const styles = StyleSheet.create({
     padding: 3,
     borderRadius: 8,
     zIndex: 9,
+  },
+  filterActiveBadge: {
+    position: 'absolute',
+    bottom: 30,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  filterActiveBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
 export default LiveDetailsScreen;
