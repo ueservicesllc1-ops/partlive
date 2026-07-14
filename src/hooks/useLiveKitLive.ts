@@ -39,6 +39,7 @@ export const useLiveKitLive = (
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [videoTracks, setVideoTracks] = useState<{ participantSid: string; track: any; identity: string }[]>([]);
   const [isPublishing, setIsPublishing] = useState(false);
   const [localMuted, setLocalMuted] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(true);
@@ -50,6 +51,26 @@ export const useLiveKitLive = (
   useEffect(() => {
     isMutedFirestoreRef.current = currentViewer?.isMuted || false;
   }, [currentViewer]);
+
+  const updateVideoTracks = useCallback((roomInstance: Room) => {
+    const tracks: { participantSid: string; track: any; identity: string }[] = [];
+    const allParticipants = [roomInstance.localParticipant, ...Array.from(roomInstance.remoteParticipants.values())];
+
+    for (const p of allParticipants) {
+      if (!p) continue;
+      const videoPub = Array.from(p.videoTrackPublications.values() as any).find(
+        (pub: any) => pub.track && pub.kind === 'video'
+      ) as any;
+      if (videoPub && videoPub.track) {
+        tracks.push({
+          participantSid: p.sid,
+          track: videoPub.track,
+          identity: p.identity,
+        });
+      }
+    }
+    setVideoTracks(tracks);
+  }, []);
 
   const connect = useCallback(async () => {
     if (!liveId || !currentUser || !enabled) return;
@@ -78,14 +99,40 @@ export const useLiveKitLive = (
 
       roomInstance.on(RoomEvent.ParticipantConnected, () => {
         setParticipants(Array.from(roomInstance.remoteParticipants.values()));
+        updateVideoTracks(roomInstance);
       });
 
       roomInstance.on(RoomEvent.ParticipantDisconnected, () => {
         setParticipants(Array.from(roomInstance.remoteParticipants.values()));
+        updateVideoTracks(roomInstance);
       });
 
       roomInstance.on(RoomEvent.Disconnected, () => {
         setConnectionState(ConnectionState.Disconnected);
+      });
+
+      roomInstance.on(RoomEvent.LocalTrackPublished, () => {
+        updateVideoTracks(roomInstance);
+      });
+
+      roomInstance.on(RoomEvent.LocalTrackUnpublished, () => {
+        updateVideoTracks(roomInstance);
+      });
+
+      roomInstance.on(RoomEvent.TrackPublished, () => {
+        updateVideoTracks(roomInstance);
+      });
+
+      roomInstance.on(RoomEvent.TrackUnpublished, () => {
+        updateVideoTracks(roomInstance);
+      });
+
+      roomInstance.on(RoomEvent.TrackSubscribed, () => {
+        updateVideoTracks(roomInstance);
+      });
+
+      roomInstance.on(RoomEvent.TrackUnsubscribed, () => {
+        updateVideoTracks(roomInstance);
       });
 
       // 3.5 Start native AudioSession before connecting (required for Android WebRTC)
@@ -100,6 +147,7 @@ export const useLiveKitLive = (
       await roomInstance.connect(connectionUrl, tokenData.token);
       setLivekitRoom(roomInstance);
       setParticipants(Array.from(roomInstance.remoteParticipants.values()));
+      updateVideoTracks(roomInstance);
 
       // 5. If role allows publishing, request mic and camera permissions and start tracks
       if (tokenData.canPublish) {
@@ -137,6 +185,7 @@ export const useLiveKitLive = (
 
         if (hasMic || hasCamera) {
           setIsPublishing(true);
+          updateVideoTracks(roomInstance);
         }
       }
     } catch (err: any) {
@@ -146,7 +195,7 @@ export const useLiveKitLive = (
     } finally {
       setConnecting(false);
     }
-  }, [liveId, currentUser, enabled]);
+  }, [liveId, currentUser, enabled, updateVideoTracks]);
 
   // Disconnect helper
   const disconnect = useCallback(async () => {
@@ -168,6 +217,7 @@ export const useLiveKitLive = (
     setConnectionState(ConnectionState.Disconnected);
     setIsPublishing(false);
     setParticipants([]);
+    setVideoTracks([]);
   }, []);
 
   // Listen for Firestore mute changes dynamically
@@ -241,6 +291,7 @@ export const useLiveKitLive = (
       const newCameraState = !cameraEnabled;
       await roomInstance.localParticipant.setCameraEnabled(newCameraState);
       setCameraEnabled(newCameraState);
+      updateVideoTracks(roomInstance);
     } catch (e) {
       console.error('Error toggling camera:', e);
     }
@@ -252,6 +303,7 @@ export const useLiveKitLive = (
     connecting,
     error,
     participants,
+    videoTracks,
     isPublishing,
     localMuted,
     cameraEnabled,

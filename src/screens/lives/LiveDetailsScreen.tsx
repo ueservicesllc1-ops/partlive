@@ -56,6 +56,7 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
     connected: livekitConnected,
     isPublishing,
     participants: livekitParticipants,
+    videoTracks,
   } = useLiveKitLive(liveId, userProfile, currentViewer, currentUserRole, joined && live?.status === 'live');
 
   // Wallet support for gifts
@@ -94,29 +95,8 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
     return () => unsubscribe();
   }, [userProfile?.uid, isHost, liveId, joined]);
 
-  // Extract active video tracks for local and remote participants
-  const activeTracks = useMemo(() => {
-    if (!livekitRoom || !livekitConnected) return [];
-
-    const tracks: { participantSid: string; track: any; identity: string }[] = [];
-    const allParticipants = [livekitRoom.localParticipant, ...(livekitParticipants || [])];
-
-    for (const p of allParticipants) {
-      if (!p) continue;
-      // Get the first video track publication
-      const videoPub = Array.from(p.videoTrackPublications.values()).find(
-        (pub) => pub.track && pub.kind === 'video'
-      );
-      if (videoPub && videoPub.track) {
-        tracks.push({
-          participantSid: p.sid,
-          track: videoPub.track,
-          identity: p.identity,
-        });
-      }
-    }
-    return tracks;
-  }, [livekitRoom, livekitConnected, livekitParticipants]);
+  // Extract active video tracks for local and remote participants directly from our hook
+  const activeTracks = videoTracks;
 
   const renderVideoGrid = () => {
     if (!livekitConnected || activeTracks.length === 0) {
