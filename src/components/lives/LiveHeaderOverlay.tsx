@@ -12,6 +12,8 @@ interface LiveHeaderOverlayProps {
   onFollowPress?: () => void;
   onViewerPress?: (viewer: LiveViewer) => void;
   isFollowing?: boolean;
+  onSwitchCameraPress?: () => void;
+  showSwitchCamera?: boolean;
 }
 
 export const LiveHeaderOverlay: React.FC<LiveHeaderOverlayProps> = ({
@@ -21,6 +23,8 @@ export const LiveHeaderOverlay: React.FC<LiveHeaderOverlayProps> = ({
   onFollowPress,
   onViewerPress,
   isFollowing = false,
+  onSwitchCameraPress,
+  showSwitchCamera = false,
 }) => {
   return (
     <View style={styles.container}>
@@ -52,6 +56,11 @@ export const LiveHeaderOverlay: React.FC<LiveHeaderOverlayProps> = ({
         {/* Viewers list & Close button */}
         <View style={styles.rightBox}>
           <LiveViewerList viewers={viewers} onViewerPress={onViewerPress} />
+          {showSwitchCamera && onSwitchCameraPress && (
+            <TouchableOpacity style={styles.switchCameraBtn} onPress={onSwitchCameraPress} activeOpacity={0.8}>
+              <Text style={styles.switchCameraIcon}>🔄</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.closeBtn} onPress={onClosePress} activeOpacity={0.8}>
             <Text style={styles.closeIcon}>✕</Text>
           </TouchableOpacity>
@@ -144,6 +153,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFF',
     fontWeight: 'bold',
+  },
+  switchCameraBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchCameraIcon: {
+    fontSize: 14,
+    color: '#FFF',
   },
   streamInfoRow: {
     flexDirection: 'row',

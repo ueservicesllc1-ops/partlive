@@ -297,6 +297,23 @@ export const useLiveKitLive = (
     }
   };
 
+  // Switch camera
+  const switchCamera = async () => {
+    const roomInstance = roomRef.current;
+    if (!roomInstance) return;
+
+    try {
+      const videoPubs = Array.from(roomInstance.localParticipant.videoTrackPublications.values() as any) as any[];
+      for (const pub of videoPubs) {
+        if (pub && pub.track && pub.track.kind === 'video') {
+          await pub.track.switchCamera();
+        }
+      }
+    } catch (e) {
+      console.error('Error switching camera:', e);
+    }
+  };
+
   return {
     livekitRoom,
     connected: connectionState === ConnectionState.Connected,
@@ -309,6 +326,7 @@ export const useLiveKitLive = (
     cameraEnabled,
     toggleMute,
     toggleCamera,
+    switchCamera,
     disconnect,
     reconnect: connect,
   };

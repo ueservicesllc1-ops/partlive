@@ -24,11 +24,29 @@ interface StartLiveFormProps {
     isPrivate: boolean;
     streamMode?: 'solo' | 'battle' | 'group';
     maxGuests?: number;
+    selectedFilter: { id: string; label: string; price: number };
+    selectedFrame: { id: string; label: string; price: number };
   }) => void;
   loading?: boolean;
 }
 
 const CATEGORIES = ['Popular', 'Música', 'Fiesta', 'Juegos', 'Conversación', 'Talento'];
+
+const FILTERS = [
+  { id: 'none', label: 'Sin Filtro 📷', price: 0 },
+  { id: 'retro', label: 'Retro 📼', price: 0 },
+  { id: 'beauty', label: 'Belleza ✨', price: 0 },
+  { id: 'neon', label: 'Neon ⚡', price: 20 },
+  { id: 'neon_pro', label: 'Neon Pro 🔮', price: 50 },
+];
+
+const FRAMES = [
+  { id: 'none', label: 'Sin Marco 🖼️', price: 0 },
+  { id: 'simple', label: 'Marco Simple', price: 0 },
+  { id: 'neon', label: 'Marco Neon', price: 15 },
+  { id: 'gold_vip', label: 'Oro VIP 👑', price: 50 },
+  { id: 'fire', label: 'Fuego Real 🔥', price: 100 },
+];
 
 export const StartLiveForm: React.FC<StartLiveFormProps> = ({ onSubmit, loading = false }) => {
   const [title, setTitle] = useState('');
@@ -41,6 +59,8 @@ export const StartLiveForm: React.FC<StartLiveFormProps> = ({ onSubmit, loading 
   const [isPrivate, setIsPrivate] = useState(false);
   const [streamMode, setStreamMode] = useState<'solo' | 'battle' | 'group'>('solo');
   const [maxGuests, setMaxGuests] = useState(4);
+  const [selectedFilter, setSelectedFilter] = useState(FILTERS[0]);
+  const [selectedFrame, setSelectedFrame] = useState(FRAMES[0]);
 
   const handleStart = () => {
     if (!title.trim()) {
@@ -58,6 +78,8 @@ export const StartLiveForm: React.FC<StartLiveFormProps> = ({ onSubmit, loading 
       isPrivate,
       streamMode,
       maxGuests,
+      selectedFilter,
+      selectedFrame,
     });
   };
 
@@ -173,6 +195,48 @@ export const StartLiveForm: React.FC<StartLiveFormProps> = ({ onSubmit, loading 
           thumbColor={isPrivate ? colors.accent : '#F4F3F4'}
         />
       </View>
+
+      <Text style={styles.label}>Filtros de Video (Gratis y Paga)</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pickerRow}>
+        {FILTERS.map(f => {
+          const isSelected = selectedFilter.id === f.id;
+          return (
+            <TouchableOpacity
+              key={f.id}
+              style={[styles.pickerBadge, isSelected && styles.pickerBadgeActive]}
+              onPress={() => setSelectedFilter(f)}
+            >
+              <Text style={[styles.pickerText, isSelected && styles.pickerTextActive]}>
+                {f.label}
+              </Text>
+              <Text style={[styles.pickerPrice, isSelected && styles.pickerPriceActive]}>
+                {f.price === 0 ? 'Gratis' : `💎 ${f.price}`}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      <Text style={styles.label}>Marcos de Video (Gratis y Paga)</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pickerRow}>
+        {FRAMES.map(fr => {
+          const isSelected = selectedFrame.id === fr.id;
+          return (
+            <TouchableOpacity
+              key={fr.id}
+              style={[styles.pickerBadge, isSelected && styles.pickerBadgeActive]}
+              onPress={() => setSelectedFrame(fr)}
+            >
+              <Text style={[styles.pickerText, isSelected && styles.pickerTextActive]}>
+                {fr.label}
+              </Text>
+              <Text style={[styles.pickerPrice, isSelected && styles.pickerPriceActive]}>
+                {fr.price === 0 ? 'Gratis' : `💎 ${fr.price}`}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       <TouchableOpacity 
         style={[styles.submitBtn, loading && styles.submitBtnDisabled]} 
@@ -298,5 +362,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: spacing.xs,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    marginVertical: spacing.xs,
+    paddingVertical: 4,
+  },
+  pickerBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#1E1B30',
+    borderWidth: 1.5,
+    borderColor: '#292440',
+    marginRight: 10,
+    alignItems: 'center',
+    minWidth: 100,
+    justifyContent: 'center',
+  },
+  pickerBadgeActive: {
+    backgroundColor: colors.primary + '1a',
+    borderColor: colors.primary,
+  },
+  pickerText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  pickerTextActive: {
+    color: '#FFF',
+  },
+  pickerPrice: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontWeight: 'bold',
+  },
+  pickerPriceActive: {
+    color: colors.accent,
   },
 });

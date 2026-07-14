@@ -57,6 +57,7 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
     isPublishing,
     participants: livekitParticipants,
     videoTracks,
+    switchCamera,
   } = useLiveKitLive(liveId, userProfile, currentViewer, currentUserRole, joined && live?.status === 'live');
 
   // Wallet support for gifts
@@ -94,6 +95,40 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
 
     return () => unsubscribe();
   }, [userProfile?.uid, isHost, liveId, joined]);
+
+  // Prevent accidental close/back navigation for Host
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (!isHost || live?.status === 'ended') {
+        return;
+      }
+
+      e.preventDefault();
+
+      Alert.alert(
+        'Finalizar Transmisión',
+        '¿Estás seguro de que deseas finalizar esta transmisión en vivo?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Finalizar',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await endLive();
+              } catch (err) {
+                console.error(err);
+              }
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    });
+
+    return () => unsubscribe();
+  }, [navigation, isHost, live?.status, endLive]);
 
   // Extract active video tracks for local and remote participants directly from our hook
   const activeTracks = videoTracks;
@@ -172,13 +207,55 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
             }
           }
 
+          const isParticipantHost = identity === live?.hostId;
+          const frame = isParticipantHost ? live?.selectedFrame : 'none';
+          const filter = isParticipantHost ? live?.selectedFilter : 'none';
+
+          // Frame Border Styles
+          let frameStyle: any = {};
+          if (frame === 'simple') {
+            frameStyle = { borderWidth: 3, borderColor: '#FFFFFF' };
+          } else if (frame === 'neon') {
+            frameStyle = { borderWidth: 3, borderColor: colors.primary };
+          } else if (frame === 'gold_vip') {
+            frameStyle = { borderWidth: 3.5, borderColor: '#FFD700' };
+          } else if (frame === 'fire') {
+            frameStyle = { borderWidth: 3.5, borderColor: '#FF4500' };
+          }
+
           return (
-            <View key={participantSid} style={[styles.gridItem, itemStyle]}>
+            <View key={participantSid} style={[styles.gridItem, itemStyle, frameStyle]}>
               <VideoView
                 videoTrack={track}
                 style={styles.videoView}
                 mirror={identity === userProfile?.uid}
               />
+
+              {/* Filter Overlays */}
+              {filter === 'retro' && (
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(139, 69, 19, 0.15)', zIndex: 1 }]} pointerEvents="none" />
+              )}
+              {filter === 'beauty' && (
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 192, 203, 0.08)', zIndex: 1 }]} pointerEvents="none" />
+              )}
+              {filter === 'neon' && (
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(128, 0, 128, 0.12)', zIndex: 1 }]} pointerEvents="none" />
+              )}
+              {filter === 'neon_pro' && (
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0, 255, 255, 0.08)', zIndex: 1 }]} pointerEvents="none" />
+              )}
+
+              {/* Frame Crown/Fire Badges */}
+              {frame === 'gold_vip' && (
+                <View style={styles.crownFrameIconContainer}>
+                  <Text style={{ fontSize: 14 }}>👑</Text>
+                </View>
+              )}
+              {frame === 'fire' && (
+                <View style={styles.crownFrameIconContainer}>
+                  <Text style={{ fontSize: 14 }}>🔥</Text>
+                </View>
+              )}
               
               {/* Frost Overlay */}
               {isFrozen && (
@@ -364,6 +441,8 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
               viewers={viewers}
               onClosePress={handleClose}
               onViewerPress={handleViewerPress}
+              showSwitchCamera={isPublishing}
+              onSwitchCameraPress={switchCamera}
             />
           )}
 
@@ -803,6 +882,15 @@ const styles = StyleSheet.create({
   modeSelectBtnTextActive: {
     color: '#FFF',
     fontWeight: 'bold',
+  },
+  crownFrameIconContainer: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 3,
+    borderRadius: 8,
+    zIndex: 9,
   },
 });
 export default LiveDetailsScreen;

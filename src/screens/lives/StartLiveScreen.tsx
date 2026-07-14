@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, StatusBar, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../store/AuthContext';
 import { createLive } from '../../services/firebase/firestore/livesService';
+import { getUserWallet } from '../../services/firebase/firestore/walletService';
+import { FirestoreCollections } from '../../constants/firestoreCollections';
 import { StartLiveForm } from '../../components/lives/StartLiveForm';
 import { colors, spacing, textPresets } from '../../theme';
 import { MAIN_ROUTES } from '../../app/routes';
@@ -75,7 +78,74 @@ export const StartLiveScreen = ({ navigation }: any) => {
         }
       }
 
-      const liveId = await createLive(userProfile, formData);
+      // 4.5 Check wallet balance for filters & frames
+      const filterCost = formData.selectedFilter?.price || 0;
+      const frameCost = formData.selectedFrame?.price || 0;
+      const totalCost = filterCost + frameCost;
+
+      if (totalCost > 0) {
+        const wallet = await getUserWallet(userProfile.uid);
+        const userDiamonds = wallet?.diamonds || 0;
+
+        if (userDiamonds < totalCost) {
+          Alert.alert(
+            'Diamantes Insuficientes',
+            `Esta configuración requiere ${totalCost} diamantes, pero solo tienes ${userDiamonds}. Por favor cambia a opciones gratis para iniciar.`
+          );
+          setLoading(false);
+          return;
+        }
+
+        // Deduct diamonds using a Firestore Transaction
+        try {
+          await firestore().runTransaction(async (transaction) => {
+            const walletRef = firestore().collection(FirestoreCollections.WALLETS).doc(userProfile.uid);
+            const walletDoc = await transaction.get(walletRef);
+            if (!walletDoc.exists) {
+              throw new Error('La billetera no existe.');
+            }
+            const currentDiamonds = walletDoc.data()?.diamonds || 0;
+            if (currentDiamonds < totalCost) {
+              throw new Error('Diamantes insuficientes en tu cuenta.');
+            }
+            transaction.update(walletRef, {
+              diamonds: currentDiamonds - totalCost,
+              updatedAt: firestore.FieldValue.serverTimestamp(),
+            });
+
+            // Log Transaction
+            const transRef = firestore().collection(FirestoreCollections.WALLET_TRANSACTIONS).doc();
+            transaction.set(transRef, {
+              userId: userProfile.uid,
+              type: 'debit',
+              currency: 'diamonds',
+              amount: totalCost,
+              description: `Compra de Filtro: ${formData.selectedFilter?.label || 'Ninguno'} y Marco: ${formData.selectedFrame?.label || 'Ninguno'} para Live Stream`,
+              createdAt: firestore.FieldValue.serverTimestamp(),
+            });
+          });
+        } catch (transError: any) {
+          console.error(transError);
+          Alert.alert('Error de Pago', transError.message || 'No se pudo procesar la compra de diamantes.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      const liveId = await createLive(userProfile, {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        language: formData.language,
+        country: formData.country,
+        allowChat: formData.allowChat,
+        allowGifts: formData.allowGifts,
+        isPrivate: formData.isPrivate,
+        streamMode: formData.streamMode,
+        maxGuests: formData.maxGuests,
+        selectedFilter: formData.selectedFilter?.id || 'none',
+        selectedFrame: formData.selectedFrame?.id || 'none',
+      } as any);
       navigation.replace(MAIN_ROUTES.LIVE_DETAILS, { liveId });
     } catch (e: any) {
       console.error(e);

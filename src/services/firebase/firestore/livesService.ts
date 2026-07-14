@@ -96,6 +96,8 @@ export const createLive = async (
     streamMode: data.streamMode || 'solo',
     maxGuests: data.streamMode === 'group' ? (data.maxGuests || 4) : data.streamMode === 'battle' ? 4 : 0,
     coHostIds: [],
+    selectedFilter: (data as any).selectedFilter || 'none',
+    selectedFrame: (data as any).selectedFrame || 'none',
     startedAt: timestamp,
     createdAt: timestamp,
     updatedAt: timestamp,

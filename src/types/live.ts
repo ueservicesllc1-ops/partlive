@@ -34,6 +34,8 @@ export interface LiveStream {
   activePkBattleId?: string;
   pkOpponentHostId?: string;
   pkOpponentLiveId?: string;
+  selectedFilter?: string;
+  selectedFrame?: string;
 }
 
 // Keep Live interface alias for compatibility if needed elsewhere
