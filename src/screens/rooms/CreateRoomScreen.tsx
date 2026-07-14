@@ -9,7 +9,7 @@ import { useAuth } from '../../store/AuthContext';
 import { MAIN_ROUTES } from '../../app/routes';
 
 export const CreateRoomScreen = ({ navigation }: any) => {
-  const { userProfile } = useAuth();
+  const { userProfile, refreshUserProfile } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (formData: any) => {
@@ -63,6 +63,7 @@ export const CreateRoomScreen = ({ navigation }: any) => {
             tags: formData.tags,
           },
         });
+        await refreshUserProfile();
       } catch (saveError) {
         console.error('Error auto-saving room configuration:', saveError);
       }

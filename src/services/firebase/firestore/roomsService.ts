@@ -64,7 +64,15 @@ export const createRoom = async (
 ): Promise<string> => {
   const db = firestore();
   const timestamp = firestore.FieldValue.serverTimestamp();
-  const roomRef = db.collection(FirestoreCollections.ROOMS).doc();
+
+  // Buscar si el usuario ya tiene una sala creada para reutilizarla
+  const snapshot = await db
+    .collection(FirestoreCollections.ROOMS)
+    .where('ownerId', '==', ownerProfile.uid)
+    .limit(1)
+    .get();
+
+  const roomRef = !snapshot.empty ? snapshot.docs[0].ref : db.collection(FirestoreCollections.ROOMS).doc();
 
   const defaultImages: Record<string, string> = {
     music: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=250',

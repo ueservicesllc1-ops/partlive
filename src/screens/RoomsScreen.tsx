@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import firestore from '@react-native-firebase/firestore';
+import { FirestoreCollections } from '../constants/firestoreCollections';
 import { colors, spacing, textPresets } from '../theme';
 import { Header } from '../components/Header';
 import { MainHeader } from '../components/navigation/MainHeader';
@@ -23,6 +25,7 @@ import { EnterRoomPasswordModal } from '../components/rooms/EnterRoomPasswordMod
 import { RequestRoomAccessModal } from '../components/rooms/RequestRoomAccessModal';
 import { BannedFromRoomMessage } from '../components/rooms/BannedFromRoomMessage';
 import { InviteOnlyMessage } from '../components/rooms/InviteOnlyMessage';
+import { Room } from '../types';
 
 const CATEGORIES = ['Popular', 'Música', 'Fiesta', 'Juegos', 'Karaoke', 'Amistad', 'Debate'];
 
@@ -40,13 +43,39 @@ export const RoomsScreen = ({ navigation }: any) => {
   } = useRoomsList();
 
   const { user } = useAuth();
-  const [selectedRoomId, setSelectedRoomId] = React.useState<string | null>(null);
-  const [passwordModalVisible, setPasswordModalVisible] = React.useState(false);
-  const [requestModalVisible, setRequestModalVisible] = React.useState(false);
-  const [banModalVisible, setBanModalVisible] = React.useState(false);
-  const [inviteModalVisible, setInviteModalVisible] = React.useState(false);
-  const [banMsg, setBanMsg] = React.useState('');
-  const [validationLoading, setValidationLoading] = React.useState(false);
+  const [myRoom, setMyRoom] = useState<Room | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [requestModalVisible, setRequestModalVisible] = useState(false);
+  const [banModalVisible, setBanModalVisible] = useState(false);
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const [banMsg, setBanMsg] = useState('');
+  const [validationLoading, setValidationLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user || user.uid === 'guest_user') {
+      setMyRoom(null);
+      return;
+    }
+    const unsubscribe = firestore()
+      .collection(FirestoreCollections.ROOMS)
+      .where('ownerId', '==', user.uid)
+      .limit(1)
+      .onSnapshot(
+        snapshot => {
+          if (snapshot && !snapshot.empty) {
+            const doc = snapshot.docs[0];
+            setMyRoom({ id: doc.id, ...doc.data() } as Room);
+          } else {
+            setMyRoom(null);
+          }
+        },
+        err => {
+          console.error('Error listening to my room:', err);
+        }
+      );
+    return () => unsubscribe();
+  }, [user]);
 
   // Backend base URL - falls back gracefully if backend not running
   const BACKEND_URL = 'http://192.168.1.240:4000';
@@ -184,6 +213,43 @@ export const RoomsScreen = ({ navigation }: any) => {
           )}
         />
       </View>
+
+      {/* Tarjeta de "Mi Sala" */}
+      {myRoom && (
+        <View style={styles.myRoomSection}>
+          <Text style={styles.sectionHeader}>Mi Sala de Voz</Text>
+          <View style={styles.myRoomCard}>
+            <View style={styles.myRoomInfo}>
+              <Text style={styles.myRoomEmoji}>
+                {myRoom.category === 'music' ? '🎵' : myRoom.category === 'karaoke' ? '🎤' : '🎙️'}
+              </Text>
+              <View style={styles.myRoomTextContainer}>
+                <Text style={styles.myRoomTitle} numberOfLines={1}>{myRoom.title}</Text>
+                <Text style={styles.myRoomStatus}>
+                  {myRoom.status === 'active' ? '🟢 Activa ahora' : '⚫ Inactiva'}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.myRoomBtn,
+                myRoom.status === 'active' ? styles.myRoomBtnActive : styles.myRoomBtnInactive
+              ]}
+              onPress={() => {
+                if (myRoom.status === 'active') {
+                  checkRoomAccess(myRoom.id);
+                } else {
+                  navigation.navigate(MAIN_ROUTES.CREATE_ROOM);
+                }
+              }}
+            >
+              <Text style={styles.myRoomBtnText}>
+                {myRoom.status === 'active' ? 'Entrar' : 'Iniciar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* List / Loading / Error / Empty Fallback */}
       {loading && !refreshing ? (
@@ -392,6 +458,68 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   createRoomHeaderBtnText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  myRoomSection: {
+    paddingHorizontal: spacing.lg,
+    marginVertical: spacing.sm,
+  },
+  sectionHeader: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  myRoomCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1E1B30',
+    padding: spacing.md,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.primary + '44',
+  },
+  myRoomInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.sm,
+  },
+  myRoomEmoji: {
+    fontSize: 28,
+  },
+  myRoomTextContainer: {
+    flex: 1,
+  },
+  myRoomTitle: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: 'bold',
+  },
+  myRoomStatus: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  myRoomBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 8,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  myRoomBtnActive: {
+    backgroundColor: colors.success,
+  },
+  myRoomBtnInactive: {
+    backgroundColor: colors.primary,
+  },
+  myRoomBtnText: {
     color: '#FFF',
     fontSize: 12,
     fontWeight: 'bold',
