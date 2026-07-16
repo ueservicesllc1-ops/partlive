@@ -32,9 +32,10 @@ router.post('/token', requireAuth, async (req: AuthRequest, res: Response): Prom
         return;
       }
 
-      // Check if user is host
+      // Check if user is host or co-host
       const isHost = liveData.hostId === uid;
-      const canPublish = isHost;
+      const isCoHost = liveData.coHostIds && liveData.coHostIds.includes(uid);
+      const canPublish = isHost || isCoHost;
 
       // Generate room name and identity
       const roomName = `live_${liveId}`;

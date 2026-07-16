@@ -21,5 +21,28 @@ buildscript {
 
 apply plugin: "com.facebook.react.rootproject"
 
+// Fix: RN 0.85.x + NDK 26 - std::format conflicts with folly::format in graphicsConversions.h
+// Inject patched shadow include path for the two affected modules after all projects are configured.
+gradle.projectsEvaluated {
+    def patchDir = "${rootProject.projectDir.absolutePath}/../android/patches".replace("\\", "/")
+    def patchedModules = ['react-native-safe-area-context', 'react-native-screens']
+    rootProject.subprojects { proj ->
+        if (patchedModules.any { proj.name.contains(it) }) {
+            try {
+                proj.android.defaultConfig.externalNativeBuild {
+                    cmake {
+                        def currentArgs = arguments ?: []
+                        if (!currentArgs.contains("-I${patchDir}")) {
+                            arguments("-I${patchDir}")
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Module may not have cmake config - skip silently
+            }
+        }
+    }
+}
+
 
 

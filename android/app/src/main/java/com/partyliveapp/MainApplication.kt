@@ -6,6 +6,7 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+import com.livekit.reactnative.LiveKitReactNative
 
 class MainApplication : Application(), ReactApplication {
 
@@ -22,6 +23,9 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    // Required by @livekit/react-native: initializes audio recorder dispatcher
+    LiveKitReactNative.setup(this)
     loadReactNative(this)
   }
 }
+

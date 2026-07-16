@@ -71,7 +71,7 @@ export const inviteHostToPk = async (
     hostAPhotoURL: fromHostData.photoURL || '',
     hostBPhotoURL: toHostData.photoURL || '',
     status: 'invited',
-    durationSeconds: 180,
+    durationSeconds: 300,
     hostAScore: 0,
     hostBScore: 0,
     hostADiamonds: 0,
@@ -159,7 +159,7 @@ export const acceptPkInvite = async (
 
   const timestamp = admin.firestore.FieldValue.serverTimestamp();
   const startedAt = timestamp;
-  const endsAt = admin.firestore.Timestamp.fromMillis(Date.now() + 180 * 1000); // 180s duration
+  const endsAt = admin.firestore.Timestamp.fromMillis(Date.now() + 300 * 1000); // 300s duration
 
   const updatedBattle: Partial<PkBattle> = {
     status: 'active',
@@ -209,7 +209,7 @@ export const acceptPkInvite = async (
     actionValue: invite.fromLiveId,
   });
 
-  return { ...battle, ...updatedBattle, startedAt: new Date(), endsAt: new Date(Date.now() + 180000) };
+  return { ...battle, ...updatedBattle, startedAt: new Date(), endsAt: new Date(Date.now() + 300000) };
 };
 
 export const rejectPkInvite = async (
@@ -420,6 +420,236 @@ export const finishPkBattle = async (
     updatedAt: timestamp,
   }, { merge: true });
 
+  // 1. Fetch contributions to find top MVPs for Host A and Host B
+  const contributionsSnap = await db.collection(PK_GIFT_CONTRIBUTIONS)
+    .where('pkBattleId', '==', pkBattleId)
+    .get();
+
+  const contribsA: Record<string, number> = {};
+  const contribsB: Record<string, number> = {};
+
+  contributionsSnap.forEach(doc => {
+    const data = doc.data();
+    const senderId = data.senderId;
+    const receiverHostId = data.receiverHostId;
+    const diamonds = data.diamonds || 0;
+
+    if (receiverHostId === battle.hostAId) {
+      contribsA[senderId] = (contribsA[senderId] || 0) + diamonds;
+    } else if (receiverHostId === battle.hostBId) {
+      contribsB[senderId] = (contribsB[senderId] || 0) + diamonds;
+    }
+  });
+
+  let mvpAId: string | null = null;
+  let maxDiamondsA = 0;
+  for (const [senderId, diamonds] of Object.entries(contribsA)) {
+    if (diamonds > maxDiamondsA) {
+      maxDiamondsA = diamonds;
+      mvpAId = senderId;
+    }
+  }
+
+  let mvpBId: string | null = null;
+  let maxDiamondsB = 0;
+  for (const [senderId, diamonds] of Object.entries(contribsB)) {
+    if (diamonds > maxDiamondsB) {
+      maxDiamondsB = diamonds;
+      mvpBId = senderId;
+    }
+  }
+
+  // 2. Fetch current wallet balances to prepare batched balance updates
+  const hostAWalletRef = db.collection('wallets').doc(battle.hostAId);
+  const hostBWalletRef = db.collection('wallets').doc(battle.hostBId);
+  const mvpAWalletRef = mvpAId ? db.collection('wallets').doc(mvpAId) : null;
+  const mvpBWalletRef = mvpBId ? db.collection('wallets').doc(mvpBId) : null;
+
+  const hostAWalletSnap = await hostAWalletRef.get();
+  const hostBWalletSnap = await hostBWalletRef.get();
+  
+  const mvpAWalletSnap = mvpAId && mvpAWalletRef ? await mvpAWalletRef.get() : null;
+  const mvpBWalletSnap = mvpBId && mvpBWalletRef ? await mvpBWalletRef.get() : null;
+
+  const hostAUserRef = db.collection('users').doc(battle.hostAId);
+  const hostBUserRef = db.collection('users').doc(battle.hostBId);
+  const mvpAUserRef = mvpAId ? db.collection('users').doc(mvpAId) : null;
+  const mvpBUserRef = mvpBId ? db.collection('users').doc(mvpBId) : null;
+
+  // 3. Process Host A (50% beans) and MVP A (10% diamonds)
+  const hostADiamonds = battle.hostADiamonds || 0;
+  if (hostADiamonds > 0) {
+    const hostABeansEarned = Math.floor(hostADiamonds * 0.50);
+    const wA = hostAWalletSnap.exists ? hostAWalletSnap.data()! : { beans: 0, lifetimeBeansEarned: 0 };
+    const newBeansA = (wA.beans || 0) + hostABeansEarned;
+    const newLifetimeA = (wA.lifetimeBeansEarned || 0) + hostABeansEarned;
+
+    batch.set(hostAWalletRef, {
+      userId: battle.hostAId,
+      beans: newBeansA,
+      lifetimeBeansEarned: newLifetimeA,
+      status: 'active',
+      updatedAt: timestamp,
+    }, { merge: true });
+
+    batch.update(hostAUserRef, {
+      beans: newBeansA,
+      updatedAt: timestamp,
+    });
+
+    const hostATxRef = db.collection('walletTransactions').doc();
+    batch.set(hostATxRef, {
+      id: hostATxRef.id,
+      userId: battle.hostAId,
+      type: 'beans_earned',
+      direction: 'credit',
+      currencyType: 'beans',
+      amount: hostABeansEarned,
+      balanceAfter: newBeansA,
+      status: 'completed',
+      description: `Comisión PK Battle (50% de ${hostADiamonds} diamantes)`,
+      relatedLiveId: battle.hostALiveId,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+
+    if (mvpAId && mvpAWalletRef && mvpAUserRef) {
+      const mvpADiamondsReward = Math.floor(hostADiamonds * 0.10);
+      if (mvpADiamondsReward > 0) {
+        const wMvpA = mvpAWalletSnap && mvpAWalletSnap.exists ? mvpAWalletSnap.data()! : { diamonds: 0 };
+        const newDiamondsMvpA = (wMvpA.diamonds || 0) + mvpADiamondsReward;
+
+        batch.set(mvpAWalletRef, {
+          userId: mvpAId,
+          diamonds: newDiamondsMvpA,
+          status: 'active',
+          updatedAt: timestamp,
+        }, { merge: true });
+
+        batch.update(mvpAUserRef, {
+          diamonds: newDiamondsMvpA,
+          updatedAt: timestamp,
+        });
+
+        const mvpATxRef = db.collection('walletTransactions').doc();
+        batch.set(mvpATxRef, {
+          id: mvpATxRef.id,
+          userId: mvpAId,
+          type: 'reward',
+          direction: 'credit',
+          currencyType: 'diamonds',
+          amount: mvpADiamondsReward,
+          balanceAfter: newDiamondsMvpA,
+          status: 'completed',
+          description: `Recompensa MVP PK Battle (10% de ${hostADiamonds} diamantes)`,
+          relatedLiveId: battle.hostALiveId,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
+
+        // Send message to live chat announcing MVP
+        try {
+          const { sendLiveSystemMessage } = await import('./liveMessagesService');
+          if (battle.hostALiveId) {
+            await sendLiveSystemMessage(
+              battle.hostALiveId,
+              `👑 ¡Felicitaciones al MVP de ${battle.hostAName}! Se lleva el 10% (${mvpADiamondsReward} diamantes) de recompensa.`
+            );
+          }
+        } catch (err) {
+          console.error('Failed to notify MVP A in chat:', err);
+        }
+      }
+    }
+  }
+
+  // 4. Process Host B (50% beans) and MVP B (10% diamonds)
+  const hostBDiamonds = battle.hostBDiamonds || 0;
+  if (hostBDiamonds > 0) {
+    const hostBBeansEarned = Math.floor(hostBDiamonds * 0.50);
+    const wB = hostBWalletSnap.exists ? hostBWalletSnap.data()! : { beans: 0, lifetimeBeansEarned: 0 };
+    const newBeansB = (wB.beans || 0) + hostBBeansEarned;
+    const newLifetimeB = (wB.lifetimeBeansEarned || 0) + hostBBeansEarned;
+
+    batch.set(hostBWalletRef, {
+      userId: battle.hostBId,
+      beans: newBeansB,
+      lifetimeBeansEarned: newLifetimeB,
+      status: 'active',
+      updatedAt: timestamp,
+    }, { merge: true });
+
+    batch.update(hostBUserRef, {
+      beans: newBeansB,
+      updatedAt: timestamp,
+    });
+
+    const hostBTxRef = db.collection('walletTransactions').doc();
+    batch.set(hostBTxRef, {
+      id: hostBTxRef.id,
+      userId: battle.hostBId,
+      type: 'beans_earned',
+      direction: 'credit',
+      currencyType: 'beans',
+      amount: hostBBeansEarned,
+      balanceAfter: newBeansB,
+      status: 'completed',
+      description: `Comisión PK Battle (50% de ${hostBDiamonds} diamantes)`,
+      relatedLiveId: battle.hostBLiveId || null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+
+    if (mvpBId && mvpBWalletRef && mvpBUserRef) {
+      const mvpBDiamondsReward = Math.floor(hostBDiamonds * 0.10);
+      if (mvpBDiamondsReward > 0) {
+        const wMvpB = mvpBWalletSnap && mvpBWalletSnap.exists ? mvpBWalletSnap.data()! : { diamonds: 0 };
+        const newDiamondsMvpB = (wMvpB.diamonds || 0) + mvpBDiamondsReward;
+
+        batch.set(mvpBWalletRef, {
+          userId: mvpBId,
+          diamonds: newDiamondsMvpB,
+          status: 'active',
+          updatedAt: timestamp,
+        }, { merge: true });
+
+        batch.update(mvpBUserRef, {
+          diamonds: newDiamondsMvpB,
+          updatedAt: timestamp,
+        });
+
+        const mvpBTxRef = db.collection('walletTransactions').doc();
+        batch.set(mvpBTxRef, {
+          id: mvpBTxRef.id,
+          userId: mvpBId,
+          type: 'reward',
+          direction: 'credit',
+          currencyType: 'diamonds',
+          amount: mvpBDiamondsReward,
+          balanceAfter: newDiamondsMvpB,
+          status: 'completed',
+          description: `Recompensa MVP PK Battle (10% de ${hostBDiamonds} diamantes)`,
+          relatedLiveId: battle.hostBLiveId || null,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
+
+        // Send message to live chat announcing MVP
+        try {
+          const { sendLiveSystemMessage } = await import('./liveMessagesService');
+          if (battle.hostBLiveId) {
+            await sendLiveSystemMessage(
+              battle.hostBLiveId,
+              `👑 ¡Felicitaciones al MVP de ${battle.hostBName}! Se lleva el 10% (${mvpBDiamondsReward} diamantes) de recompensa.`
+            );
+          }
+        } catch (err) {
+          console.error('Failed to notify MVP B in chat:', err);
+        }
+      }
+    }
+  }
+
   await batch.commit();
 
   // Notify hosts
@@ -571,4 +801,143 @@ export const expireOldPkInvites = async (): Promise<void> => {
   });
 
   await batch.commit();
+};
+
+export const rollPkDice = async (
+  pkBattleId: string,
+  hostId: string
+): Promise<PkBattle> => {
+  const battleRef = db.collection(PK_BATTLES).doc(pkBattleId);
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+
+  const battleSnap = await battleRef.get();
+  if (!battleSnap.exists) throw new Error('Batalla PK no encontrada.');
+  const battle = battleSnap.data() as PkBattle;
+
+  if (battle.status !== 'active') throw new Error('La batalla PK no está activa.');
+
+  const isHostA = battle.hostAId === hostId;
+  const isHostB = battle.hostBId === hostId;
+  if (!isHostA && !isHostB) throw new Error('No eres participante de esta batalla.');
+
+  const diceAvailable = isHostA ? battle.hostADiceAvailable : battle.hostBDiceAvailable;
+  if (!diceAvailable) throw new Error('No tienes un dado disponible para lanzar.');
+
+  const powers: ('steal_100' | 'double_points' | 'block_gifts' | 'reset_power' | 'shield')[] = [
+    'steal_100',
+    'double_points',
+    'block_gifts',
+    'reset_power',
+    'shield'
+  ];
+  const rolledPower = powers[Math.floor(Math.random() * powers.length)];
+
+  const updates: any = {
+    updatedAt: timestamp,
+  };
+
+  if (isHostA) {
+    updates.hostADiceAvailable = false;
+  } else {
+    updates.hostBDiceAvailable = false;
+  }
+
+  let chatMsg = '';
+  const hostName = isHostA ? battle.hostAName : battle.hostBName;
+  const opponentName = isHostA ? battle.hostBName : battle.hostAName;
+
+  const opponentShield = isHostA ? battle.hostBActivePower === 'shield' : battle.hostAActivePower === 'shield';
+  const opponentShieldExpiry = isHostA ? battle.hostBPowerExpiry : battle.hostAPowerExpiry;
+  
+  let shieldActive = false;
+  if (opponentShield && opponentShieldExpiry) {
+    const expiryMs = opponentShieldExpiry.toMillis ? opponentShieldExpiry.toMillis() : new Date(opponentShieldExpiry).getTime();
+    if (Date.now() < expiryMs) {
+      shieldActive = true;
+    }
+  }
+
+  if (rolledPower === 'steal_100') {
+    if (shieldActive) {
+      chatMsg = `🛡️ ¡${opponentName} usó su ESCUDO para bloquear el robo de 100 diamantes de ${hostName}!`;
+      if (isHostA) {
+        updates.hostBActivePower = null;
+        updates.hostBPowerExpiry = null;
+      } else {
+        updates.hostAActivePower = null;
+        updates.hostAPowerExpiry = null;
+      }
+    } else {
+      const opponentScoreField = isHostA ? 'hostBScore' : 'hostAScore';
+      const hostScoreField = isHostA ? 'hostAScore' : 'hostBScore';
+      const opponentScore = isHostA ? (battle.hostBScore || 0) : (battle.hostAScore || 0);
+      const stealAmount = Math.min(100, opponentScore);
+      
+      updates[opponentScoreField] = admin.firestore.FieldValue.increment(-stealAmount);
+      updates[hostScoreField] = admin.firestore.FieldValue.increment(stealAmount);
+      chatMsg = `⚡ ¡${hostName} lanzó el DADO ❓ y obtuvo ROBO! Robó ${stealAmount} diamantes a ${opponentName}.`;
+    }
+  } else if (rolledPower === 'reset_power') {
+    if (shieldActive) {
+      chatMsg = `🛡️ ¡${opponentName} usó su ESCUDO para bloquear el reseteo de poder de ${hostName}!`;
+      if (isHostA) {
+        updates.hostBActivePower = null;
+        updates.hostBPowerExpiry = null;
+      } else {
+        updates.hostAActivePower = null;
+        updates.hostAPowerExpiry = null;
+      }
+    } else {
+      const opponentPowerField = isHostA ? 'hostBPowerBar' : 'hostAPowerBar';
+      updates[opponentPowerField] = 0;
+      chatMsg = `💥 ¡${hostName} lanzó el DADO ❓ y obtuvo RESET! Redujo la barra de poder de ${opponentName} a cero.`;
+    }
+  } else if (rolledPower === 'double_points') {
+    const expiry = admin.firestore.Timestamp.fromMillis(Date.now() + 30 * 1000); // 30 seconds
+    if (isHostA) {
+      updates.hostAActivePower = 'double_points';
+      updates.hostAPowerExpiry = expiry;
+    } else {
+      updates.hostBActivePower = 'double_points';
+      updates.hostBPowerExpiry = expiry;
+    }
+    chatMsg = `🔥 ¡${hostName} lanzó el DADO ❓ y obtuvo DOBLE PUNTOS (2x) por 30 segundos!`;
+  } else if (rolledPower === 'block_gifts') {
+    const expiry = admin.firestore.Timestamp.fromMillis(Date.now() + 15 * 1000); // 15 seconds
+    if (isHostA) {
+      updates.hostAActivePower = 'block_gifts';
+      updates.hostAPowerExpiry = expiry;
+    } else {
+      updates.hostBActivePower = 'block_gifts';
+      updates.hostBPowerExpiry = expiry;
+    }
+    chatMsg = `❄️ ¡${hostName} lanzó el DADO ❓ y obtuvo BLOQUEO! Congeló al oponente ${opponentName} por 15 segundos.`;
+  } else if (rolledPower === 'shield') {
+    const expiry = admin.firestore.Timestamp.fromMillis(Date.now() + 30 * 1000); // 30 seconds
+    if (isHostA) {
+      updates.hostAActivePower = 'shield';
+      updates.hostAPowerExpiry = expiry;
+    } else {
+      updates.hostBActivePower = 'shield';
+      updates.hostBPowerExpiry = expiry;
+    }
+    chatMsg = `🛡️ ¡${hostName} lanzó el DADO ❓ y obtuvo un ESCUDO protector por 30 segundos!`;
+  }
+
+  await battleRef.update(updates);
+
+  try {
+    const { sendLiveSystemMessage } = await import('./liveMessagesService');
+    if (battle.hostALiveId) {
+      await sendLiveSystemMessage(battle.hostALiveId, chatMsg);
+    }
+    if (battle.hostBLiveId) {
+      await sendLiveSystemMessage(battle.hostBLiveId, chatMsg);
+    }
+  } catch (err) {
+    console.error('Failed to send PK dice roll system chat message:', err);
+  }
+
+  const freshSnap = await battleRef.get();
+  return { id: freshSnap.id, ...freshSnap.data() } as PkBattle;
 };

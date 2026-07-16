@@ -37,6 +37,7 @@ import {
   sessionStartLimiter,
   heartbeatLimiter,
 } from './middleware/rateLimitMiddleware';
+import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler';
 
 dotenv.config();
 
@@ -96,6 +97,10 @@ app.use('/api/sessions/heartbeat', heartbeatLimiter);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/rooms', roomAccessRoutes);
+
+// ─── 404 & Global Error Handlers (must be last) ──────────────────────────────
+app.use(notFoundHandler);
+app.use(globalErrorHandler);
 
 app.listen(PORT, () => {
   console.log(`🚀 Backend running on http://localhost:${PORT}`);

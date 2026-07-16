@@ -58,6 +58,8 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
     participants: livekitParticipants,
     videoTracks,
     switchCamera,
+    cameraEnabled,
+    toggleCamera,
   } = useLiveKitLive(liveId, userProfile, currentViewer, currentUserRole, joined && live?.status === 'live');
 
   // Wallet support for gifts
@@ -441,14 +443,17 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* Main video area (placed behind everything, constant full screen dimensions) */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0F0C1B' }]}>
+        {renderVideoGrid()}
+      </View>
+
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        pointerEvents="box-none"
       >
-        {/* Main video area */}
-        <View style={styles.videoArea}>
-          {renderVideoGrid()}
-          
+        <View style={{ flex: 1 }} pointerEvents="box-none">
           {/* PK Battle Overlay */}
           {activeBattle && activeBattle.status === 'active' && (
             <View style={styles.pkOverlayContainer}>
@@ -611,6 +616,28 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
                   }}
                 >
                   <Text style={styles.sheetBtnText}>🚫 Moderar Espectadores</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.sheetBtn}
+                  onPress={async () => {
+                    setLiveMenuVisible(false);
+                    await toggleCamera();
+                  }}
+                >
+                  <Text style={styles.sheetBtnText}>
+                    {cameraEnabled ? '📷 Pausar Cámara' : '🎥 Activar Cámara'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.sheetBtn, { borderBottomWidth: 0 }]}
+                  onPress={() => {
+                    setLiveMenuVisible(false);
+                    handleClose();
+                  }}
+                >
+                  <Text style={[styles.sheetBtnText, { color: colors.secondary }]}>🛑 Detener Live</Text>
                 </TouchableOpacity>
               </>
             ) : (

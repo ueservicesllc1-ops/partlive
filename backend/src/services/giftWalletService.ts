@@ -135,12 +135,51 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
       throw new Error('Saldo insuficiente de diamantes para enviar este regalo.');
     }
 
+    let finalBeansGenerated = beansGenerated;
+    let scoreAddition = totalDiamondsSpent;
+    let battle: any = null;
+
+    if (targetType === 'live' && targetSnap.exists) {
+      const liveData = targetSnap.data();
+      if (liveData && liveData.isInPkBattle && liveData.activePkBattleId) {
+        finalBeansGenerated = 0; // Defer payout to the end of battle
+        
+        const pkBattleSnap = await transaction.get(db.collection('pkBattles').doc(liveData.activePkBattleId));
+        if (pkBattleSnap.exists) {
+          battle = pkBattleSnap.data();
+          const isHostA = battle.hostAId === receiverId;
+          
+          // Check if opponent has 'block_gifts' active and not expired
+          const opponentActivePower = isHostA ? battle.hostBActivePower : battle.hostAActivePower;
+          const opponentPowerExpiry = isHostA ? battle.hostBPowerExpiry : battle.hostAPowerExpiry;
+          
+          if (opponentActivePower === 'block_gifts') {
+            const expiryMs = opponentPowerExpiry ? (opponentPowerExpiry.toMillis ? opponentPowerExpiry.toMillis() : new Date(opponentPowerExpiry).getTime()) : 0;
+            if (Date.now() < expiryMs) {
+              throw new Error('¡El oponente ha bloqueado tus regalos! Inténtalo de nuevo en unos segundos.');
+            }
+          }
+
+          // Check if host has 'double_points' active and not expired
+          const hostActivePower = isHostA ? battle.hostAActivePower : battle.hostBActivePower;
+          const hostPowerExpiry = isHostA ? battle.hostAPowerExpiry : battle.hostBPowerExpiry;
+          
+          if (hostActivePower === 'double_points') {
+            const expiryMs = hostPowerExpiry ? (hostPowerExpiry.toMillis ? hostPowerExpiry.toMillis() : new Date(hostPowerExpiry).getTime()) : 0;
+            if (Date.now() < expiryMs) {
+              scoreAddition = totalDiamondsSpent * 2;
+            }
+          }
+        }
+      }
+    }
+
     // New Balances
     const newSenderDiamonds = senderWallet.diamonds - totalDiamondsSpent;
     const newSenderLifetimeSpent = (senderWallet.lifetimeDiamondsSpent || 0) + totalDiamondsSpent;
 
-    const newReceiverBeans = (receiverWallet.beans || 0) + beansGenerated;
-    const newReceiverLifetimeEarned = (receiverWallet.lifetimeBeansEarned || 0) + beansGenerated;
+    const newReceiverBeans = (receiverWallet.beans || 0) + finalBeansGenerated;
+    const newReceiverLifetimeEarned = (receiverWallet.lifetimeBeansEarned || 0) + finalBeansGenerated;
 
     // Update Sender Wallet & User profile cache
     transaction.update(senderWalletRef, {
@@ -339,42 +378,55 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
     });
 
     // Check if live stream is in active PK Battle
-    if (targetType === 'live') {
+    if (targetType === 'live' && battle) {
       const liveData = targetSnap.data();
-      if (liveData && liveData.isInPkBattle && liveData.activePkBattleId) {
-        const pkBattleRef = db.collection('pkBattles').doc(liveData.activePkBattleId);
-        const isHostA = liveData.hostId === receiverId;
+      const pkBattleRef = db.collection('pkBattles').doc(liveData.activePkBattleId);
+      const isHostA = liveData.hostId === receiverId;
 
-        if (isHostA) {
-          transaction.update(pkBattleRef, {
-            hostAScore: admin.firestore.FieldValue.increment(totalDiamondsSpent),
-            hostADiamonds: admin.firestore.FieldValue.increment(totalDiamondsSpent),
-            hostAGiftsCount: admin.firestore.FieldValue.increment(quantity),
-            updatedAt: timestamp,
-          });
-        } else {
-          transaction.update(pkBattleRef, {
-            hostBScore: admin.firestore.FieldValue.increment(totalDiamondsSpent),
-            hostBDiamonds: admin.firestore.FieldValue.increment(totalDiamondsSpent),
-            hostBGiftsCount: admin.firestore.FieldValue.increment(quantity),
-            updatedAt: timestamp,
-          });
-        }
+      const currentPowerBar = isHostA ? (battle.hostAPowerBar || 0) : (battle.hostBPowerBar || 0);
+      const currentDice = isHostA ? (battle.hostADiceAvailable || false) : (battle.hostBDiceAvailable || false);
 
-        const contributionRef = db.collection('pkGiftContributions').doc();
-        transaction.set(contributionRef, {
-          id: contributionRef.id,
-          pkBattleId: liveData.activePkBattleId,
-          giftEventId: giftEventRef.id,
-          senderId,
-          receiverHostId: receiverId,
-          giftId,
-          giftName: gift.name,
-          diamonds: totalDiamondsSpent,
-          beansGenerated,
-          createdAt: timestamp,
+      let newPowerBar = currentPowerBar + totalDiamondsSpent;
+      let diceAvailable = currentDice;
+
+      if (newPowerBar >= 100) {
+        diceAvailable = true;
+        newPowerBar = newPowerBar % 100;
+      }
+
+      if (isHostA) {
+        transaction.update(pkBattleRef, {
+          hostAScore: admin.firestore.FieldValue.increment(scoreAddition),
+          hostADiamonds: admin.firestore.FieldValue.increment(totalDiamondsSpent),
+          hostAGiftsCount: admin.firestore.FieldValue.increment(quantity),
+          hostAPowerBar: newPowerBar,
+          hostADiceAvailable: diceAvailable,
+          updatedAt: timestamp,
+        });
+      } else {
+        transaction.update(pkBattleRef, {
+          hostBScore: admin.firestore.FieldValue.increment(scoreAddition),
+          hostBDiamonds: admin.firestore.FieldValue.increment(totalDiamondsSpent),
+          hostBGiftsCount: admin.firestore.FieldValue.increment(quantity),
+          hostBPowerBar: newPowerBar,
+          hostBDiceAvailable: diceAvailable,
+          updatedAt: timestamp,
         });
       }
+
+      const contributionRef = db.collection('pkGiftContributions').doc();
+      transaction.set(contributionRef, {
+        id: contributionRef.id,
+        pkBattleId: liveData.activePkBattleId,
+        giftEventId: giftEventRef.id,
+        senderId,
+        receiverHostId: receiverId,
+        giftId,
+        giftName: gift.name,
+        diamonds: totalDiamondsSpent,
+        beansGenerated: totalDiamondsSpent,
+        createdAt: timestamp,
+      });
     }
 
     // Update Room/Live/Game statistics

@@ -8,7 +8,8 @@ import {
   finishPkBattle,
   cancelPkBattle,
   getActivePkBattleByLive,
-  getHostPkHistory
+  getHostPkHistory,
+  rollPkDice
 } from '../services/pkBattleService';
 
 export const pkBattleRoutes = Router();
@@ -104,6 +105,25 @@ pkBattleRoutes.post('/finish', requireAuth, async (req: AuthRequest, res: Respon
   } catch (error: any) {
     console.error('Error finishing PK battle:', error);
     res.status(400).json({ error: error.message || 'Error finishing battle' });
+  }
+});
+
+// POST /api/pk/roll-dice - Roll the question mark dice
+pkBattleRoutes.post('/roll-dice', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const hostId = req.user.uid;
+    const { pkBattleId } = req.body;
+
+    if (!pkBattleId) {
+      res.status(400).json({ error: 'pkBattleId is required.' });
+      return;
+    }
+
+    const battle = await rollPkDice(pkBattleId, hostId);
+    res.json({ success: true, battle });
+  } catch (error: any) {
+    console.error('Error rolling PK dice:', error);
+    res.status(400).json({ error: error.message || 'Error rolling dice' });
   }
 });
 

@@ -87,6 +87,14 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+
+        // Fix: RN 0.85.x + NDK 26 - std::format conflicts with Folly in graphicsConversions.h
+        externalNativeBuild {
+            cmake {
+                def patchDir = "${projectDir.parentFile.absolutePath}/patches".replace("\\", "/")
+                cppFlags "-std=c++20 -I${patchDir}"
+            }
+        }
     }
     signingConfigs {
         debug {

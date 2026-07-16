@@ -28,6 +28,29 @@ const ConnectionState = {
   Reconnecting: 'reconnecting',
 } as const;
 
+const getActiveVideoDeviceId = (roomInstance: Room): string | null => {
+  try {
+    const localVideoPub = Array.from(roomInstance.localParticipant.videoTrackPublications.values())
+      .find((pub: any) => pub.track && pub.kind === 'video');
+    const localVideoTrack = localVideoPub?.track;
+    if (!localVideoTrack) return null;
+
+    const msTrack = (localVideoTrack as any).mediaStreamTrack;
+    if (!msTrack) return null;
+
+    const deviceId = 
+      msTrack.getSettings?.().deviceId || 
+      msTrack.getConstraints?.().deviceId || 
+      msTrack._constraints?.deviceId ||
+      msTrack.deviceId;
+
+    return deviceId || null;
+  } catch (e) {
+    console.error('Error getting active video device ID:', e);
+    return null;
+  }
+};
+
 export const useLiveKitLive = (
   liveId: string,
   currentUser: any,
@@ -49,6 +72,7 @@ export const useLiveKitLive = (
   const roomRef = useRef<Room | null>(null);
   const roleRef = useRef(currentUserRole);
   const isMutedFirestoreRef = useRef(currentViewer?.isMuted || false);
+  const activeDeviceIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     isMutedFirestoreRef.current = currentViewer?.isMuted || false;
@@ -305,29 +329,56 @@ export const useLiveKitLive = (
     if (!roomInstance || !isPublishing) return;
 
     try {
-      // Enumerate all video input devices
       const allDevices = await mediaDevices.enumerateDevices() as any[];
       const videoInputs = allDevices.filter((d: any) => d.kind === 'videoinput');
+      if (videoInputs.length === 0) return;
 
-      // Determine target facing mode (toggle front/back)
-      const targetFacing = isFrontCamera ? 'environment' : 'user';
-      const targetDevice = videoInputs.find(
-        (d: any) => d.facing === targetFacing || d.label?.toLowerCase().includes(isFrontCamera ? 'back' : 'front')
-      );
+      // 1. Determine currently active device ID
+      const activeId = getActiveVideoDeviceId(roomInstance) || activeDeviceIdRef.current;
 
-      if (targetDevice) {
-        await roomInstance.switchActiveDevice('videoinput', targetDevice.deviceId);
-        setIsFrontCamera(!isFrontCamera);
-      } else if (videoInputs.length >= 2) {
-        // Fallback: pick the other device if facing mode labels aren't available
-        const currentDevice = videoInputs.find((d: any) =>
-          d.facing === (isFrontCamera ? 'user' : 'environment') || !d.facing
-        );
-        const otherDevice = videoInputs.find((d: any) => d !== currentDevice);
-        if (otherDevice) {
-          await roomInstance.switchActiveDevice('videoinput', otherDevice.deviceId);
-          setIsFrontCamera(!isFrontCamera);
+      let nextDevice: any = null;
+      if (activeId) {
+        const currentIndex = videoInputs.findIndex((d: any) => d.deviceId === activeId);
+        if (currentIndex !== -1) {
+          nextDevice = videoInputs[(currentIndex + 1) % videoInputs.length];
         }
+      }
+
+      // 2. Fallback: if we couldn't determine the active device, use isFrontCamera to choose
+      if (!nextDevice) {
+        const targetFacing = isFrontCamera ? 'environment' : 'user';
+        nextDevice = videoInputs.find(
+          (d: any) => d.facing === targetFacing || 
+                      d.label?.toLowerCase().includes(isFrontCamera ? 'back' : 'front') ||
+                      d.label?.toLowerCase().includes(isFrontCamera ? 'rear' : 'user')
+        );
+      }
+
+      // 3. Last resort fallback: just toggle based on facing expectation
+      if (!nextDevice && videoInputs.length >= 2) {
+        nextDevice = isFrontCamera ? videoInputs[1] : videoInputs[0];
+      }
+
+      if (!nextDevice && videoInputs.length > 0) {
+        nextDevice = videoInputs[0];
+      }
+
+      if (nextDevice) {
+        await roomInstance.switchActiveDevice('videoinput', nextDevice.deviceId);
+        activeDeviceIdRef.current = nextDevice.deviceId;
+
+        // Update isFrontCamera state based on the selected device attributes
+        const label = nextDevice.label?.toLowerCase() || '';
+        const facing = nextDevice.facing || '';
+        const isNowFront = facing === 'user' || 
+                           label.includes('front') || 
+                           label.includes('user') || 
+                           label.includes('face') || 
+                           label.includes('anterior') || 
+                           label.includes('frontal') || 
+                           (!facing && !label.includes('back') && !label.includes('rear') && !label.includes('environment'));
+
+        setIsFrontCamera(isNowFront);
       }
     } catch (e) {
       console.error('Error switching camera:', e);
