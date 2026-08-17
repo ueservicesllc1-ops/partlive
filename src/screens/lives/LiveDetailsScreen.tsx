@@ -17,6 +17,7 @@ import {
   LiveActionsBar,
   LiveModerationMenu,
   LiveEndedState,
+  CameraLogModal,
 } from '../../components/lives';
 import { GiftStoreModal } from '../../components/store/GiftStoreModal';
 import { ScreenError } from '../../components/ScreenError';
@@ -60,6 +61,11 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
     switchCamera,
     cameraEnabled,
     toggleCamera,
+    cameraLogs,
+    showCameraLogs,
+    lastCameraError,
+    setShowCameraLogs,
+    clearCameraLogs,
   } = useLiveKitLive(liveId, userProfile, currentViewer, currentUserRole, joined && live?.status === 'live');
 
   // Wallet support for gifts
@@ -631,6 +637,16 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  style={styles.sheetBtn}
+                  onPress={() => {
+                    setLiveMenuVisible(false);
+                    setShowCameraLogs(true);
+                  }}
+                >
+                  <Text style={styles.sheetBtnText}>📋 Ver Logs de Cámara</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   style={[styles.sheetBtn, { borderBottomWidth: 0 }]}
                   onPress={() => {
                     setLiveMenuVisible(false);
@@ -691,6 +707,16 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
           targetOwnerId={live.hostId}
         />
       )}
+
+      {/* Camera Debug Logs Modal */}
+      <CameraLogModal
+        visible={showCameraLogs}
+        logs={cameraLogs}
+        lastError={lastCameraError}
+        onClose={() => setShowCameraLogs(false)}
+        onClear={clearCameraLogs}
+        onRetrySwitch={switchCamera}
+      />
     </SafeAreaView>
   );
 };

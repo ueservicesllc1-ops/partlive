@@ -10,4 +10,6 @@ export * from './LiveLikeButton';
 export * from './LiveModerationMenu';
 export * from './StartLiveForm';
 export * from './LiveEndedState';
+export * from './CameraLogModal';
 export { GiftCatalogModal } from '../rooms/GiftCatalogModal'; // Reuse gift catalog modal if needed
+

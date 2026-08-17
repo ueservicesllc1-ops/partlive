@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Room,
   RoomEvent,
@@ -6,388 +6,471 @@ import {
   RoomOptions,
   LogLevel,
   setLogLevel,
+  createLocalVideoTrack,
+  Track,
+  LocalVideoTrack,
 } from 'livekit-client';
-import { AudioSession } from '@livekit/react-native';
-import { mediaDevices } from '@livekit/react-native-webrtc';
+import { AudioSession, AndroidAudioTypePresets } from '@livekit/react-native';
 import { getLiveKitLiveToken } from '../services/api/livekitApi';
 import {
   checkDevicePermission,
   requestDevicePermission,
-  showPermissionBlockedAlert,
 } from '../utils/permissions';
 import { LIVEKIT_CONFIG } from '../config/livekit';
 
-// Enable verbose LiveKit logs to capture exact details in logcat
-setLogLevel(LogLevel.debug);
+setLogLevel(LogLevel.warn); // warn only — debug floods logcat and can slow things down
 
-// Safe local ConnectionState definition compatible with livekit-client ConnectionState strings
-const ConnectionState = {
-  Disconnected: 'disconnected',
-  Connecting: 'connecting',
-  Connected: 'connected',
-  Reconnecting: 'reconnecting',
-} as const;
+// ─── Camera Device Discovery ───────────────────────────────────────────────
+// Uses the WebRTC mediaDevices API (registered by @livekit/react-native-webrtc)
+// to enumerate physical cameras and classify them as front/back by label.
 
-const getActiveVideoDeviceId = (roomInstance: Room): string | null => {
+interface CameraDeviceInfo {
+  deviceId: string;
+  label: string;
+  facing: 'front' | 'back' | 'unknown';
+}
+
+/**
+ * Enumerate available video input devices and classify each as front, back, or unknown.
+ * Android labels typically contain "front" or "back" / "rear" / "environment".
+ * iOS labels typically contain "Front" or "Back".
+ * Falls back to index-based heuristic if labels are empty.
+ */
+const getAvailableCameras = async (): Promise<CameraDeviceInfo[]> => {
   try {
-    const localVideoPub = Array.from(roomInstance.localParticipant.videoTrackPublications.values())
-      .find((pub: any) => pub.track && pub.kind === 'video');
-    const localVideoTrack = localVideoPub?.track;
-    if (!localVideoTrack) return null;
+    // mediaDevices is a WebRTC global registered by @livekit/react-native-webrtc
+    const devices = await (globalThis as any).navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter((d: any) => d.kind === 'videoinput');
 
-    const msTrack = (localVideoTrack as any).mediaStreamTrack;
-    if (!msTrack) return null;
+    console.log('[Camera] Found', videoDevices.length, 'video devices:',
+      videoDevices.map((d: any) => ({ id: d.deviceId, label: d.label })));
 
-    const deviceId = 
-      msTrack.getSettings?.().deviceId || 
-      msTrack.getConstraints?.().deviceId || 
-      msTrack._constraints?.deviceId ||
-      msTrack.deviceId;
+    if (videoDevices.length === 0) return [];
 
-    return deviceId || null;
+    return videoDevices.map((d: any, index: number) => {
+      const label = (d.label || '').toLowerCase();
+      let facing: 'front' | 'back' | 'unknown' = 'unknown';
+
+      if (label.includes('front') || label.includes('user') || label.includes('facing front')) {
+        facing = 'front';
+      } else if (label.includes('back') || label.includes('rear') || label.includes('environment') || label.includes('facing back')) {
+        facing = 'back';
+      } else if (videoDevices.length === 2) {
+        // Heuristic: on most Android phones index 0 = back camera, index 1 = front camera.
+        // (labels are empty before permission grant on many Android devices)
+        facing = index === 0 ? 'back' : 'front';
+      }
+
+      return {
+        deviceId: d.deviceId,
+        label: d.label || `Camera ${index}`,
+        facing,
+      };
+    });
   } catch (e) {
-    console.error('Error getting active video device ID:', e);
-    return null;
+    console.error('[Camera] enumerateDevices failed:', e);
+    return [];
   }
 };
+
+
+
+
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+interface VideoTrackInfo {
+  participantSid: string;
+  track: any;
+  identity: string;
+}
+
+// ─── Hook ──────────────────────────────────────────────────────────────────
 
 export const useLiveKitLive = (
   liveId: string,
   currentUser: any,
-  currentViewer: any,
-  currentUserRole: string | null,
+  _currentViewer: any,   // kept for API compat but not used as a dep
+  _currentUserRole: string | null, // kept for API compat
   enabled: boolean = true
 ) => {
+  // ── State ──
   const [livekitRoom, setLivekitRoom] = useState<Room | null>(null);
-  const [connectionState, setConnectionState] = useState<any>(ConnectionState.Disconnected);
+  const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [videoTracks, setVideoTracks] = useState<{ participantSid: string; track: any; identity: string }[]>([]);
+  const [videoTracks, setVideoTracks] = useState<VideoTrackInfo[]>([]);
   const [isPublishing, setIsPublishing] = useState(false);
   const [localMuted, setLocalMuted] = useState(false);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [cameraEnabled, setCameraEnabled] = useState(false);
   const [isFrontCamera, setIsFrontCamera] = useState(true);
+  const [cameraLogs, setCameraLogs] = useState<string[]>([]);
+  const [showCameraLogs, setShowCameraLogs] = useState(false);
+  const [lastCameraError, setLastCameraError] = useState<string | null>(null);
 
+  const logCameraMsg = useCallback((msg: string) => {
+    const time = new Date().toLocaleTimeString();
+    const formatted = `[${time}] ${msg}`;
+    console.log('[CameraLog]', formatted);
+    setCameraLogs(prev => [...prev.slice(-40), formatted]);
+  }, []);
+
+  const clearCameraLogs = useCallback(() => {
+    setCameraLogs([]);
+    setLastCameraError(null);
+  }, []);
+
+  // ── Refs (stable, don't trigger re-renders) ──
   const roomRef = useRef<Room | null>(null);
-  const roleRef = useRef(currentUserRole);
-  const isMutedFirestoreRef = useRef(currentViewer?.isMuted || false);
-  const activeDeviceIdRef = useRef<string | null>(null);
+  const switchingRef = useRef(false);
+  const isFrontCameraRef = useRef(true); // mirrors isFrontCamera state — readable in stable callbacks
+  // Store latest user uid in a ref so connect() never needs currentUser in deps
+  const userUidRef = useRef<string | null>(currentUser?.uid ?? null);
+  useEffect(() => { userUidRef.current = currentUser?.uid ?? null; }, [currentUser?.uid]);
 
+  // Keep references for API compatibility to satisfy TypeScript compilation warnings
+  const compatRef = useRef({ _currentViewer, _currentUserRole });
   useEffect(() => {
-    isMutedFirestoreRef.current = currentViewer?.isMuted || false;
-  }, [currentViewer]);
+    compatRef.current = { _currentViewer, _currentUserRole };
+  }, [_currentViewer, _currentUserRole]);
 
-  const updateVideoTracks = useCallback((roomInstance: Room) => {
-    const tracks: { participantSid: string; track: any; identity: string }[] = [];
-    const allParticipants = [roomInstance.localParticipant, ...Array.from(roomInstance.remoteParticipants.values())];
+  // Keep ref in sync whenever state changes
+  useEffect(() => { isFrontCameraRef.current = isFrontCamera; }, [isFrontCamera]);
 
-    for (const p of allParticipants) {
+  // ── updateVideoTracks ─────────────────────────────────────────────────────
+  const updateVideoTracks = useCallback((room: Room) => {
+    const tracks: VideoTrackInfo[] = [];
+    const all = [room.localParticipant, ...Array.from(room.remoteParticipants.values())];
+    for (const p of all) {
       if (!p) continue;
-      const videoPub = Array.from(p.videoTrackPublications.values() as any).find(
-        (pub: any) => pub.track && pub.kind === 'video'
+      const pub = Array.from(p.videoTrackPublications.values() as any).find(
+        (x: any) => x.track && x.kind === 'video'
       ) as any;
-      if (videoPub && videoPub.track) {
-        tracks.push({
-          participantSid: p.sid,
-          track: videoPub.track,
-          identity: p.identity,
-        });
+      if (pub?.track) {
+        tracks.push({ participantSid: p.sid, track: pub.track, identity: p.identity });
       }
     }
     setVideoTracks(tracks);
   }, []);
 
-  const connect = useCallback(async () => {
-    if (!liveId || !currentUser || !enabled) return;
+  // ── Core connection lifecycle ─────────────────────────────────────────────
+  // This effect runs ONLY when liveId changes or when enabled flips from false→true.
+  // We use a local `mounted` flag to stop state updates after cleanup.
+  useEffect(() => {
+    if (!enabled || !liveId) return;
 
-    setConnecting(true);
-    setError(null);
-    setConnectionState(ConnectionState.Connecting);
+    let mounted = true;
+    let roomInstance: Room | null = null;
 
-    try {
-      // 1. Fetch live kit token specifically for live streams
-      const tokenData = await getLiveKitLiveToken(liveId);
+    const doConnect = async () => {
+      console.log('[LiveKit] Starting connection for liveId:', liveId);
 
-      // 2. Setup room options
-      const roomOptions: RoomOptions = {
-        adaptiveStream: true,
-        dynacast: true,
-      };
+      if (mounted) { setConnecting(true); setError(null); }
 
-      const roomInstance = new Room(roomOptions);
-      roomRef.current = roomInstance;
-
-      // 3. Register listeners
-      roomInstance.on(RoomEvent.ConnectionStateChanged, (state: any) => {
-        setConnectionState(state);
-      });
-
-      roomInstance.on(RoomEvent.ParticipantConnected, () => {
-        setParticipants(Array.from(roomInstance.remoteParticipants.values()));
-        updateVideoTracks(roomInstance);
-      });
-
-      roomInstance.on(RoomEvent.ParticipantDisconnected, () => {
-        setParticipants(Array.from(roomInstance.remoteParticipants.values()));
-        updateVideoTracks(roomInstance);
-      });
-
-      roomInstance.on(RoomEvent.Disconnected, () => {
-        setConnectionState(ConnectionState.Disconnected);
-      });
-
-      roomInstance.on(RoomEvent.LocalTrackPublished, () => {
-        updateVideoTracks(roomInstance);
-      });
-
-      roomInstance.on(RoomEvent.LocalTrackUnpublished, () => {
-        updateVideoTracks(roomInstance);
-      });
-
-      roomInstance.on(RoomEvent.TrackPublished, () => {
-        updateVideoTracks(roomInstance);
-      });
-
-      roomInstance.on(RoomEvent.TrackUnpublished, () => {
-        updateVideoTracks(roomInstance);
-      });
-
-      roomInstance.on(RoomEvent.TrackSubscribed, () => {
-        updateVideoTracks(roomInstance);
-      });
-
-      roomInstance.on(RoomEvent.TrackUnsubscribed, () => {
-        updateVideoTracks(roomInstance);
-      });
-
-      // 3.5 Start native AudioSession before connecting (required for Android WebRTC)
       try {
-        await AudioSession.startAudioSession();
-      } catch (audioErr) {
-        console.warn('[LiveKit] Failed to start native AudioSession:', audioErr);
+        const tokenData = await getLiveKitLiveToken(liveId);
+        if (!mounted) return;
+
+        // ── Build room ──
+        const options: RoomOptions = { adaptiveStream: true, dynacast: true };
+        roomInstance = new Room(options);
+        roomRef.current = roomInstance;
+
+        // ── Listeners ──
+        const onStateChange = () => {
+          if (!mounted) return;
+          updateVideoTracks(roomInstance!);
+        };
+
+        roomInstance.on(RoomEvent.LocalTrackPublished, onStateChange);
+        roomInstance.on(RoomEvent.LocalTrackUnpublished, onStateChange);
+        roomInstance.on(RoomEvent.TrackPublished, onStateChange);
+        roomInstance.on(RoomEvent.TrackUnpublished, onStateChange);
+        roomInstance.on(RoomEvent.TrackSubscribed, onStateChange);
+        roomInstance.on(RoomEvent.TrackUnsubscribed, onStateChange);
+        roomInstance.on(RoomEvent.TrackMuted, onStateChange);
+        roomInstance.on(RoomEvent.TrackUnmuted, onStateChange);
+
+        roomInstance.on(RoomEvent.ParticipantConnected, () => {
+          if (!mounted) return;
+          setParticipants(Array.from(roomInstance!.remoteParticipants.values()));
+          updateVideoTracks(roomInstance!);
+        });
+        roomInstance.on(RoomEvent.ParticipantDisconnected, () => {
+          if (!mounted) return;
+          setParticipants(Array.from(roomInstance!.remoteParticipants.values()));
+          updateVideoTracks(roomInstance!);
+        });
+        roomInstance.on(RoomEvent.Disconnected, () => {
+          if (!mounted) return;
+          setConnected(false);
+          setIsPublishing(false);
+        });
+
+        // ── AudioSession ──
+        try {
+          await AudioSession.configureAudio({
+            android: { audioTypeOptions: AndroidAudioTypePresets.communication },
+          });
+          await AudioSession.startAudioSession();
+          console.log('[LiveKit] AudioSession started');
+        } catch (e) {
+          console.warn('[LiveKit] AudioSession error (non-fatal):', e);
+        }
+
+        // ── Connect ──
+        const wsUrl = tokenData.url || LIVEKIT_CONFIG.LIVEKIT_WS_URL;
+        await roomInstance.connect(wsUrl, tokenData.token);
+        if (!mounted) return;
+
+        setLivekitRoom(roomInstance);
+        setConnected(true);
+        setParticipants(Array.from(roomInstance.remoteParticipants.values()));
+        updateVideoTracks(roomInstance);
+
+        // ── Publish camera + mic ──
+        if (tokenData.canPublish) {
+          let hasMic = (await checkDevicePermission('microphone')) === 'granted';
+          let hasCamera = (await checkDevicePermission('camera')) === 'granted';
+
+          if (!hasMic) {
+            hasMic = (await requestDevicePermission('microphone')) === 'granted';
+          }
+          if (!hasCamera) {
+            hasCamera = (await requestDevicePermission('camera')) === 'granted';
+          }
+
+          if (!mounted) return;
+
+          if (hasMic) {
+            await roomInstance.localParticipant.setMicrophoneEnabled(true);
+            if (mounted) setLocalMuted(false);
+          }
+
+          if (hasCamera) {
+            console.log('[LiveKit] Enabling camera via deviceId discovery...');
+            try {
+              const cameras = await getAvailableCameras();
+              const frontCam = cameras.find(c => c.facing === 'front');
+
+              if (frontCam) {
+                console.log('[LiveKit] Using front camera deviceId:', frontCam.deviceId, 'label:', frontCam.label);
+                const videoTrack = await createLocalVideoTrack({
+                  deviceId: { exact: frontCam.deviceId },
+                });
+                await roomInstance.localParticipant.publishTrack(videoTrack, {
+                  source: Track.Source.Camera,
+                });
+                console.log('[LiveKit] ✅ Front camera published via deviceId');
+              } else {
+                // Fallback: no identifiable front camera — use default
+                console.warn('[LiveKit] No front camera found by label, using setCameraEnabled fallback');
+                await roomInstance.localParticipant.setCameraEnabled(true);
+              }
+
+              if (mounted) {
+                isFrontCameraRef.current = true;
+                setCameraEnabled(true);
+                setIsFrontCamera(true);
+              }
+            } catch (camErr) {
+              console.error('[LiveKit] Camera init error, trying fallback:', camErr);
+              // Ultimate fallback: plain setCameraEnabled
+              try {
+                await roomInstance.localParticipant.setCameraEnabled(true);
+                if (mounted) {
+                  isFrontCameraRef.current = true;
+                  setCameraEnabled(true);
+                  setIsFrontCamera(true);
+                }
+              } catch (fallbackErr) {
+                console.error('[LiveKit] Camera fallback also failed:', fallbackErr);
+              }
+            }
+          }
+
+          if (mounted && (hasMic || hasCamera)) {
+            setIsPublishing(true);
+            updateVideoTracks(roomInstance);
+            // Second update after a brief delay to ensure VideoView renders
+            setTimeout(() => {
+              if (mounted && roomRef.current) {
+                updateVideoTracks(roomRef.current);
+                console.log('[LiveKit] Video track refresh done');
+              }
+            }, 1000);
+          }
+        }
+      } catch (err: any) {
+        console.error('[LiveKit] Connection error:', err);
+        if (mounted) {
+          setError(err?.message || 'Error al conectar');
+          setConnected(false);
+        }
+      } finally {
+        if (mounted) setConnecting(false);
       }
+    };
 
-      // 4. Connect to server (prioritize dynamic URL from token response)
-      const connectionUrl = tokenData.url || LIVEKIT_CONFIG.LIVEKIT_WS_URL;
-      await roomInstance.connect(connectionUrl, tokenData.token);
-      setLivekitRoom(roomInstance);
-      setParticipants(Array.from(roomInstance.remoteParticipants.values()));
-      updateVideoTracks(roomInstance);
+    doConnect();
 
-      // 5. If role allows publishing, request mic and camera permissions and start tracks
-      if (tokenData.canPublish) {
-        const micStatus = await checkDevicePermission('microphone');
-        const cameraStatus = await checkDevicePermission('camera');
-
-        let hasMic = micStatus === 'granted';
-        let hasCamera = cameraStatus === 'granted';
-
-        if (micStatus !== 'granted' && micStatus !== 'blocked') {
-          const reqMic = await requestDevicePermission('microphone');
-          if (reqMic === 'granted') hasMic = true;
-        }
-
-        if (cameraStatus !== 'granted' && cameraStatus !== 'blocked') {
-          const reqCamera = await requestDevicePermission('camera');
-          if (reqCamera === 'granted') hasCamera = true;
-        }
-
-        const shouldBeMuted = isMutedFirestoreRef.current;
-
-        if (hasMic) {
-          await roomInstance.localParticipant.setMicrophoneEnabled(!shouldBeMuted);
-          setLocalMuted(shouldBeMuted);
-        } else {
-          setLocalMuted(true);
-        }
-
-        if (hasCamera) {
-          await roomInstance.localParticipant.setCameraEnabled(true);
-          setCameraEnabled(true);
-        } else {
-          setCameraEnabled(false);
-        }
-
-        if (hasMic || hasCamera) {
-          setIsPublishing(true);
-          updateVideoTracks(roomInstance);
-        }
+    // ── Cleanup: runs when liveId changes, component unmounts, or enabled→false ──
+    return () => {
+      mounted = false;
+      console.log('[LiveKit] Cleanup — disconnecting');
+      if (roomInstance) {
+        roomInstance.removeAllListeners();
+        roomInstance.disconnect().catch(() => {});
+        roomRef.current = null;
       }
-    } catch (err: any) {
-      console.error('LiveKit connection error:', err);
-      setError(err?.message || 'Error al conectar al servidor de transmisiones');
-      setConnectionState(ConnectionState.Disconnected);
-    } finally {
+      AudioSession.stopAudioSession().catch(() => {});
+      setLivekitRoom(null);
+      setConnected(false);
       setConnecting(false);
-    }
-  }, [liveId, currentUser, enabled, updateVideoTracks]);
+      setIsPublishing(false);
+      setCameraEnabled(false);
+      setParticipants([]);
+      setVideoTracks([]);
+    };
+  // ⚠️ INTENTIONAL: only re-run when liveId or enabled changes.
+  // All other values are read through refs.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveId, enabled]);
 
-  // Disconnect helper
-  const disconnect = useCallback(async () => {
-    if (roomRef.current) {
-      try {
-        roomRef.current.removeAllListeners();
-        await roomRef.current.disconnect();
-      } catch (e) {
-        console.error('Error disconnecting LiveKit room:', e);
-      }
-      roomRef.current = null;
-    }
+  // ── Toggle mute ────────────────────────────────────────────────────────────
+  const toggleMute = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room) return;
     try {
-      await AudioSession.stopAudioSession();
+      const nowEnabled = room.localParticipant.isMicrophoneEnabled;
+      await room.localParticipant.setMicrophoneEnabled(!nowEnabled);
+      setLocalMuted(nowEnabled); // muted = mic disabled
     } catch (e) {
-      console.warn('[LiveKit] Error stopping AudioSession:', e);
+      console.error('[LiveKit] toggleMute error:', e);
     }
-    setLivekitRoom(null);
-    setConnectionState(ConnectionState.Disconnected);
-    setIsPublishing(false);
-    setParticipants([]);
-    setVideoTracks([]);
   }, []);
 
-  // Listen for Firestore mute changes dynamically
-  useEffect(() => {
-    const applyMute = async () => {
-      const roomInstance = roomRef.current;
-      if (roomInstance && isPublishing) {
-        const shouldMute = currentViewer?.isMuted || false;
-        if (roomInstance.localParticipant.isMicrophoneEnabled === shouldMute) {
-          await roomInstance.localParticipant.setMicrophoneEnabled(!shouldMute);
-          setLocalMuted(shouldMute);
-        }
-      }
-    };
-    applyMute();
-  }, [currentViewer?.isMuted, isPublishing]);
-
-  useEffect(() => {
-    if (enabled) {
-      connect();
-    }
-    return () => {
-      disconnect();
-    };
-  }, [connect, disconnect, enabled]);
-
-  // Handle dynamic Role Upgrade/Downgrade (e.g. Co-Host <=> Viewer)
-  useEffect(() => {
-    if (!livekitRoom || connectionState !== ConnectionState.Connected) return;
-
-    const prevRole = roleRef.current;
-    const newRole = currentUserRole;
-
-    if (prevRole === newRole) return;
-    roleRef.current = newRole;
-
-    const handleRoleUpdate = async () => {
-      const wasPrivileged = ['host', 'cohost'].includes(prevRole || '');
-      const isPrivilegedNow = ['host', 'cohost'].includes(newRole || '');
-
-      if (isPrivilegedNow !== wasPrivileged) {
-        console.log(`Co-hosting privileges changed from ${prevRole} to ${newRole}, reconnecting LiveKit...`);
-        await disconnect();
-        await connect();
-      }
-    };
-
-    handleRoleUpdate();
-  }, [currentUserRole, connectionState, livekitRoom, connect, disconnect]);
-
-  // Toggle local mute
-  const toggleMute = async () => {
-    const roomInstance = roomRef.current;
-    if (!roomInstance || !isPublishing) return;
-
+  // ── Toggle camera on/off ───────────────────────────────────────────────────
+  const toggleCamera = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room) return;
     try {
-      const newMuteState = !localMuted;
-      await roomInstance.localParticipant.setMicrophoneEnabled(!newMuteState);
-      setLocalMuted(newMuteState);
+      const nowEnabled = room.localParticipant.isCameraEnabled;
+      await room.localParticipant.setCameraEnabled(!nowEnabled);
+      setCameraEnabled(!nowEnabled);
+      updateVideoTracks(room);
     } catch (e) {
-      console.error('Error toggling mute:', e);
+      console.error('[LiveKit] toggleCamera error:', e);
     }
-  };
+  }, [updateVideoTracks]);
 
-  // Toggle local camera
-  const toggleCamera = async () => {
-    const roomInstance = roomRef.current;
-    if (!roomInstance || !isPublishing) return;
+  // ── Switch camera (front ↔ back) ─────────────────────────────────────────
+  // Cleanly unpublishes current track, releases hardware with safety delay,
+  // creates fresh target track (front/back), and publishes it to LiveKit.
+  const switchCamera = useCallback(async () => {
+    setLastCameraError(null);
+
+    const room = roomRef.current;
+    if (!room) {
+      const msg = '❌ No room connected - imposible girar cámara';
+      logCameraMsg(msg);
+      setLastCameraError(msg);
+      return;
+    }
+    if (switchingRef.current) {
+      logCameraMsg('⚠️ Cambio de cámara ya en progreso, ignorando click duplicado');
+      return;
+    }
+    switchingRef.current = true;
+
+    const currentlyFront = isFrontCameraRef.current;
+    const targetFront = !currentlyFront;
+    const targetFacing = targetFront ? 'user' : 'environment';
+    const targetLabel = targetFront ? 'FRONTAL' : 'TRASERA';
+    logCameraMsg(`🔄 === INICIO GIRO CÁMARA === (Actual: ${currentlyFront ? 'FRONTAL' : 'TRASERA'} → Objetivo: ${targetLabel})`);
 
     try {
-      const newCameraState = !cameraEnabled;
-      await roomInstance.localParticipant.setCameraEnabled(newCameraState);
-      setCameraEnabled(newCameraState);
-      updateVideoTracks(roomInstance);
-    } catch (e) {
-      console.error('Error toggling camera:', e);
-    }
-  };
+      // 1. Obtener todas las publicaciones de video local existentes
+      const localPubs = Array.from(room.localParticipant.videoTrackPublications.values() as any);
+      const videoPubs = localPubs.filter((p: any) => p.track && (p.source === Track.Source.Camera || p.kind === 'video')) as any[];
 
-  // Switch camera between front and back using LiveKit's room.switchActiveDevice
-  const switchCamera = async () => {
-    const roomInstance = roomRef.current;
-    if (!roomInstance || !isPublishing) return;
-
-    try {
-      const allDevices = await mediaDevices.enumerateDevices() as any[];
-      const videoInputs = allDevices.filter((d: any) => d.kind === 'videoinput');
-      if (videoInputs.length === 0) return;
-
-      // 1. Determine currently active device ID
-      const activeId = getActiveVideoDeviceId(roomInstance) || activeDeviceIdRef.current;
-
-      let nextDevice: any = null;
-      if (activeId) {
-        const currentIndex = videoInputs.findIndex((d: any) => d.deviceId === activeId);
-        if (currentIndex !== -1) {
-          nextDevice = videoInputs[(currentIndex + 1) % videoInputs.length];
+      logCameraMsg(`Deteniendo y despublicando ${videoPubs.length} track(s) de cámara activa(s)...`);
+      for (const pub of videoPubs) {
+        if (pub.track) {
+          try {
+            await room.localParticipant.unpublishTrack(pub.track);
+            if (typeof pub.track.stop === 'function') pub.track.stop();
+            if (pub.track.mediaStreamTrack && typeof pub.track.mediaStreamTrack.stop === 'function') {
+              pub.track.mediaStreamTrack.stop();
+            }
+          } catch (unpubErr: any) {
+            logCameraMsg('⚠️ Error al despublicar track previo: ' + (unpubErr?.message || String(unpubErr)));
+          }
         }
       }
 
-      // 2. Fallback: if we couldn't determine the active device, use isFrontCamera to choose
-      if (!nextDevice) {
-        const targetFacing = isFrontCamera ? 'environment' : 'user';
-        nextDevice = videoInputs.find(
-          (d: any) => d.facing === targetFacing || 
-                      d.label?.toLowerCase().includes(isFrontCamera ? 'back' : 'front') ||
-                      d.label?.toLowerCase().includes(isFrontCamera ? 'rear' : 'user')
-        );
+      // 2. Esperar 250ms para que el CameraManager de Android/Samsung libere el hardware
+      logCameraMsg('⏳ Liberando hardware de cámara Samsung (250ms delay)...');
+      await new Promise<void>(resolve => setTimeout(resolve, 250));
+
+      // 3. Enumerar cámaras disponibles para obtener deviceId si es posible
+      let targetDeviceId: string | undefined;
+      try {
+        const cameras = await getAvailableCameras();
+        logCameraMsg(`Cámaras detectadas (${cameras.length}): ` +
+          (cameras.map(c => `${c.label || c.deviceId.substring(0, 8)} [${c.facing}]`).join(', ') || 'ninguna'));
+        
+        const matchingCam = cameras.find(c => targetFront ? c.facing === 'front' : c.facing === 'back');
+        if (matchingCam) {
+          targetDeviceId = matchingCam.deviceId;
+          logCameraMsg(`Cámara seleccionada por deviceId: ${matchingCam.label || matchingCam.deviceId.substring(0, 10)}`);
+        }
+      } catch (enumErr: any) {
+        logCameraMsg('⚠️ No se pudieron enumerar cámaras, usando facingMode directo.');
       }
 
-      // 3. Last resort fallback: just toggle based on facing expectation
-      if (!nextDevice && videoInputs.length >= 2) {
-        nextDevice = isFrontCamera ? videoInputs[1] : videoInputs[0];
+      // 4. Crear nuevo track local con la cámara objetivo
+      const trackOptions: any = targetDeviceId
+        ? { deviceId: targetDeviceId, facingMode: targetFacing as any }
+        : { facingMode: targetFacing as any };
+
+      logCameraMsg(`🎥 Creando nuevo track local (${targetLabel}) con opciones: ${JSON.stringify(trackOptions)}...`);
+      const newTrack = await createLocalVideoTrack(trackOptions);
+
+      // 5. Publicar el nuevo track en LiveKit
+      logCameraMsg('📡 Publicando nuevo track en LiveKit Room...');
+      await room.localParticipant.publishTrack(newTrack, { source: Track.Source.Camera });
+
+      // 6. Actualizar estado e interfaz
+      isFrontCameraRef.current = targetFront;
+      setIsFrontCamera(targetFront);
+      setCameraEnabled(true);
+      updateVideoTracks(room);
+      logCameraMsg(`✅ GIRO DE CÁMARA EXITOSO: Ahora transmitiendo con cámara ${targetLabel}`);
+
+    } catch (err: any) {
+      const errStr = err?.message || String(err);
+      logCameraMsg(`❌ ERROR al girar cámara a ${targetLabel}: ${errStr}`);
+      setLastCameraError(`Fallo al girar cámara: ${errStr}`);
+
+      // Recuperación de emergencia: intentar restaurar cámara por defecto
+      try {
+        logCameraMsg('🔄 Intentando recuperación: reactivando cámara...');
+        await room.localParticipant.setCameraEnabled(true);
+        setCameraEnabled(true);
+        updateVideoTracks(room);
+      } catch (recErr: any) {
+        logCameraMsg('❌ Error en recuperación: ' + (recErr?.message || String(recErr)));
       }
-
-      if (!nextDevice && videoInputs.length > 0) {
-        nextDevice = videoInputs[0];
-      }
-
-      if (nextDevice) {
-        await roomInstance.switchActiveDevice('videoinput', nextDevice.deviceId);
-        activeDeviceIdRef.current = nextDevice.deviceId;
-
-        // Update isFrontCamera state based on the selected device attributes
-        const label = nextDevice.label?.toLowerCase() || '';
-        const facing = nextDevice.facing || '';
-        const isNowFront = facing === 'user' || 
-                           label.includes('front') || 
-                           label.includes('user') || 
-                           label.includes('face') || 
-                           label.includes('anterior') || 
-                           label.includes('frontal') || 
-                           (!facing && !label.includes('back') && !label.includes('rear') && !label.includes('environment'));
-
-        setIsFrontCamera(isNowFront);
-      }
-    } catch (e) {
-      console.error('Error switching camera:', e);
+    } finally {
+      switchingRef.current = false;
+      logCameraMsg('=== FIN GIRO CÁMARA ===');
     }
-  };
+  }, [logCameraMsg, updateVideoTracks]);
 
   return {
     livekitRoom,
-    connected: connectionState === ConnectionState.Connected,
+    connected,
     connecting,
     error,
     participants,
@@ -395,13 +478,15 @@ export const useLiveKitLive = (
     isPublishing,
     localMuted,
     cameraEnabled,
+    isFrontCamera,
+    cameraLogs,
+    showCameraLogs,
+    lastCameraError,
+    setShowCameraLogs,
+    clearCameraLogs,
     toggleMute,
     toggleCamera,
     switchCamera,
-    disconnect,
-    reconnect: connect,
   };
 };
-
-
 
