@@ -110,8 +110,10 @@ export async function createInAppNotification(data: Omit<AppNotification, 'id' |
   const notifRef = db.collection(NOTIFICATIONS).doc();
   const now = admin.firestore.FieldValue.serverTimestamp();
 
-  const newNotif: AppNotification = {
+  const newNotif: any = {
     ...data,
+    imageUrl: data.imageUrl || '',
+    data: data.data || {},
     id: notifRef.id,
     status: 'unread',
     createdAt: now,

@@ -15,8 +15,11 @@ export interface UserProfile {
   language?: string;
   level: number;
   xp: number;
-  diamonds: number; // Moneda comprada por el usuario
-  beans: number; // Moneda acumulada por el host para retiros
+  coins?: number; // User purchased currency (Coins)
+  coinsBalance?: number; // User Coins balance
+  diamonds: number; // Moneda comprada por el usuario (legacy) / host earnings
+  diamondBalance?: number; // Host earned currency (Diamonds)
+  beans: number; // Moneda acumulada por el host para retiros (legacy)
   followersCount: number;
   followingCount: number;
   friendsCount?: number;

@@ -47,6 +47,15 @@ import { KaraokeBattleScreen } from '../screens/karaoke/KaraokeBattleScreen';
 import { MyKaraokeHistoryScreen } from '../screens/karaoke/MyKaraokeHistoryScreen';
 import { PkHistoryScreen } from '../screens/lives/PkHistoryScreen';
 import { PkResultsScreen } from '../screens/lives/PkResultsScreen';
+import { PkDiscoveryScreen } from '../screens/lives/PkDiscoveryScreen';
+import { ClubsHomeScreen } from '../screens/clubs/ClubsHomeScreen';
+import { ClubDetailsScreen } from '../screens/clubs/ClubDetailsScreen';
+import { FavoriteHostsScreen } from '../screens/social/FavoriteHostsScreen';
+import { ClipsFeedScreen } from '../screens/clips/ClipsFeedScreen';
+import { MySubscriptionsScreen } from '../screens/profile/MySubscriptionsScreen';
+import { ReferralDashboardScreen } from '../screens/profile/ReferralDashboardScreen';
+import { AdminControlCenterScreen } from '../screens/admin/AdminControlCenterScreen';
+import { SocialFeedScreen } from '../screens/social/SocialFeedScreen';
 import { AgencyApplicationScreen } from '../screens/host/AgencyApplicationScreen';
 import { AgencyDashboardScreen } from '../screens/host/AgencyDashboardScreen';
 import { AgencyHostsScreen } from '../screens/host/AgencyHostsScreen';
@@ -120,6 +129,15 @@ export const MainNavigator = () => {
       <Stack.Screen name={MAIN_ROUTES.MY_KARAOKE_HISTORY} component={MyKaraokeHistoryScreen} />
       <Stack.Screen name={MAIN_ROUTES.PK_HISTORY} component={PkHistoryScreen} />
       <Stack.Screen name={MAIN_ROUTES.PK_RESULTS} component={PkResultsScreen} />
+      <Stack.Screen name={MAIN_ROUTES.PK_DISCOVERY} component={PkDiscoveryScreen} />
+      <Stack.Screen name={MAIN_ROUTES.CLUBS_HOME} component={ClubsHomeScreen} />
+      <Stack.Screen name={MAIN_ROUTES.CLUB_DETAILS} component={ClubDetailsScreen} />
+      <Stack.Screen name={MAIN_ROUTES.FAVORITE_HOSTS} component={FavoriteHostsScreen} />
+      <Stack.Screen name={MAIN_ROUTES.CLIPS_FEED} component={ClipsFeedScreen} />
+      <Stack.Screen name={MAIN_ROUTES.MY_SUBSCRIPTIONS} component={MySubscriptionsScreen} />
+      <Stack.Screen name={MAIN_ROUTES.REFERRAL_DASHBOARD} component={ReferralDashboardScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_CONTROL_CENTER} component={AdminControlCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.SOCIAL_FEED} component={SocialFeedScreen} />
       <Stack.Screen name={MAIN_ROUTES.AGENCY_APPLICATION} component={AgencyApplicationScreen} />
       <Stack.Screen name={MAIN_ROUTES.AGENCY_DASHBOARD} component={AgencyDashboardScreen} />
       <Stack.Screen name={MAIN_ROUTES.AGENCY_HOSTS} component={AgencyHostsScreen} />

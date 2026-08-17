@@ -66,7 +66,7 @@ export const ProfileScreen = ({ navigation }: any) => {
 
         <TouchableOpacity onPress={() => navigation.navigate(MAIN_ROUTES.WALLET)}>
           <WalletSummary
-            beans={userWallet ? userWallet.beans : (userProfile.beans || 0)}
+            beans={userWallet ? (userWallet.beans ?? 0) : (userProfile.beans || 0)}
             diamonds={userWallet ? userWallet.diamonds : (userProfile.diamonds || 0)}
           />
         </TouchableOpacity>

@@ -4,34 +4,44 @@ import { colors, textPresets, spacing } from '../../theme';
 import { formatCoins } from '../../utils/formatNumbers';
 
 interface WalletBalanceCardProps {
+  coins: number;
   diamonds: number;
-  beans: number;
+  availableDiamonds?: number;
+  diamondUsdRate?: number;
 }
 
-export const WalletBalanceCard: React.FC<WalletBalanceCardProps> = ({ diamonds, beans }) => {
+export const WalletBalanceCard: React.FC<WalletBalanceCardProps> = ({
+  coins,
+  diamonds,
+  availableDiamonds,
+  diamondUsdRate = 0.01,
+}) => {
+  const currentDiamonds = availableDiamonds ?? diamonds;
+  const estimatedUsd = (currentDiamonds * diamondUsdRate).toFixed(2);
+
   return (
     <View style={styles.container}>
-      {/* Diamonds Box */}
+      {/* Coins Box */}
       <View style={styles.box}>
         <View style={styles.header}>
-          <Text style={styles.emoji}>💎</Text>
-          <Text style={styles.label}>Diamantes</Text>
+          <Text style={styles.emoji}>🪙</Text>
+          <Text style={styles.label}>Coins</Text>
         </View>
-        <Text style={styles.amount}>{formatCoins(diamonds)}</Text>
-        <Text style={styles.subtext}>Usados para enviar regalos</Text>
+        <Text style={styles.amount}>{formatCoins(coins)}</Text>
+        <Text style={styles.subtext}>Moneda para regalar</Text>
       </View>
 
       {/* Divider */}
       <View style={styles.divider} />
 
-      {/* Beans Box */}
+      {/* Diamonds Box */}
       <View style={styles.box}>
         <View style={styles.header}>
-          <Text style={styles.emoji}>🫘</Text>
-          <Text style={styles.label}>Beans</Text>
+          <Text style={styles.emoji}>💎</Text>
+          <Text style={styles.label}>Diamonds</Text>
         </View>
-        <Text style={styles.amount}>{formatCoins(beans)}</Text>
-        <Text style={styles.subtext}>Recibidos de regalos</Text>
+        <Text style={styles.amount}>{formatCoins(currentDiamonds)}</Text>
+        <Text style={styles.subtext}>≈ ${estimatedUsd} USD</Text>
       </View>
     </View>
   );

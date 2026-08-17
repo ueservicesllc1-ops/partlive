@@ -93,8 +93,35 @@ export const PkScoreBoard: React.FC<PkScoreBoardProps> = ({ battle }) => {
     return null;
   };
 
+  const isCloseBattle = total > 50 && Math.abs(scoreA - scoreB) < Math.max(10, total * 0.1);
+  const leadingHost = scoreA > scoreB ? 'A' : scoreB > scoreA ? 'B' : 'DRAW';
+
+  const lastLeaderRef = useRef<string>('DRAW');
+  const [showComeback, setShowComeback] = React.useState(false);
+
+  useEffect(() => {
+    if (lastLeaderRef.current !== 'DRAW' && leadingHost !== 'DRAW' && lastLeaderRef.current !== leadingHost) {
+      setShowComeback(true);
+      const timer = setTimeout(() => setShowComeback(false), 3000);
+      return () => clearTimeout(timer);
+    }
+    lastLeaderRef.current = leadingHost;
+  }, [leadingHost]);
+
   return (
     <View style={styles.container}>
+      {/* Moments Badges */}
+      {isCloseBattle && (
+        <View style={styles.momentBadge}>
+          <Text style={styles.momentText}>🔥 CLOSE BATTLE!</Text>
+        </View>
+      )}
+      {showComeback && (
+        <View style={[styles.momentBadge, styles.comebackBadge]}>
+          <Text style={styles.momentText}>⚡ COMEBACK!</Text>
+        </View>
+      )}
+
       <View style={styles.scoreTextRow}>
         <View style={[styles.badge, styles.badgeA]}>
           <View style={styles.badgeContent}>
@@ -231,6 +258,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 6,
+  momentBadge: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 45, 85, 0.9)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  comebackBadge: {
+    backgroundColor: 'rgba(0, 229, 255, 0.9)',
+  },
+  momentText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#FFF',
+    letterSpacing: 0.5,
   },
   powerBarContainer: {
     width: '45%',

@@ -157,6 +157,7 @@ export const calculateAgencyCommission = async (
 
   const now = admin.firestore.FieldValue.serverTimestamp();
   const commissionRef = db.collection(AGENCY_COMMISSIONS).doc();
+  const ledgerRef = db.collection('agencyCommissionLedger').doc();
 
   await db.runTransaction(async (transaction) => {
     transaction.set(commissionRef, {
@@ -167,6 +168,20 @@ export const calculateAgencyCommission = async (
       beansGenerated,
       commissionBeans,
       status: 'pending',
+      createdAt: now,
+    });
+
+    // Write audit ledger record
+    transaction.set(ledgerRef, {
+      commissionId: ledgerRef.id,
+      agencyId,
+      hostId,
+      sourceGiftEventId: giftEventId,
+      diamondAmount: beansGenerated,
+      eligibleAmount: beansGenerated,
+      commissionRate: commissionPercent,
+      commissionAmount: commissionBeans,
+      status: 'approved',
       createdAt: now,
     });
 
@@ -223,4 +238,72 @@ export const getAgencyDashboard = async (agencyId: string): Promise<any> => {
     agency,
     hosts,
   };
+};
+
+export const inviteUserToAgency = async (agencyId: string, userId: string): Promise<string> => {
+  const inviteRef = db.collection('agencyInvites').doc();
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+
+  await inviteRef.set({
+    id: inviteRef.id,
+    agencyId,
+    userId,
+    status: 'pending',
+    createdAt: timestamp,
+  });
+
+  return inviteRef.id;
+};
+
+export const respondToAgencyInvite = async (inviteId: string, userId: string, accept: boolean): Promise<void> => {
+  const inviteRef = db.collection('agencyInvites').doc(inviteId);
+  const inviteSnap = await inviteRef.get();
+  if (!inviteSnap.exists) throw new Error('Invitación de agencia no encontrada.');
+
+  const invite = inviteSnap.data()!;
+  if (invite.userId !== userId) throw new Error('Acción no autorizada.');
+
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+
+  if (accept) {
+    await inviteRef.update({ status: 'accepted', updatedAt: timestamp });
+    await addHostToAgency(invite.agencyId, userId);
+  } else {
+    await inviteRef.update({ status: 'rejected', updatedAt: timestamp });
+  }
+};
+
+export const requestAgencyTransfer = async (hostId: string, fromAgencyId: string, toAgencyId: string, reason?: string): Promise<string> => {
+  const transferRef = db.collection('agencyTransferHistory').doc();
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+
+  await transferRef.set({
+    transferId: transferRef.id,
+    hostId,
+    fromAgencyId,
+    toAgencyId,
+    requestedAt: timestamp,
+    status: 'pending',
+    reason: reason || '',
+  });
+
+  return transferRef.id;
+};
+
+export const approveAgencyTransfer = async (transferId: string): Promise<void> => {
+  const transferRef = db.collection('agencyTransferHistory').doc(transferId);
+  const transferSnap = await transferRef.get();
+  if (!transferSnap.exists) throw new Error('Solicitud de transferencia no encontrada.');
+
+  const transfer = transferSnap.data()!;
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+
+  // Remove from old agency & add to new agency preserving historical ledger
+  await removeHostFromAgency(transfer.fromAgencyId, transfer.hostId);
+  await addHostToAgency(transfer.toAgencyId, transfer.hostId);
+
+  await transferRef.update({
+    status: 'approved',
+    approvedAt: timestamp,
+  });
 };

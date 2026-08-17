@@ -1,187 +1,59 @@
 import { Router, Response } from 'express';
 import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
-import { requireAdminOrModerator } from '../middleware/adminMiddleware';
-import * as eventService from '../services/eventService';
+import {
+  createScheduledEvent,
+  toggleEventReminder,
+  getUpcomingEvents,
+} from '../services/eventService';
 
-const router = Router();
+export const eventRoutes = Router();
 
-// --- USER ENDPOINTS ---
-
-// Get all active events
-router.get('/active', requireAuth, async (req: AuthRequest, res: Response) => {
+// POST /api/events/create - Host schedules new event
+eventRoutes.post('/create', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const events = await eventService.getActiveEvents({
-      type: req.query.type as string,
-      target: req.query.target as string,
-    });
-    res.json(events);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    const hostId = req.user.uid;
+    const { title, description, category, startTime, coverUrl } = req.body;
 
-// Get detailed event by ID
-router.get('/:eventId', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const event = await eventService.getEventById(req.params.eventId as string);
-    if (!event) {
-      res.status(404).json({ error: 'Event not found' });
+    if (!title || !category || !startTime) {
+      res.status(400).json({ error: 'Title, category, and startTime are required.' });
       return;
     }
-    res.json(event);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+
+    const event = await createScheduledEvent(hostId, title, description || '', category, startTime, coverUrl);
+    res.status(201).json({ success: true, event });
+  } catch (error: any) {
+    console.error('Error creating event:', error);
+    res.status(400).json({ error: error.message || 'Error creating event' });
   }
 });
 
-// Get participants rank leaderboard
-router.get('/:eventId/participants', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const limit = parseInt(req.query.limit as string) || 100;
-    const participants = await eventService.getEventParticipants(req.params.eventId as string, limit);
-    res.json(participants);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Join an active event
-router.post('/:eventId/join', requireAuth, async (req: AuthRequest, res: Response) => {
+// POST /api/events/reminder - Toggle reminder subscription for event
+eventRoutes.post('/reminder', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user.uid;
-    const { displayName, username, photoURL, isHost, hostId, roomId, agencyId } = req.body;
+    const { eventId } = req.body;
 
-    const participant = await eventService.joinEvent(req.params.eventId as string, {
-      userId: isHost ? undefined : userId,
-      hostId: isHost ? (hostId || userId) : undefined,
-      roomId,
-      agencyId,
-      displayName: displayName || 'User',
-      username,
-      photoURL,
-    });
+    if (!eventId) {
+      res.status(400).json({ error: 'eventId is required.' });
+      return;
+    }
 
-    res.json({ success: true, participant });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const result = await toggleEventReminder(userId, eventId);
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('Error toggling event reminder:', error);
+    res.status(400).json({ error: error.message || 'Error toggling reminder' });
   }
 });
 
-// Claim event rewards
-router.post('/rewards/:rewardId/claim', requireAuth, async (req: AuthRequest, res: Response) => {
+// GET /api/events/upcoming - Get list of upcoming scheduled events
+eventRoutes.get('/upcoming', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user.uid;
-    await eventService.claimEventReward(req.params.rewardId as string, userId);
-    res.json({ success: true, message: 'Reward successfully claimed' });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const { category } = req.query;
+    const events = await getUpcomingEvents(category as string);
+    res.json({ success: true, events });
+  } catch (error: any) {
+    console.error('Error getting upcoming events:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
-
-// --- ADMIN / MODERATOR ENDPOINTS ---
-
-// Get event management list (all statuses)
-router.get('/admin/list', requireAuth, requireAdminOrModerator, async (req: AuthRequest, res: Response) => {
-  try {
-    const snap = await require('firebase-admin').firestore().collection('specialEvents').get();
-    const list: any[] = [];
-    snap.forEach((doc: any) => list.push(doc.data()));
-    res.json(list);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Create new special event
-router.post('/admin/create', requireAuth, requireAdminOrModerator, async (req: AuthRequest, res: Response) => {
-  try {
-    const adminId = req.user.uid;
-    const event = await eventService.createEvent(adminId, req.body);
-    res.json({ success: true, event });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Edit event
-router.patch('/admin/:eventId', requireAuth, requireAdminOrModerator, async (req: AuthRequest, res: Response) => {
-  try {
-    const adminId = req.user.uid;
-    const event = await eventService.updateEvent(req.params.eventId as string, adminId, req.body);
-    res.json({ success: true, event });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Activate event
-router.post('/admin/:eventId/activate', requireAuth, requireAdminOrModerator, async (req: AuthRequest, res: Response) => {
-  try {
-    const adminId = req.user.uid;
-    await eventService.activateEvent(req.params.eventId as string, adminId);
-    res.json({ success: true, message: 'Event activated and notifications sent' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// End event
-router.post('/admin/:eventId/end', requireAuth, requireAdminOrModerator, async (req: AuthRequest, res: Response) => {
-  try {
-    const adminId = req.user.uid;
-    await eventService.endEvent(req.params.eventId as string, adminId);
-    res.json({ success: true, message: 'Event ended and rankings finalized' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Recalculate ranking positions
-router.post('/admin/:eventId/recalculate', requireAuth, requireAdminOrModerator, async (req: AuthRequest, res: Response) => {
-  try {
-    await eventService.recalculateEventRanking(req.params.eventId as string);
-    res.json({ success: true, message: 'Rankings successfully recalculated' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Manual Reward creation for top users
-router.post('/admin/:eventId/rewards/add', requireAuth, requireAdminOrModerator, async (req: AuthRequest, res: Response) => {
-  try {
-    const { participantId, userId, rewardType, rewardAmount } = req.body;
-    const reward = await eventService.createEventReward(req.params.eventId as string, participantId, {
-      userId,
-      rewardType,
-      rewardAmount,
-    });
-    res.json({ success: true, reward });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// Approve event rewards
-router.post('/admin/rewards/:rewardId/approve', requireAuth, requireAdminOrModerator, async (req: AuthRequest, res: Response) => {
-  try {
-    const adminId = req.user.uid;
-    await eventService.approveEventReward(req.params.rewardId as string, adminId);
-    res.json({ success: true, message: 'Reward approved' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Reject event rewards
-router.post('/admin/rewards/:rewardId/reject', requireAuth, requireAdminOrModerator, async (req: AuthRequest, res: Response) => {
-  try {
-    const adminId = req.user.uid;
-    const { reason } = req.body;
-    await eventService.rejectEventReward(req.params.rewardId as string, adminId, reason || 'Fraud detected');
-    res.json({ success: true, message: 'Reward rejected' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-export default router;

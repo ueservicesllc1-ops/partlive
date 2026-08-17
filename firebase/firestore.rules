@@ -16,12 +16,17 @@ service cloud.firestore {
     }
 
     // USERS:
-    // - Todos pueden leer perfiles públicos.
-    // - Solo el propietario puede editar ciertos campos de su perfil.
+    // - Todos los usuarios autenticados pueden leer perfiles.
+    // - El propietario solo puede actualizar campos no financieros ni de rol.
     match /users/{uid} {
       allow read: if isAuthenticated();
-      // En el futuro, prohibir modificar saldo, rol o isVerified desde el cliente.
-      allow write: if isOwner(uid);
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'coins', 'coinsBalance', 'diamonds', 'diamondBalance', 'beans',
+        'availableDiamonds', 'pendingDiamonds', 'lifetimeDiamonds', 'withdrawnDiamonds',
+        'role', 'isVerified', 'isHost'
+      ]);
+      allow delete: if false;
       
       // Subcolecciones privadas del usuario
       match /walletTransactions/{txId} {
@@ -56,7 +61,8 @@ service cloud.firestore {
     }
 
     // GLOBAL READ-ONLY PARA CLIENTES:
-    // Juegos, Regalos, Banners, Eventos, Misiones y Rankings son administrados por backend/admin
+    // Configuración, Juegos, Regalos, Banners, Eventos, Misiones y Rankings son administrados por backend/admin
+    match /systemConfig/{document=**} { allow read: if isAuthenticated(); allow write: if false; }
     match /games/{document=**} { allow read: if true; allow write: if false; }
     match /gifts/{document=**} { allow read: if true; allow write: if false; }
     match /banners/{document=**} { allow read: if true; allow write: if false; }

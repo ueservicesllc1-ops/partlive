@@ -105,14 +105,17 @@ export const GiftStoreModal: React.FC<GiftStoreModalProps> = ({
       return;
     }
 
-    const cost = selectedGift.priceDiamonds * quantity;
-    if (!wallet || wallet.diamonds < cost) {
+    const coinCost = selectedGift.coinCost || selectedGift.priceDiamonds || 1;
+    const totalCoinsCost = coinCost * quantity;
+    const userCoins = wallet?.coins ?? wallet?.coinsBalance ?? wallet?.diamonds ?? 0;
+
+    if (!wallet || userCoins < totalCoinsCost) {
       Alert.alert(
-        'Diamantes Insuficientes',
-        `Necesitas 💎 ${cost} diamantes pero solo tienes 💎 ${wallet?.diamonds ?? 0}. ¿Quieres comprar más?`,
+        'Coins Insuficientes',
+        `Necesitas 🪙 ${totalCoinsCost} Coins pero solo tienes 🪙 ${userCoins}. ¿Quieres recargar más Coins?`,
         [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Comprar Diamantes', onPress: () => setActiveTab('buy') },
+          { text: 'Comprar Coins', onPress: () => setActiveTab('buy') },
         ]
       );
       return;
@@ -263,7 +266,7 @@ export const GiftStoreModal: React.FC<GiftStoreModalProps> = ({
                   <ActivityIndicator color="#0B0813" size="small" />
                 ) : (
                   <Text style={styles.sendBtnText}>
-                    Enviar {selectedGift ? `(💎 ${selectedGift.priceDiamonds * quantity})` : ''}
+                    Enviar {selectedGift ? `(🪙 ${(selectedGift.coinCost || selectedGift.priceDiamonds || 1) * quantity})` : ''}
                   </Text>
                 )}
               </TouchableOpacity>

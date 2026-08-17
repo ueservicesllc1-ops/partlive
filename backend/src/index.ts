@@ -28,6 +28,21 @@ import { verificationRoutes } from './routes/verificationRoutes';
 import { sessionRoutes } from './routes/sessionRoutes';
 import { analyticsRoutes } from './routes/analyticsRoutes';
 import { roomAccessRoutes } from './routes/roomAccessRoutes';
+import { clubRoutes } from './routes/clubRoutes';
+import { liveActivityRoutes } from './routes/liveActivityRoutes';
+import { eventRoutes } from './routes/eventRoutes';
+import { discoveryRoutes } from './routes/discoveryRoutes';
+import { clipRoutes } from './routes/clipRoutes';
+import { revenueRoutes } from './routes/revenueRoutes';
+import { hostSubscriptionRoutes } from './routes/hostSubscriptionRoutes';
+import { aiRoutes } from './routes/aiRoutes';
+import { productionSecurityRoutes } from './routes/productionSecurityRoutes';
+import { growthAttributionRoutes } from './routes/growthAttributionRoutes';
+import { referralRoutes } from './routes/referralRoutes';
+import { affiliateRoutes } from './routes/affiliateRoutes';
+import { adminControlRoutes } from './routes/adminControlRoutes';
+import { socialPostRoutes } from './routes/socialPostRoutes';
+import { storyRoutes } from './routes/storyRoutes';
 import { cleanupAbandonedSessions } from './services/sessionTrackingService';
 import {
   generalLimiter,
@@ -97,6 +112,21 @@ app.use('/api/sessions/heartbeat', heartbeatLimiter);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/rooms', roomAccessRoutes);
+app.use('/api/clubs', clubRoutes);
+app.use('/api/activities', liveActivityRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/discovery', discoveryRoutes);
+app.use('/api/clips', clipRoutes);
+app.use('/api/revenue', revenueRoutes);
+app.use('/api/host-subscriptions', hostSubscriptionRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/security', productionSecurityRoutes);
+app.use('/api/growth', growthAttributionRoutes);
+app.use('/api/referrals', referralRoutes);
+app.use('/api/affiliates', affiliateRoutes);
+app.use('/api/admin-control', adminControlRoutes);
+app.use('/api/social/posts-api', socialPostRoutes);
+app.use('/api/stories', storyRoutes);
 
 // ─── 404 & Global Error Handlers (must be last) ──────────────────────────────
 app.use(notFoundHandler);

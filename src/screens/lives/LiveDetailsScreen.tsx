@@ -24,6 +24,15 @@ import { ScreenError } from '../../components/ScreenError';
 import { ReportModal } from '../../components/moderation/ReportModal';
 import { useGiftEvents } from '../../hooks/useGiftEvents';
 import { GiftAnimationLayer, GiftReceivedToast, GlobalGiftBanner, TopGiftersPanel } from '../../components/gifts';
+import { GiftComboBanner } from '../../components/gifts/GiftComboBanner';
+import { LiveGiftGoalCard } from '../../components/lives/LiveGiftGoalCard';
+import { HostGoalModal } from '../../components/lives/HostGoalModal';
+import { GiftSettingsModal } from '../../components/lives/GiftSettingsModal';
+import { RecentGiftsTicker } from '../../components/lives/RecentGiftsTicker';
+import { HostThankYouButton } from '../../components/lives/HostThankYouButton';
+import { PkHostSearchModal } from '../../components/pk/PkHostSearchModal';
+import { PkResultModal } from '../../components/pk/PkResultModal';
+import { PkTopContributorsPanel } from '../../components/pk/PkTopContributorsPanel';
 import { inviteCoHost, listenToCoHostInvites, respondToCoHostInvite, updateLive } from '../../services/firebase/firestore';
 
 export const LiveDetailsScreen = ({ route, navigation }: any) => {
@@ -336,16 +345,29 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
     lastEvent,
     activeToasts,
     activeBanners,
+    recentGifts,
+    comboCount,
+    comboSenderName,
+    comboGiftName,
+    comboEmoji,
+    comboVisible,
     dismissToast,
     dismissBanner,
   } = useGiftEvents('live', liveId);
 
   const [giftModalVisible, setGiftModalVisible] = useState(false);
+  const [goalModalVisible, setGoalModalVisible] = useState(false);
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+  const [goalTitle, setGoalTitle] = useState('🎯 Meta del Live');
+  const [targetDiamonds, setTargetDiamonds] = useState(5000);
   const [modMenuVisible, setModMenuVisible] = useState(false);
   const [selectedViewer, setSelectedViewer] = useState<any | null>(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [liveMenuVisible, setLiveMenuVisible] = useState(false);
   const [pkInviteModalVisible, setPkInviteModalVisible] = useState(false);
+  const [pkHostSearchVisible, setPkHostSearchVisible] = useState(false);
+  const [pkResultModalVisible, setPkResultModalVisible] = useState(false);
+  const [pkContributions, setPkContributions] = useState<any[]>([]);
 
   // Mapped members representation for GiftCatalogModal
   const mappedMembers = useMemo(() => {
@@ -490,8 +512,39 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
             />
           )}
 
-          {/* Lower Overlays (Chat and actions) */}
+          {/* Live Gift Goal Card */}
+          <LiveGiftGoalCard
+            goalTitle={goalTitle}
+            targetDiamonds={targetDiamonds}
+            currentDiamonds={live?.diamondsGenerated || 0}
+            isHost={isHost}
+            onPressHostGoalConfig={() => setGoalModalVisible(true)}
+          />
+
+          {/* Visual Combo Banner */}
+          <GiftComboBanner
+            comboCount={comboCount}
+            senderName={comboSenderName}
+            giftName={comboGiftName}
+            giftEmoji={comboEmoji}
+            visible={comboVisible}
+          />
+
+          {/* Lower Overlays (Chat, recent gifts ticker, and actions) */}
           <View style={styles.overlayBottom}>
+            {/* Recent Gifts Ticker */}
+            <RecentGiftsTicker recentGifts={recentGifts} />
+
+            {/* Host Quick Thank You Callout */}
+            {isHost && recentGifts.length > 0 && (
+              <HostThankYouButton
+                lastSenderName={recentGifts[recentGifts.length - 1]?.senderName}
+                onSendThankYou={(name) => {
+                  handleSendMessage(`¡Gracias ${name} por apoyar la transmisión! 💖`);
+                }}
+              />
+            )}
+
             <View style={styles.chatWrapper}>
               <LiveChatPanel messages={messages} />
             </View>
@@ -512,6 +565,41 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Host Goal Modal */}
+      <HostGoalModal
+        visible={goalModalVisible}
+        onClose={() => setGoalModalVisible(false)}
+        currentTitle={goalTitle}
+        currentTargetDiamonds={targetDiamonds}
+        onSaveGoal={(title, diamonds) => {
+          setGoalTitle(title);
+          setTargetDiamonds(diamonds);
+        }}
+      />
+
+      {/* Gift Settings Modal */}
+      <GiftSettingsModal
+        visible={settingsModalVisible}
+        onClose={() => setSettingsModalVisible(false)}
+      />
+
+      {/* PK Host Search Modal */}
+      {isHost && (
+        <PkHostSearchModal
+          visible={pkHostSearchVisible}
+          onClose={() => setPkHostSearchVisible(false)}
+          currentHostId={userProfile?.uid || ''}
+          fromLiveId={liveId}
+        />
+      )}
+
+      {/* PK Result Modal */}
+      <PkResultModal
+        visible={pkResultModalVisible}
+        battle={pkBattle}
+        onClose={() => setPkResultModalVisible(false)}
+      />
 
       {/* Gifting Modal overlay */}
       {live && userProfile && (
@@ -640,6 +728,16 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
                   style={styles.sheetBtn}
                   onPress={() => {
                     setLiveMenuVisible(false);
+                    setPkHostSearchVisible(true);
+                  }}
+                >
+                  <Text style={styles.sheetBtnText}>⚔️ Iniciar Batalla PK 1vs1</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.sheetBtn}
+                  onPress={() => {
+                    setLiveMenuVisible(false);
                     setShowCameraLogs(true);
                   }}
                 >
@@ -666,6 +764,16 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
                   }}
                 >
                   <Text style={styles.sheetBtnText}>🎤 Entrar al Karaoke</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.sheetBtn}
+                  onPress={() => {
+                    setLiveMenuVisible(false);
+                    setSettingsModalVisible(true);
+                  }}
+                >
+                  <Text style={styles.sheetBtnText}>⚙️ Ajustes de Regalos y Efectos</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity

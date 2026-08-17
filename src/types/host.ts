@@ -47,6 +47,8 @@ export interface HostStats {
   monthlyDiamondsReceived: number;
   monthlyBeansEarned: number;
   totalBeansEarned: number;
+  diamondsEarned?: number;
+  totalDiamondsEarned?: number;
   eligibleForPayout: boolean;
   eligibilityUpdatedAt: any; // Firestore Timestamp
   totalLives: number;

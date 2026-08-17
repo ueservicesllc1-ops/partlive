@@ -1,165 +1,221 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, spacing, textPresets } from '../../theme';
-import { HostStats } from '../../types';
-import { useAuth } from '../../store/AuthContext';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { colors, textPresets, spacing } from '../../theme';
+import { formatCoins } from '../../utils/formatNumbers';
 
-interface Props {
-  stats: HostStats | null;
+interface HostEarningsCardProps {
+  availableDiamonds: number;
+  pendingDiamonds?: number;
+  lifetimeDiamonds: number;
+  withdrawnDiamonds?: number;
+  isKycVerified?: boolean;
+  minPayoutDiamonds?: number;
+  diamondUsdRate?: number;
   onRequestPayout?: () => void;
 }
 
-export const HostEarningsCard: React.FC<Props> = ({ stats, onRequestPayout }) => {
-  const { userWallet } = useAuth();
-  const available = userWallet?.beans ?? 0;
-  const pending = userWallet?.pendingBeans ?? 0;
-  const locked = userWallet?.lockedBeans ?? 0;
-  const total = stats?.totalBeansEarned ?? 0;
+export const HostEarningsCard: React.FC<HostEarningsCardProps> = ({
+  availableDiamonds = 0,
+  pendingDiamonds = 0,
+  lifetimeDiamonds = 0,
+  withdrawnDiamonds = 0,
+  isKycVerified = false,
+  minPayoutDiamonds = 5000,
+  diamondUsdRate = 0.01,
+  onRequestPayout,
+}) => {
+  const estimatedUsd = (availableDiamonds * diamondUsdRate).toFixed(2);
+  const canRequestPayout = availableDiamonds >= minPayoutDiamonds && isKycVerified;
+
+  const handlePayoutPress = () => {
+    if (!isKycVerified) {
+      Alert.alert(
+        'Verificación Requerida',
+        'Para solicitar retiros de ganancias, debes completar primero la verificación de identidad (KYC).',
+        [{ text: 'Entendido' }]
+      );
+      return;
+    }
+    if (availableDiamonds < minPayoutDiamonds) {
+      Alert.alert(
+        'Mínimo no alcanzado',
+        `El mínimo para solicitar retiros es de ${formatCoins(minPayoutDiamonds)} Diamantes (≈ $${(minPayoutDiamonds * diamondUsdRate).toFixed(2)} USD).`,
+        [{ text: 'Entendido' }]
+      );
+      return;
+    }
+    if (onRequestPayout) {
+      onRequestPayout();
+    }
+  };
 
   return (
     <View style={styles.card}>
-      {/* Total headline */}
-      <View style={styles.headline}>
-        <Text style={styles.diamondEmoji}>🫘</Text>
-        <View>
-          <Text style={styles.totalValue}>{total.toLocaleString()}</Text>
-          <Text style={styles.totalLabel}>Beans ganados acumulados</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>💎 Panel de Ganancias Creador</Text>
+        <View style={[styles.kycBadge, isKycVerified ? styles.kycPass : styles.kycPending]}>
+          <Text style={styles.kycText}>
+            {isKycVerified ? '✓ KYC Verificado' : '⚠️ KYC Pendiente'}
+          </Text>
         </View>
       </View>
 
-      {/* Breakdown row */}
-      <View style={styles.breakdown}>
-        <View style={styles.breakdownItem}>
-          <View style={[styles.dot, { backgroundColor: colors.success }]} />
-          <Text style={styles.breakdownValue}>{available.toLocaleString()}</Text>
-          <Text style={styles.breakdownLabel}>Disponibles</Text>
+      {/* Main USD Equivalent */}
+      <View style={styles.usdContainer}>
+        <Text style={styles.usdLabel}>Ganancias Disponibles</Text>
+        <Text style={styles.usdValue}>${estimatedUsd} <Text style={styles.usdCurrency}>USD</Text></Text>
+        <Text style={styles.usdSubtext}>{formatCoins(availableDiamonds)} Diamantes disponibles</Text>
+      </View>
+
+      {/* Grid of stats */}
+      <View style={styles.statsGrid}>
+        <View style={styles.statBox}>
+          <Text style={styles.statLabel}>Pendientes</Text>
+          <Text style={styles.statValue}>{formatCoins(pendingDiamonds)}</Text>
         </View>
-        <View style={styles.breakdownDivider} />
-        <View style={styles.breakdownItem}>
-          <View style={[styles.dot, { backgroundColor: colors.warning }]} />
-          <Text style={styles.breakdownValue}>{pending.toLocaleString()}</Text>
-          <Text style={styles.breakdownLabel}>Pendientes</Text>
+        <View style={styles.statBox}>
+          <Text style={styles.statLabel}>Histórico Ganado</Text>
+          <Text style={styles.statValue}>{formatCoins(lifetimeDiamonds)}</Text>
         </View>
-        <View style={styles.breakdownDivider} />
-        <View style={styles.breakdownItem}>
-          <View style={[styles.dot, { backgroundColor: colors.textMuted }]} />
-          <Text style={styles.breakdownValue}>{locked.toLocaleString()}</Text>
-          <Text style={styles.breakdownLabel}>Bloqueados</Text>
+        <View style={styles.statBox}>
+          <Text style={styles.statLabel}>Retirado</Text>
+          <Text style={styles.statValue}>{formatCoins(withdrawnDiamonds)}</Text>
         </View>
       </View>
 
-      {/* Payout notice */}
-      <View style={styles.noticeBox}>
-        <Text style={styles.noticeText}>
-          💡 El retiro de beans se realiza en dólares americanos (1,000 Beans = $3 USD). El retiro mínimo es de $20 USD.
-        </Text>
-      </View>
-
-      {/* Payout button */}
+      {/* Request Payout Button */}
       <TouchableOpacity
         style={[
           styles.payoutButton,
-          (!stats?.eligibleForPayout) && styles.disabledPayoutBtn
+          !canRequestPayout && styles.payoutButtonDisabled,
         ]}
-        onPress={onRequestPayout}
-        disabled={!stats?.eligibleForPayout}
-        accessibilityLabel="Solicitar retiro"
+        onPress={handlePayoutPress}
+        activeOpacity={0.8}
       >
         <Text style={styles.payoutButtonText}>
-          {stats?.eligibleForPayout ? 'Solicitar Retiro de Beans' : 'No cumples requisitos de retiro'}
+          💳 Solicitar Retiro de Ganancias
         </Text>
       </TouchableOpacity>
+      {!canRequestPayout && (
+        <Text style={styles.helperText}>
+          {!isKycVerified
+            ? 'Requiere verificación KYC aprobada para retiros'
+            : `Mínimo de retiro: ${formatCoins(minPayoutDiamonds)} Diamantes`}
+        </Text>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: '#1E1B30',
     borderRadius: 20,
     padding: spacing.lg,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.gold + '33',
+    borderWidth: 1.5,
+    borderColor: '#342D54',
+    marginBottom: spacing.lg,
   },
-  headline: {
+  headerRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: spacing.md,
     marginBottom: spacing.md,
   },
-  diamondEmoji: {
-    fontSize: 44,
+  title: {
+    ...textPresets.body,
+    fontWeight: 'bold',
+    color: colors.text,
+    fontSize: 15,
   },
-  totalValue: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: colors.gold,
-    letterSpacing: -1,
-  },
-  totalLabel: {
-    ...textPresets.bodySmall,
-    color: colors.textMuted,
-  },
-  breakdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceLight,
+  kycBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 12,
-    padding: spacing.md,
-    marginBottom: spacing.md,
   },
-  breakdownItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
+  kycPass: {
+    backgroundColor: 'rgba(76, 217, 100, 0.2)',
   },
-  breakdownDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: colors.border,
+  kycPending: {
+    backgroundColor: 'rgba(255, 149, 0, 0.2)',
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginBottom: 2,
-  },
-  breakdownValue: {
-    fontSize: 16,
-    fontWeight: '700',
+  kycText: {
+    fontSize: 10,
+    fontWeight: 'bold',
     color: colors.text,
   },
-  breakdownLabel: {
-    fontSize: 10,
+  usdContainer: {
+    alignItems: 'center',
+    backgroundColor: '#141124',
+    borderRadius: 16,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#292440',
+  },
+  usdLabel: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  usdValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#4CD964',
+  },
+  usdCurrency: {
+    fontSize: 16,
     color: colors.textMuted,
   },
-  noticeBox: {
-    backgroundColor: colors.primary + '15',
-    borderRadius: 10,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  noticeText: {
+  usdSubtext: {
     fontSize: 11,
     color: colors.textMuted,
-    lineHeight: 16,
+    marginTop: 4,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#18142B',
+    padding: spacing.sm,
+    borderRadius: 12,
+    marginHorizontal: 3,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  statValue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: colors.text,
   },
   payoutButton: {
-    backgroundColor: colors.border,
+    backgroundColor: colors.accent,
     borderRadius: 14,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     alignItems: 'center',
-    opacity: 0.5,
+    justifyContent: 'center',
+  },
+  payoutButtonDisabled: {
+    backgroundColor: '#2A2542',
+    opacity: 0.8,
   },
   payoutButtonText: {
+    ...textPresets.body,
+    fontWeight: 'bold',
+    color: '#FFF',
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.textMuted,
   },
-  disabledPayoutBtn: {
-    opacity: 0.5,
-    backgroundColor: colors.border,
+  helperText: {
+    fontSize: 10,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: 6,
   },
 });

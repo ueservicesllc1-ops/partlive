@@ -108,22 +108,38 @@ agencyRoutes.post('/hosts', requireAuth, async (req: AuthRequest, res: Response)
   }
 });
 
-// DELETE /api/agencies/hosts/:hostId - Remove host from agency
-agencyRoutes.delete('/hosts/:hostId', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+// POST /api/agencies/invite - Send recruitment invitation
+agencyRoutes.post('/invite', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const ownerId = req.user.uid;
-    const { hostId } = req.params;
+    const { userId } = req.body;
 
     const agency = await getAgencyByOwner(ownerId);
     if (!agency) {
-      res.status(403).json({ error: 'Only approved agency owners can remove hosts.' });
+      res.status(403).json({ error: 'Solo propietarios de agencia pueden enviar invitaciones.' });
       return;
     }
 
-    await removeHostFromAgency(agency.id, hostId as string);
-    res.json({ success: true, message: 'Host removed from agency.' });
+    const { inviteUserToAgency } = await import('../services/agencyService');
+    const inviteId = await inviteUserToAgency(agency.id, userId);
+    res.status(201).json({ success: true, inviteId });
   } catch (error: any) {
-    console.error('Error removing host from agency:', error);
-    res.status(400).json({ error: error.message || 'Error removing host' });
+    console.error('Error inviting host:', error);
+    res.status(400).json({ error: error.message || 'Error inviting host' });
+  }
+});
+
+// POST /api/agencies/respond-invite - Accept or reject agency invitation
+agencyRoutes.post('/respond-invite', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user.uid;
+    const { inviteId, accept } = req.body;
+
+    const { respondToAgencyInvite } = await import('../services/agencyService');
+    await respondToAgencyInvite(inviteId, userId, !!accept);
+    res.json({ success: true, message: 'Respuesta registrada.' });
+  } catch (error: any) {
+    console.error('Error responding to agency invite:', error);
+    res.status(400).json({ error: error.message || 'Error responding to invite' });
   }
 });

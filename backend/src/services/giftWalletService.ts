@@ -28,15 +28,18 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
   const gift = giftSnap.data()!;
   if (!gift.isActive) throw new Error('El regalo no está activo');
 
-  const giftPriceDiamonds = gift.priceDiamonds || 0;
-  const totalDiamondsSpent = giftPriceDiamonds * quantity;
+  const giftCoinCost = gift.coinCost || gift.priceDiamonds || 1;
+  const giftDiamondReward = gift.diamondReward || gift.beansValue || giftCoinCost;
+
+  const totalCoinsSpent = giftCoinCost * quantity;
+  const totalDiamondsEarned = giftDiamondReward * quantity;
 
   // 2. Pre-Check Anti-Fraud
-  await checkGiftFraud(senderId, receiverId, giftId, quantity, giftPriceDiamonds);
+  await checkGiftFraud(senderId, receiverId, giftId, quantity, totalCoinsSpent);
 
   // 3. Calculate Monetization
   const monetization = await calculateGiftMonetization({
-    totalDiamonds: totalDiamondsSpent,
+    totalDiamonds: totalCoinsSpent,
     receiverId,
     targetType,
     targetId,
@@ -86,8 +89,8 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
       transaction.get(targetRef),
     ]);
 
-    if (!senderUserSnap.exists) throw new Error('Sender user profile not found');
-    if (!receiverUserSnap.exists) throw new Error('Receiver user profile not found');
+    if (!senderUserSnap.exists) throw new Error('Perfil de usuario emisor no encontrado');
+    if (!receiverUserSnap.exists) throw new Error('Perfil de usuario receptor no encontrado');
     if (!targetSnap.exists) throw new Error(`El objetivo de tipo ${targetType} no existe o no está activo.`);
 
     const senderUser = senderUserSnap.data()!;
@@ -95,7 +98,7 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
 
     senderCountry = senderUser.country || 'CL';
     receiverCountry = receiverUser.country || 'CL';
-    agencyId = receiverUser.agencyId || undefined;
+    agencyId = receiverUser.agencyId || null;
 
     let senderWallet = senderWalletSnap.exists ? senderWalletSnap.data()! : null;
     let receiverWallet = receiverWalletSnap.exists ? receiverWalletSnap.data()! : null;
@@ -112,14 +115,19 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
     if (!receiverWallet) {
       receiverWallet = {
         userId: receiverId,
+        coins: 0,
+        coinsBalance: 0,
         diamonds: 0,
+        diamondBalance: 0,
+        availableDiamonds: 0,
+        pendingDiamonds: 0,
+        lifetimeDiamonds: 0,
+        withdrawnDiamonds: 0,
         beans: 0,
         lifetimeDiamondsPurchased: 0,
         lifetimeDiamondsSpent: 0,
         lifetimeBeansEarned: 0,
         lifetimeBeansWithdrawn: 0,
-        pendingBeans: 0,
-        lockedBeans: 0,
         status: 'active',
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -130,29 +138,27 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
       throw new Error('La billetera del destinatario está inactiva o bloqueada.');
     }
 
-    // Validate Balance
-    if (senderWallet.diamonds < totalDiamondsSpent) {
-      throw new Error('Saldo insuficiente de diamantes para enviar este regalo.');
+    // Validate Sender Coins Balance
+    const senderCoins = senderWallet.coins ?? senderWallet.coinsBalance ?? senderWallet.diamonds ?? 0;
+    if (senderCoins < totalCoinsSpent) {
+      throw new Error(`Saldo insuficiente de Coins (${senderCoins} disponibles, se requieren ${totalCoinsSpent}).`);
     }
 
-    let finalBeansGenerated = beansGenerated;
-    let scoreAddition = totalDiamondsSpent;
+    let finalDiamondsEarned = totalDiamondsEarned;
+    let scoreAddition = totalCoinsSpent;
     let battle: any = null;
 
     if (targetType === 'live' && targetSnap.exists) {
       const liveData = targetSnap.data();
       if (liveData && liveData.isInPkBattle && liveData.activePkBattleId) {
-        finalBeansGenerated = 0; // Defer payout to the end of battle
-        
         const pkBattleSnap = await transaction.get(db.collection('pkBattles').doc(liveData.activePkBattleId));
         if (pkBattleSnap.exists) {
           battle = pkBattleSnap.data();
           const isHostA = battle.hostAId === receiverId;
-          
-          // Check if opponent has 'block_gifts' active and not expired
+
+          // Check powerups...
           const opponentActivePower = isHostA ? battle.hostBActivePower : battle.hostAActivePower;
           const opponentPowerExpiry = isHostA ? battle.hostBPowerExpiry : battle.hostAPowerExpiry;
-          
           if (opponentActivePower === 'block_gifts') {
             const expiryMs = opponentPowerExpiry ? (opponentPowerExpiry.toMillis ? opponentPowerExpiry.toMillis() : new Date(opponentPowerExpiry).getTime()) : 0;
             if (Date.now() < expiryMs) {
@@ -160,14 +166,12 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
             }
           }
 
-          // Check if host has 'double_points' active and not expired
           const hostActivePower = isHostA ? battle.hostAActivePower : battle.hostBActivePower;
           const hostPowerExpiry = isHostA ? battle.hostAPowerExpiry : battle.hostBPowerExpiry;
-          
           if (hostActivePower === 'double_points') {
             const expiryMs = hostPowerExpiry ? (hostPowerExpiry.toMillis ? hostPowerExpiry.toMillis() : new Date(hostPowerExpiry).getTime()) : 0;
             if (Date.now() < expiryMs) {
-              scoreAddition = totalDiamondsSpent * 2;
+              scoreAddition = totalCoinsSpent * 2;
             }
           }
         }
@@ -175,20 +179,26 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
     }
 
     // New Balances
-    const newSenderDiamonds = senderWallet.diamonds - totalDiamondsSpent;
-    const newSenderLifetimeSpent = (senderWallet.lifetimeDiamondsSpent || 0) + totalDiamondsSpent;
+    const newSenderCoins = senderCoins - totalCoinsSpent;
+    const newSenderLifetimeSpent = (senderWallet.lifetimeDiamondsSpent || 0) + totalCoinsSpent;
 
-    const newReceiverBeans = (receiverWallet.beans || 0) + finalBeansGenerated;
-    const newReceiverLifetimeEarned = (receiverWallet.lifetimeBeansEarned || 0) + finalBeansGenerated;
+    const receiverDiamonds = receiverWallet.diamonds ?? receiverWallet.availableDiamonds ?? receiverWallet.beans ?? 0;
+    const newReceiverDiamonds = receiverDiamonds + finalDiamondsEarned;
+    const newAvailableDiamonds = (receiverWallet.availableDiamonds ?? receiverWallet.beans ?? 0) + finalDiamondsEarned;
+    const newLifetimeDiamonds = (receiverWallet.lifetimeDiamonds ?? receiverWallet.lifetimeBeansEarned ?? 0) + finalDiamondsEarned;
 
     // Update Sender Wallet & User profile cache
     transaction.update(senderWalletRef, {
-      diamonds: newSenderDiamonds,
+      coins: newSenderCoins,
+      coinsBalance: newSenderCoins,
+      diamonds: newSenderCoins, // Legacy compatibility
       lifetimeDiamondsSpent: newSenderLifetimeSpent,
       updatedAt: timestamp,
     });
     transaction.update(senderUserRef, {
-      diamonds: newSenderDiamonds,
+      coins: newSenderCoins,
+      coinsBalance: newSenderCoins,
+      diamonds: newSenderCoins,
       updatedAt: timestamp,
     });
 
@@ -196,18 +206,28 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
     if (!receiverWalletSnap.exists) {
       transaction.set(receiverWalletRef, {
         ...receiverWallet,
-        beans: newReceiverBeans,
-        lifetimeBeansEarned: newReceiverLifetimeEarned,
+        diamonds: newReceiverDiamonds,
+        diamondBalance: newReceiverDiamonds,
+        availableDiamonds: newAvailableDiamonds,
+        lifetimeDiamonds: newLifetimeDiamonds,
+        beans: newReceiverDiamonds, // Legacy compatibility
+        lifetimeBeansEarned: newLifetimeDiamonds,
       });
     } else {
       transaction.update(receiverWalletRef, {
-        beans: newReceiverBeans,
-        lifetimeBeansEarned: newReceiverLifetimeEarned,
+        diamonds: newReceiverDiamonds,
+        diamondBalance: newReceiverDiamonds,
+        availableDiamonds: newAvailableDiamonds,
+        lifetimeDiamonds: newLifetimeDiamonds,
+        beans: newReceiverDiamonds,
+        lifetimeBeansEarned: newLifetimeDiamonds,
         updatedAt: timestamp,
       });
     }
     transaction.update(receiverUserRef, {
-      beans: newReceiverBeans,
+      diamonds: newReceiverDiamonds,
+      diamondBalance: newReceiverDiamonds,
+      beans: newReceiverDiamonds,
       totalGiftsReceived: admin.firestore.FieldValue.increment(quantity),
       updatedAt: timestamp,
     });
@@ -222,12 +242,16 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
       giftId,
       giftName: gift.name,
       quantity,
-      priceDiamonds: giftPriceDiamonds,
-      totalDiamonds: totalDiamondsSpent,
+      coinCost: giftCoinCost,
+      diamondReward: giftDiamondReward,
+      totalCoinsSpent,
+      totalDiamondsEarned,
+      priceDiamonds: giftCoinCost,
+      totalDiamonds: totalCoinsSpent,
       platformCommissionPercent,
       platformDiamondsValue,
       receiverSharePercent,
-      beansGenerated,
+      beansGenerated: finalDiamondsEarned,
       status: 'completed',
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -250,8 +274,9 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
       giftIconUrl: gift.iconUrl || '',
       giftEmoji: gift.iconEmoji || '🎁',
       quantity,
-      totalDiamonds: totalDiamondsSpent,
-      beansGenerated,
+      totalCoins: totalCoinsSpent,
+      totalDiamonds: totalDiamondsEarned,
+      beansGenerated: finalDiamondsEarned,
       rarity: gift.rarity || 'common',
       animationType: gift.animationType || 'small',
       roomEffectType: gift.roomEffectType || null,
@@ -281,75 +306,45 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
       });
     }
 
-    // Assign temporary Sender Title if configured
-    if (gift.senderTitle) {
-      const durationDays = gift.senderTitleDurationDays || 1;
-      const expiresAt = admin.firestore.Timestamp.fromDate(new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000));
-      const titleId = `${senderId}_${gift.senderTitle}`;
-      const titleRef = db.collection('temporaryUserTitles').doc(titleId);
-      transaction.set(titleRef, {
-        id: titleId,
-        userId: senderId,
-        userName: senderUser.displayName || 'Usuario',
-        title: gift.senderTitle,
-        expiresAt,
-        isActive: true,
-        updatedAt: timestamp,
-      }, { merge: true });
-    }
-
-    // Assign temporary Host Badge if configured
-    if (gift.hostBadge) {
-      const durationDays = gift.hostBadgeDurationDays || 1;
-      const expiresAt = admin.firestore.Timestamp.fromDate(new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000));
-      const badgeId = `${receiverId}_${gift.hostBadge}`;
-      const badgeRef = db.collection('temporaryHostBadges').doc(badgeId);
-      transaction.set(badgeRef, {
-        id: badgeId,
-        userId: receiverId, // host
-        userName: receiverUser.displayName || 'Usuario',
-        badge: gift.hostBadge,
-        expiresAt,
-        isActive: true,
-        updatedAt: timestamp,
-      }, { merge: true });
-    }
-
     // Create Audit Transactions
     transaction.set(senderTxRef, {
       id: senderTxRef.id,
+      transactionId: senderTxRef.id,
       userId: senderId,
-      type: 'gift_sent',
+      type: 'GIFT_SENT',
       direction: 'debit',
-      currencyType: 'diamonds',
-      amount: totalDiamondsSpent,
-      balanceAfter: newSenderDiamonds,
+      currency: 'coins',
+      currencyType: 'coins',
+      amount: totalCoinsSpent,
+      balanceAfter: newSenderCoins,
       status: 'completed',
       description: `Envió ${quantity}x ${gift.name} a ${receiverUser.displayName || 'usuario'}`,
+      recipientId: receiverId,
       relatedUserId: receiverId,
       relatedRoomId: targetType === 'room' ? targetId : null,
       relatedLiveId: targetType === 'live' ? targetId : null,
       relatedGiftId: giftId,
-      relatedGiftEventId: giftEventRef.id,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
 
     transaction.set(receiverTxRef, {
       id: receiverTxRef.id,
+      transactionId: receiverTxRef.id,
       userId: receiverId,
-      type: 'beans_earned',
+      type: 'DIAMOND_EARNED',
       direction: 'credit',
-      currencyType: 'beans',
-      amount: beansGenerated,
-      balanceAfter: newReceiverBeans,
+      currency: 'diamonds',
+      currencyType: 'diamonds',
+      amount: finalDiamondsEarned,
+      balanceAfter: newReceiverDiamonds,
       status: 'completed',
       description: `Recibió ${quantity}x ${gift.name} de ${senderUser.displayName || 'usuario'}`,
+      recipientId: receiverId,
       relatedUserId: senderId,
       relatedRoomId: targetType === 'room' ? targetId : null,
       relatedLiveId: targetType === 'live' ? targetId : null,
       relatedGiftId: giftId,
-      relatedGiftEventId: giftEventRef.id,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -371,68 +366,71 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
       giftIconUrl: gift.iconUrl || '',
       giftEmoji: gift.iconEmoji || '🎁',
       giftQuantity: quantity,
-      giftDiamonds: totalDiamondsSpent,
+      giftDiamonds: totalCoinsSpent,
       status: 'active',
       createdAt: timestamp,
       updatedAt: timestamp,
     });
 
     // Check if live stream is in active PK Battle
-    if (targetType === 'live' && battle) {
+    if (targetType === 'live' && battle && targetSnap.exists) {
       const liveData = targetSnap.data();
-      const pkBattleRef = db.collection('pkBattles').doc(liveData.activePkBattleId);
-      const isHostA = liveData.hostId === receiverId;
+      const activePkBattleId = liveData?.activePkBattleId;
+      if (activePkBattleId) {
+        const pkBattleRef = db.collection('pkBattles').doc(activePkBattleId);
+        const isHostA = (liveData?.hostId || liveData?.ownerId) === receiverId;
 
-      const currentPowerBar = isHostA ? (battle.hostAPowerBar || 0) : (battle.hostBPowerBar || 0);
-      const currentDice = isHostA ? (battle.hostADiceAvailable || false) : (battle.hostBDiceAvailable || false);
+        const currentPowerBar = isHostA ? (battle.hostAPowerBar || 0) : (battle.hostBPowerBar || 0);
+        const currentDice = isHostA ? (battle.hostADiceAvailable || false) : (battle.hostBDiceAvailable || false);
 
-      let newPowerBar = currentPowerBar + totalDiamondsSpent;
-      let diceAvailable = currentDice;
+        let newPowerBar = currentPowerBar + totalCoinsSpent;
+        let diceAvailable = currentDice;
 
-      if (newPowerBar >= 100) {
-        diceAvailable = true;
-        newPowerBar = newPowerBar % 100;
-      }
+        if (newPowerBar >= 100) {
+          diceAvailable = true;
+          newPowerBar = newPowerBar % 100;
+        }
 
-      if (isHostA) {
-        transaction.update(pkBattleRef, {
-          hostAScore: admin.firestore.FieldValue.increment(scoreAddition),
-          hostADiamonds: admin.firestore.FieldValue.increment(totalDiamondsSpent),
-          hostAGiftsCount: admin.firestore.FieldValue.increment(quantity),
-          hostAPowerBar: newPowerBar,
-          hostADiceAvailable: diceAvailable,
-          updatedAt: timestamp,
+        if (isHostA) {
+          transaction.update(pkBattleRef, {
+            hostAScore: admin.firestore.FieldValue.increment(scoreAddition),
+            hostADiamonds: admin.firestore.FieldValue.increment(totalDiamondsEarned),
+            hostAGiftsCount: admin.firestore.FieldValue.increment(quantity),
+            hostAPowerBar: newPowerBar,
+            hostADiceAvailable: diceAvailable,
+            updatedAt: timestamp,
+          });
+        } else {
+          transaction.update(pkBattleRef, {
+            hostBScore: admin.firestore.FieldValue.increment(scoreAddition),
+            hostBDiamonds: admin.firestore.FieldValue.increment(totalDiamondsEarned),
+            hostBGiftsCount: admin.firestore.FieldValue.increment(quantity),
+            hostBPowerBar: newPowerBar,
+            hostBDiceAvailable: diceAvailable,
+            updatedAt: timestamp,
+          });
+        }
+
+        const contributionRef = db.collection('pkGiftContributions').doc();
+        transaction.set(contributionRef, {
+          id: contributionRef.id,
+          pkBattleId: activePkBattleId,
+          giftEventId: giftEventRef.id,
+          senderId,
+          receiverHostId: receiverId,
+          giftId,
+          giftName: gift.name,
+          diamonds: totalDiamondsEarned,
+          beansGenerated: totalDiamondsEarned,
+          createdAt: timestamp,
         });
-      } else {
-        transaction.update(pkBattleRef, {
-          hostBScore: admin.firestore.FieldValue.increment(scoreAddition),
-          hostBDiamonds: admin.firestore.FieldValue.increment(totalDiamondsSpent),
-          hostBGiftsCount: admin.firestore.FieldValue.increment(quantity),
-          hostBPowerBar: newPowerBar,
-          hostBDiceAvailable: diceAvailable,
-          updatedAt: timestamp,
-        });
       }
-
-      const contributionRef = db.collection('pkGiftContributions').doc();
-      transaction.set(contributionRef, {
-        id: contributionRef.id,
-        pkBattleId: liveData.activePkBattleId,
-        giftEventId: giftEventRef.id,
-        senderId,
-        receiverHostId: receiverId,
-        giftId,
-        giftName: gift.name,
-        diamonds: totalDiamondsSpent,
-        beansGenerated: totalDiamondsSpent,
-        createdAt: timestamp,
-      });
     }
 
     // Update Room/Live/Game statistics
     transaction.update(targetRef, {
       giftsCount: admin.firestore.FieldValue.increment(quantity),
-      diamondsGenerated: admin.firestore.FieldValue.increment(totalDiamondsSpent),
+      diamondsGenerated: admin.firestore.FieldValue.increment(totalDiamondsEarned),
       updatedAt: timestamp,
     });
 
@@ -446,7 +444,7 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
       userId: senderId,
       userName: senderUser.displayName || 'Usuario',
       userPhotoURL: senderUser.photoURL || '',
-      totalDiamonds: admin.firestore.FieldValue.increment(totalDiamondsSpent),
+      totalDiamonds: admin.firestore.FieldValue.increment(totalDiamondsEarned),
       giftsCount: admin.firestore.FieldValue.increment(quantity),
       lastGiftAt: timestamp,
     }, { merge: true });
@@ -454,8 +452,8 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
 
   // Background operations
   try {
-    const commissionBeans = await calculateAgencyCommission(receiverId, finalGiftEvent.id, beansGenerated);
-    await recordGiftPlatformMargin(totalDiamondsSpent, beansGenerated, commissionBeans);
+    const commissionBeans = await calculateAgencyCommission(receiverId, finalGiftEvent.id, totalDiamondsEarned);
+    await recordGiftPlatformMargin(totalCoinsSpent, totalDiamondsEarned, commissionBeans);
 
     // Track gift in analytical collections
     try {
@@ -465,8 +463,8 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
         receiverId,
         giftId,
         gift.name,
-        totalDiamondsSpent,
-        beansGenerated,
+        totalCoinsSpent,
+        totalDiamondsEarned,
         senderCountry,
         receiverCountry,
         agencyId
@@ -479,6 +477,17 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
     const { incrementMissionProgress } = await import('./missionService');
     await incrementMissionProgress(senderId, 'send_gift', quantity);
     await incrementMissionProgress(receiverId, 'receive_gift', quantity);
+
+    // Award XP and Recalculate VIP Level
+    try {
+      const { addXpToUser } = await import('./levelService');
+      const { recalculateUserVip } = await import('./vipService');
+      await addXpToUser(senderId, totalCoinsSpent * 10, 'gift_sent');
+      await addXpToUser(receiverId, totalDiamondsEarned * 5, 'gift_received');
+      await recalculateUserVip(senderId);
+    } catch (xpErr) {
+      console.error('Failed to update XP/VIP level post gift:', xpErr);
+    }
 
     // Integrate with active Karaoke Sessions
     if (targetType === 'room' || targetType === 'live') {
@@ -495,7 +504,7 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
 
           if (!perfSnap.empty) {
             const perfId = perfSnap.docs[0].id;
-            await updatePerformanceGifts(perfId, totalDiamondsSpent, beansGenerated);
+            await updatePerformanceGifts(perfId, totalDiamondsEarned, totalDiamondsEarned);
           }
         }
       } catch (kErr) {
@@ -503,7 +512,7 @@ export const sendGiftWithWallet = async (params: SendGiftParams): Promise<any> =
       }
     }
   } catch (commErr) {
-    console.error('Failed background operations for gift send:', commErr);
+    console.error('Failed post-gift background operations:', commErr);
   }
 
   return finalGiftEvent;

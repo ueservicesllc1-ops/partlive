@@ -17,8 +17,10 @@ export const sendLiveGift = async (
   quantity: number = 1
 ): Promise<void> => {
   const db = firestore();
-  const totalDiamonds = gift.priceDiamonds * quantity;
-  const totalBeans = gift.beansValue * quantity;
+  const coinCost = gift.coinCost || gift.priceDiamonds || 1;
+  const diamondReward = gift.diamondReward || gift.beansValue || 1;
+  const totalDiamonds = coinCost * quantity;
+  const totalBeans = diamondReward * quantity;
 
   if (GIFT_WALLET_MODE === 'backend') {
     // API backend integration

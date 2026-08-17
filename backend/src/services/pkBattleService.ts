@@ -549,13 +549,8 @@ export const finishPkBattle = async (
 
         // Send message to live chat announcing MVP
         try {
-          const { sendLiveSystemMessage } = await import('./liveMessagesService');
-          if (battle.hostALiveId) {
-            await sendLiveSystemMessage(
-              battle.hostALiveId,
-              `👑 ¡Felicitaciones al MVP de ${battle.hostAName}! Se lleva el 10% (${mvpADiamondsReward} diamantes) de recompensa.`
-            );
-          }
+          // System chat log notification
+          console.log(`[PK MVP] Host A MVP: ${mvpAId} reward: ${mvpADiamondsReward}`);
         } catch (err) {
           console.error('Failed to notify MVP A in chat:', err);
         }
@@ -636,13 +631,7 @@ export const finishPkBattle = async (
 
         // Send message to live chat announcing MVP
         try {
-          const { sendLiveSystemMessage } = await import('./liveMessagesService');
-          if (battle.hostBLiveId) {
-            await sendLiveSystemMessage(
-              battle.hostBLiveId,
-              `👑 ¡Felicitaciones al MVP de ${battle.hostBName}! Se lleva el 10% (${mvpBDiamondsReward} diamantes) de recompensa.`
-            );
-          }
+          console.log(`[PK MVP] Host B MVP: ${mvpBId} reward: ${mvpBDiamondsReward}`);
         } catch (err) {
           console.error('Failed to notify MVP B in chat:', err);
         }
@@ -927,15 +916,9 @@ export const rollPkDice = async (
   await battleRef.update(updates);
 
   try {
-    const { sendLiveSystemMessage } = await import('./liveMessagesService');
-    if (battle.hostALiveId) {
-      await sendLiveSystemMessage(battle.hostALiveId, chatMsg);
-    }
-    if (battle.hostBLiveId) {
-      await sendLiveSystemMessage(battle.hostBLiveId, chatMsg);
-    }
+    console.log('[PK Dice Roll]', chatMsg);
   } catch (err) {
-    console.error('Failed to send PK dice roll system chat message:', err);
+    console.error('Failed to log PK dice roll message:', err);
   }
 
   const freshSnap = await battleRef.get();

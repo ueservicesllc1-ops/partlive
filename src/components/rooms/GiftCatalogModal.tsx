@@ -84,13 +84,16 @@ export const GiftCatalogModal: React.FC<GiftCatalogModalProps> = ({
 
     try {
       const quantity = 1;
-      const totalDiamonds = selectedGift.priceDiamonds * quantity;
-      const totalBeans = selectedGift.beansValue * quantity;
+      const coinCost = selectedGift.coinCost || selectedGift.priceDiamonds || 1;
+      const diamondReward = selectedGift.diamondReward || selectedGift.beansValue || 1;
+      const totalDiamonds = coinCost * quantity;
+      const totalBeans = diamondReward * quantity;
+      const userCoins = wallet?.coins ?? wallet?.coinsBalance ?? wallet?.diamonds ?? 0;
 
       if (GIFT_WALLET_MODE === 'backend') {
         // Validation check client-side
-        if (!wallet || wallet.diamonds < totalDiamonds) {
-          Alert.alert('Diamantes Insuficientes', 'No tienes suficientes diamantes. Ve a la Billetera a recargar.');
+        if (!wallet || userCoins < totalDiamonds) {
+          Alert.alert('Coins Insuficientes', 'No tienes suficientes Coins. Ve a la Billetera a recargar.');
           setSending(false);
           return;
         }

@@ -1,6 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import firestore from '@react-native-firebase/firestore';
 import { getGiftById } from '../services/firebase/firestore/giftsService';
+import { GiftEventQueue } from '../services/gifts/GiftEventQueue';
+import { RecentGiftItem } from '../components/lives/RecentGiftsTicker';
 
 export interface GiftAnimationEvent {
   id: string;
@@ -22,6 +24,35 @@ export const useGiftEvents = (
   const [lastEvent, setLastEvent] = useState<GiftAnimationEvent | null>(null);
   const [activeToasts, setActiveToasts] = useState<any[]>([]);
   const [activeBanners, setActiveBanners] = useState<any[]>([]);
+  const [recentGifts, setRecentGifts] = useState<RecentGiftItem[]>([]);
+
+  // Combo tracking state
+  const [comboCount, setComboCount] = useState(1);
+  const [comboSenderName, setComboSenderName] = useState('');
+  const [comboGiftName, setComboGiftName] = useState('');
+  const [comboEmoji, setComboEmoji] = useState('🎁');
+  const [comboVisible, setComboVisible] = useState(false);
+
+  const lastComboRef = useRef<{ senderId: string; giftId: string; time: number }>({
+    senderId: '',
+    giftId: '',
+    time: 0,
+  });
+  const comboTimerRef = useRef<any>(null);
+
+  useEffect(() => {
+    // Connect queue playback to component state
+    GiftEventQueue.setPlayCallback((event) => {
+      setLastEvent(event);
+      setTimeout(() => {
+        GiftEventQueue.finishAnimation();
+      }, 2500);
+    });
+
+    return () => {
+      GiftEventQueue.clearQueue();
+    };
+  }, []);
 
   useEffect(() => {
     if (!targetId) return;
@@ -50,8 +81,6 @@ export const useGiftEvents = (
           snapshot.docChanges().forEach(async (change) => {
             if (change.type === 'added') {
               const data = change.doc.data();
-              
-              // Skip if created is null (local optimistic writes before server timestamp)
               if (!data.createdAt) return;
 
               let animationType: 'small' | 'medium' | 'big' | 'global' = 'small';
@@ -77,10 +106,50 @@ export const useGiftEvents = (
                 createdAt: data.createdAt,
               };
 
-              // Trigger full-screen animation overlay
-              setLastEvent(event);
+              // Enqueue into GiftEventQueue
+              GiftEventQueue.enqueue(event);
 
-              // Add to side toast notifications queue
+              // Update Recent Gifts Ticker
+              setRecentGifts((prev) => [
+                ...prev.slice(-10),
+                {
+                  id: event.id,
+                  senderName: event.senderName,
+                  giftName: event.giftName,
+                  giftEmoji: event.giftIconUrl,
+                  quantity: event.quantity,
+                },
+              ]);
+
+              // Manage Combo Logic
+              const now = Date.now();
+              const isSameSenderAndGift =
+                lastComboRef.current.senderId === event.senderId &&
+                lastComboRef.current.giftId === event.giftId &&
+                now - lastComboRef.current.time < 3500;
+
+              if (isSameSenderAndGift) {
+                setComboCount((c) => c + event.quantity);
+              } else {
+                setComboCount(event.quantity);
+                setComboSenderName(event.senderName);
+                setComboGiftName(event.giftName);
+                setComboEmoji(event.giftIconUrl);
+              }
+
+              lastComboRef.current = {
+                senderId: event.senderId,
+                giftId: event.giftId,
+                time: now,
+              };
+
+              setComboVisible(true);
+              if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
+              comboTimerRef.current = setTimeout(() => {
+                setComboVisible(false);
+              }, 3000);
+
+              // Add side toast notification
               setActiveToasts((prev) => [
                 ...prev,
                 {
@@ -93,7 +162,7 @@ export const useGiftEvents = (
                 },
               ]);
 
-              // If legendary/global gift, also trigger top global marquee banner
+              // If global gift, trigger top global marquee banner
               if (animationType === 'global') {
                 setActiveBanners((prev) => [
                   ...prev,
@@ -129,6 +198,12 @@ export const useGiftEvents = (
     lastEvent,
     activeToasts,
     activeBanners,
+    recentGifts,
+    comboCount,
+    comboSenderName,
+    comboGiftName,
+    comboEmoji,
+    comboVisible,
     dismissToast,
     dismissBanner,
   };

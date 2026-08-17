@@ -49,9 +49,20 @@ export const LiveMessageItem: React.FC<LiveMessageItemProps> = ({ message }) => 
     );
   }
 
+  const getVipBadge = () => {
+    const vipLvl = (message as any).vipLevel || (message.metadata as any)?.vipLevel;
+    if (vipLvl && vipLvl > 0) {
+      return `👑 VIP ${vipLvl} `;
+    }
+    return '';
+  };
+
   return (
     <View style={styles.messageBubble}>
       <Text style={styles.messageText}>
+        {getVipBadge() !== '' && (
+          <Text style={styles.vipBadgeText}>{getVipBadge()}</Text>
+        )}
         <Text style={[styles.senderName, { color: getRoleColor(message.senderRole) }]}>
           {getRolePrefix(message.senderRole)}
           {message.senderName}:{' '}
@@ -77,6 +88,11 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 12,
     lineHeight: 16,
+  },
+  vipBadgeText: {
+    color: '#FFD700',
+    fontWeight: '900',
+    fontSize: 10,
   },
   senderName: {
     fontWeight: 'bold',

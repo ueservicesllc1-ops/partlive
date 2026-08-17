@@ -176,7 +176,11 @@ export const HostDashboardScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            <HostEarningsCard stats={stats} />
+            <HostEarningsCard
+              availableDiamonds={stats?.totalDiamondsEarned || stats?.totalBeansEarned || 0}
+              lifetimeDiamonds={stats?.totalDiamondsEarned || stats?.totalBeansEarned || 0}
+              isKycVerified={userProfile?.isKycVerified || false}
+            />
 
             <HostStatsGrid stats={stats} />
 

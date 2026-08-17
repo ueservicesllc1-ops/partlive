@@ -32,12 +32,12 @@ const QUICK_QUANTITIES = [1, 5, 10, 99];
 import { ScrollView } from 'react-native';
 
 const CATEGORIES = [
-  { label: 'Todo', value: 'all' },
-  { label: 'Popular', value: 'popular' },
-  { label: 'Música', value: 'music' },
-  { label: 'Batallas', value: 'battle' },
-  { label: 'Juegos', value: 'juegos' },
-  { label: 'VIP', value: 'vip' },
+  { label: '🔥 POPULAR', value: 'POPULAR' },
+  { label: '❤️ LOVE', value: 'LOVE' },
+  { label: '🎉 FUN', value: 'FUN' },
+  { label: '👑 PREMIUM', value: 'PREMIUM' },
+  { label: '🌌 SPECIAL', value: 'SPECIAL' },
+  { label: 'TODOS', value: 'ALL' },
 ];
 
 export const GiftCatalogTab: React.FC<GiftCatalogTabProps> = ({
@@ -48,24 +48,7 @@ export const GiftCatalogTab: React.FC<GiftCatalogTabProps> = ({
   quantity,
   onChangeQuantity,
 }) => {
-  const [customQtyText, setCustomQtyText] = useState(String(quantity));
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-
-  const handleCustomQtyChange = (text: string) => {
-    // Only allow digits
-    const cleaned = text.replace(/[^0-9]/g, '');
-    setCustomQtyText(cleaned);
-    
-    const num = parseInt(cleaned, 10);
-    if (!isNaN(num) && num > 0 && num <= 99) {
-      onChangeQuantity(num);
-    }
-  };
-
-  const handleQuickQtySelect = (qty: number) => {
-    onChangeQuantity(qty);
-    setCustomQtyText(String(qty));
-  };
+  const [selectedCategory, setSelectedCategory] = useState<string>('POPULAR');
 
   if (loading) {
     return (
@@ -76,9 +59,9 @@ export const GiftCatalogTab: React.FC<GiftCatalogTabProps> = ({
     );
   }
 
-  const filteredGifts = selectedCategory === 'all'
+  const filteredGifts = selectedCategory === 'ALL'
     ? gifts
-    : gifts.filter((g) => g.category === selectedCategory);
+    : gifts.filter((g) => (g.category || 'POPULAR').toUpperCase() === selectedCategory);
 
   return (
     <View style={styles.container}>
@@ -111,14 +94,15 @@ export const GiftCatalogTab: React.FC<GiftCatalogTabProps> = ({
       </View>
 
       <FlatList
-        data={filteredGifts}
+        data={filteredGifts.length > 0 ? filteredGifts : gifts}
         numColumns={3}
         keyExtractor={(item) => item.id}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.gridContent}
         renderItem={({ item }) => {
           const isSelected = selectedGift?.id === item.id;
-          const rarityColor = RARITY_COLORS[item.rarity] || '#FFF';
+          const rarityKey = item.rarity || 'common';
+          const rarityColor = RARITY_COLORS[rarityKey] || '#FFF';
           
           return (
             <TouchableOpacity
@@ -133,7 +117,7 @@ export const GiftCatalogTab: React.FC<GiftCatalogTabProps> = ({
               {/* Rarity Tag */}
               <View style={[styles.rarityBadge, { backgroundColor: rarityColor }]}>
                 <Text style={styles.rarityText}>
-                  {item.rarity.toUpperCase()}
+                  {rarityKey.toUpperCase()}
                 </Text>
               </View>
 
@@ -142,14 +126,14 @@ export const GiftCatalogTab: React.FC<GiftCatalogTabProps> = ({
                 {item.name}
               </Text>
               <Text style={styles.giftPrice}>
-                💎 {item.priceDiamonds}
+                🪙 {item.coinCost || item.priceDiamonds || 1}
               </Text>
             </TouchableOpacity>
           );
         }}
       />
 
-      {/* Quantity Selector at the bottom */}
+      {/* Strict Fixed Quantity Selector at the bottom */}
       <View style={styles.quantityContainer}>
         <Text style={styles.qtyLabel}>Cantidad:</Text>
         
@@ -163,7 +147,7 @@ export const GiftCatalogTab: React.FC<GiftCatalogTabProps> = ({
                   styles.quickQtyBtn,
                   isSelected && styles.quickQtyBtnActive,
                 ]}
-                onPress={() => handleQuickQtySelect(qty)}
+                onPress={() => onChangeQuantity(qty)}
               >
                 <Text
                   style={[
@@ -176,18 +160,6 @@ export const GiftCatalogTab: React.FC<GiftCatalogTabProps> = ({
               </TouchableOpacity>
             );
           })}
-
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.qtyInput}
-              value={customQtyText}
-              onChangeText={handleCustomQtyChange}
-              keyboardType="number-pad"
-              maxLength={2}
-              placeholder="1-99"
-              placeholderTextColor={colors.textDark}
-            />
-          </View>
         </View>
       </View>
     </View>

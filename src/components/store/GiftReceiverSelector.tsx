@@ -19,16 +19,20 @@ interface GiftReceiverSelectorProps {
   receivers: Receiver[];
   selectedReceiver: Receiver | null;
   onSelectReceiver: (receiver: Receiver) => void;
+  isPkBattle?: boolean;
 }
 
 export const GiftReceiverSelector: React.FC<GiftReceiverSelectorProps> = ({
   receivers,
   selectedReceiver,
   onSelectReceiver,
+  isPkBattle = false,
 }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Destinatario</Text>
+      <Text style={styles.title}>
+        {isPkBattle ? '⚔️ Selecciona Host a Apoyar en la PK' : 'Destinatario'}
+      </Text>
       {receivers.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
@@ -49,6 +53,7 @@ export const GiftReceiverSelector: React.FC<GiftReceiverSelectorProps> = ({
                 style={[
                   styles.card,
                   isSelected && styles.cardActive,
+                  isPkBattle && isSelected && styles.cardPkActive,
                 ]}
                 activeOpacity={0.8}
                 onPress={() => onSelectReceiver(item)}
@@ -114,6 +119,11 @@ const styles = StyleSheet.create({
     shadowColor: colors.accent,
     shadowOpacity: 0.2,
     shadowRadius: 6,
+  },
+  cardPkActive: {
+    borderColor: '#FFD700',
+    backgroundColor: 'rgba(255, 215, 0, 0.12)',
+    shadowColor: '#FFD700',
   },
   avatarWrapper: {
     position: 'relative',

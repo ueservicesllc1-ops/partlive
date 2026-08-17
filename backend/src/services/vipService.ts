@@ -106,3 +106,55 @@ export const checkVipStatus = async (userId: string): Promise<boolean> => {
 
   return true;
 };
+
+/**
+ * Calculates user's cumulative verified spend from giftTransactions and updates VIP Level.
+ */
+export const recalculateUserVip = async (userId: string): Promise<{ vipLevel: number; eligibleCoinsSpent: number }> => {
+  const userRef = db.collection(USERS).doc(userId);
+
+  // 1. Fetch systemConfig/vip
+  const vipConfigSnap = await db.collection('systemConfig').doc('vip').get();
+  const vipLevelsList = vipConfigSnap.exists ? (vipConfigSnap.data()?.vipLevels || []) : [];
+
+  // 2. Sum coins spent in verified completed gift transactions
+  const giftSnap = await db
+    .collection('giftTransactions')
+    .where('senderId', '==', userId)
+    .where('status', '==', 'completed')
+    .get();
+
+  let totalCoinsSpent = 0;
+  giftSnap.docs.forEach((doc) => {
+    const data = doc.data();
+    totalCoinsSpent += data.totalCoinsSpent || data.coinCost * (data.quantity || 1) || 0;
+  });
+
+  // 3. Determine target VIP Level based on requiredSpendCoins
+  let targetVipLevel = 0;
+  let targetBadge = '👤';
+  let targetFrame = 'default';
+
+  for (const vLvl of vipLevelsList) {
+    if (totalCoinsSpent >= vLvl.requiredSpendCoins) {
+      targetVipLevel = vLvl.level;
+      targetBadge = vLvl.badge;
+      targetFrame = `frame_vip_${vLvl.level}`;
+    } else {
+      break;
+    }
+  }
+
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+
+  await userRef.update({
+    vipLevel: targetVipLevel,
+    isVip: targetVipLevel > 0,
+    eligibleCoinsSpent: totalCoinsSpent,
+    profileFrame: targetFrame,
+    badges: admin.firestore.FieldValue.arrayUnion(`vip_${targetVipLevel}`),
+    updatedAt: timestamp,
+  });
+
+  return { vipLevel: targetVipLevel, eligibleCoinsSpent: totalCoinsSpent };
+};

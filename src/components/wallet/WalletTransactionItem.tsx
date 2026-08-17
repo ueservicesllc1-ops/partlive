@@ -11,34 +11,22 @@ interface WalletTransactionItemProps {
 
 export const WalletTransactionItem: React.FC<WalletTransactionItemProps> = ({ tx }) => {
   const getIcon = () => {
-    switch (tx.type) {
-      case 'diamond_purchase':
-        return '💳';
-      case 'gift_sent':
-        return '🎁';
-      case 'gift_received':
-        return '💝';
-      case 'beans_earned':
-        return '🫘';
-      case 'payout_requested':
-        return '🏧';
-      case 'payout_paid':
-        return '✅';
-      case 'payout_rejected':
-        return '❌';
-      case 'vip_purchase':
-        return '👑';
-      case 'reward':
-        return '🌟';
-      case 'admin_adjustment':
-        return '🔧';
-      default:
-        return '🔧';
-    }
+    const t = String(tx.type).toUpperCase();
+    if (t.includes('COIN_PURCHASE') || t.includes('PURCHASE')) return '💳';
+    if (t.includes('GIFT_SENT') || t.includes('SEND')) return '🎁';
+    if (t.includes('GIFT_RECEIVED') || t.includes('DIAMOND_EARNED') || t.includes('RECEIVED')) return '💝';
+    if (t.includes('PAYOUT_REQUEST')) return '🏧';
+    if (t.includes('PAYOUT_COMPLETED') || t.includes('PAID')) return '✅';
+    if (t.includes('PAYOUT_REJECTED')) return '❌';
+    if (t.includes('VIP')) return '👑';
+    if (t.includes('REWARD')) return '🌟';
+    return '🪙';
   };
 
   const getCurrencySymbol = () => {
-    return tx.currencyType === 'diamonds' ? '💎' : '🫘';
+    if (tx.currencyType === 'coins') return '🪙';
+    if (tx.currencyType === 'diamonds') return '💎';
+    return '🪙';
   };
 
   const dateObj = toDateSafe(tx.createdAt);
@@ -78,30 +66,16 @@ export const WalletTransactionItem: React.FC<WalletTransactionItemProps> = ({ tx
 };
 
 const getFallbackDescription = (tx: WalletTransaction): string => {
-  switch (tx.type) {
-    case 'diamond_purchase':
-      return 'Compra de diamantes';
-    case 'gift_sent':
-      return 'Regalo enviado';
-    case 'gift_received':
-      return 'Regalo recibido';
-    case 'beans_earned':
-      return 'Beans ganados por regalo';
-    case 'payout_requested':
-      return 'Retiro solicitado';
-    case 'payout_paid':
-      return 'Retiro pagado';
-    case 'payout_rejected':
-      return 'Retiro rechazado';
-    case 'vip_purchase':
-      return 'Suscripción VIP';
-    case 'reward':
-      return 'Recompensa';
-    case 'admin_adjustment':
-      return 'Ajuste administrativo';
-    default:
-      return 'Ajuste de saldo';
-  }
+  const t = String(tx.type).toUpperCase();
+  if (t.includes('COIN_PURCHASE')) return 'Compra de Coins';
+  if (t.includes('GIFT_SENT')) return 'Regalo enviado';
+  if (t.includes('GIFT_RECEIVED') || t.includes('DIAMOND_EARNED')) return 'Diamantes ganados por regalo';
+  if (t.includes('PAYOUT_REQUEST')) return 'Retiro solicitado';
+  if (t.includes('PAYOUT_COMPLETED')) return 'Retiro pagado';
+  if (t.includes('PAYOUT_REJECTED')) return 'Retiro rechazado';
+  if (t.includes('VIP')) return 'Suscripción VIP';
+  if (t.includes('REWARD')) return 'Recompensa';
+  return 'Transacción de billetera';
 };
 
 const styles = StyleSheet.create({
