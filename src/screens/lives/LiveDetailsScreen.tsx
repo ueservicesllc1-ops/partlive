@@ -156,14 +156,275 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
   // Extract active video tracks for local and remote participants directly from our hook
   const activeTracks = videoTracks;
 
+  const handleGroupPlusPress = () => {
+    Alert.alert(
+      'Invitar Co-Host 👥',
+      'Para invitar a un co-anfitrión a tu pantalla:\n\nToca la foto de perfil del espectador en la barra superior de la pantalla, y selecciona la opción "Invitar a co-transmitir".'
+    );
+  };
+
+  const renderTrackItem = (participantSid: string, track: any, identity: string, itemStyle: any) => {
+    const participantUser = viewers.find(v => v.userId === identity);
+    const displayName = identity === userProfile?.uid ? 'Tú' : (participantUser?.displayName || 'Co-Host');
+
+    // Power and Dice checks
+    const isParticipantHostA = activeBattle && identity === activeBattle.hostAId;
+    const isParticipantHostB = activeBattle && identity === activeBattle.hostBId;
+
+    const diceAvailable = isParticipantHostA ? activeBattle.hostADiceAvailable : (isParticipantHostB ? activeBattle.hostBDiceAvailable : false);
+    const isMe = identity === userProfile?.uid;
+
+    // Check if participant is frozen (opponent block_gifts is active)
+    let isFrozen = false;
+    if (activeBattle) {
+      if (isParticipantHostA) {
+        const oppPower = activeBattle.hostBActivePower;
+        const oppExpiry = activeBattle.hostBPowerExpiry;
+        if (oppPower === 'block_gifts' && oppExpiry) {
+          const expiryMs = oppExpiry.toMillis ? oppExpiry.toMillis() : new Date(oppExpiry).getTime();
+          isFrozen = Date.now() < expiryMs;
+        }
+      } else if (isParticipantHostB) {
+        const oppPower = activeBattle.hostAActivePower;
+        const oppExpiry = activeBattle.hostAPowerExpiry;
+        if (oppPower === 'block_gifts' && oppExpiry) {
+          const expiryMs = oppExpiry.toMillis ? oppExpiry.toMillis() : new Date(oppExpiry).getTime();
+          isFrozen = Date.now() < expiryMs;
+        }
+      }
+    }
+
+    // Check if participant has shield active
+    let hasShield = false;
+    if (activeBattle) {
+      const power = isParticipantHostA ? activeBattle.hostAActivePower : (isParticipantHostB ? activeBattle.hostBActivePower : null);
+      const expiry = isParticipantHostA ? activeBattle.hostAPowerExpiry : (isParticipantHostB ? activeBattle.hostBPowerExpiry : null);
+      if (power === 'shield' && expiry) {
+        const expiryMs = expiry.toMillis ? expiry.toMillis() : new Date(expiry).getTime();
+        hasShield = Date.now() < expiryMs;
+      }
+    }
+
+    // Check if participant has double points active
+    let hasDouble = false;
+    if (activeBattle) {
+      const power = isParticipantHostA ? activeBattle.hostAActivePower : (isParticipantHostB ? activeBattle.hostBActivePower : null);
+      const expiry = isParticipantHostA ? activeBattle.hostAPowerExpiry : (isParticipantHostB ? activeBattle.hostBPowerExpiry : null);
+      if (power === 'double_points' && expiry) {
+        const expiryMs = expiry.toMillis ? expiry.toMillis() : new Date(expiry).getTime();
+        hasDouble = Date.now() < expiryMs;
+      }
+    }
+
+    const isParticipantHost = identity === live?.hostId;
+    const frame = isParticipantHost ? live?.selectedFrame : 'none';
+    const filter = isParticipantHost ? live?.selectedFilter : 'none';
+
+    // Frame Border Styles
+    let frameStyle: any = {};
+    if (frame === 'simple') {
+      frameStyle = { borderWidth: 3, borderColor: '#FFFFFF' };
+    } else if (frame === 'neon') {
+      frameStyle = { borderWidth: 3, borderColor: colors.primary };
+    } else if (frame === 'gold_vip') {
+      frameStyle = { borderWidth: 3.5, borderColor: '#FFD700' };
+    } else if (frame === 'fire') {
+      frameStyle = { borderWidth: 3.5, borderColor: '#FF4500' };
+    }
+
+    return (
+      <View key={participantSid} style={[styles.gridItem, itemStyle, frameStyle]}>
+        <VideoView
+          videoTrack={track}
+          style={styles.videoView}
+          mirror={identity === userProfile?.uid}
+        />
+
+        {/* Filter Overlays */}
+        {filter === 'retro' && (
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(120, 60, 0, 0.28)', zIndex: 1 }]} />
+        )}
+        {filter === 'beauty' && (
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 180, 200, 0.18)', zIndex: 1 }]} />
+        )}
+        {filter === 'neon' && (
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(100, 0, 200, 0.22)', zIndex: 1 }]} />
+        )}
+        {filter === 'neon_pro' && (
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0, 200, 255, 0.20)', zIndex: 1 }]} />
+        )}
+
+        {/* Active filter/frame badge (only visible to the streaming host) */}
+        {identity === userProfile?.uid && filter && filter !== 'none' && (
+          <View style={styles.filterActiveBadge} pointerEvents="none">
+            <Text style={styles.filterActiveBadgeText}>
+              {filter === 'retro' ? '📼 Retro' : filter === 'beauty' ? '✨ Belleza' : filter === 'neon' ? '⚡ Neon' : '🔮 Neon Pro'}
+            </Text>
+          </View>
+        )}
+
+        {/* Frame Crown/Fire Badges */}
+        {frame === 'gold_vip' && (
+          <View style={styles.crownFrameIconContainer}>
+            <Text style={{ fontSize: 14 }}>👑</Text>
+          </View>
+        )}
+        {frame === 'fire' && (
+          <View style={styles.crownFrameIconContainer}>
+            <Text style={{ fontSize: 14 }}>🔥</Text>
+          </View>
+        )}
+        
+        {/* Frost Overlay */}
+        {isFrozen && (
+          <View style={styles.frostOverlay}>
+            <Text style={styles.frostEmoji}>❄️</Text>
+            <Text style={styles.frostText}>BLOQUEADO</Text>
+          </View>
+        )}
+
+        {/* Shield Glow aura */}
+        {hasShield && (
+          <View style={styles.shieldOverlay}>
+            <Text style={styles.shieldEmoji}>🛡️</Text>
+          </View>
+        )}
+
+        {/* Double Points badge */}
+        {hasDouble && (
+          <View style={styles.doublePointsOverlay}>
+            <Text style={styles.doublePointsText}>🔥 2x</Text>
+          </View>
+        )}
+
+        {/* Dice Overlay */}
+        {diceAvailable && (
+          <TouchableOpacity
+            style={styles.floatingDice}
+            onPress={isMe ? rollDice : undefined}
+            disabled={!isMe}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.diceText}>❓</Text>
+          </TouchableOpacity>
+        )}
+
+        <View style={styles.participantNameTag}>
+          <Text style={styles.participantNameText} numberOfLines={1}>
+            {displayName}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
   const renderVideoGrid = () => {
     if (!livekitConnected || activeTracks.length === 0) {
       return <LiveVideoPlaceholder title={live?.title} category={live?.category} />;
     }
 
     const count = activeTracks.length;
+    const isBattleMode = live?.streamMode === 'battle';
+    const isGroupMode = live?.streamMode === 'group';
 
-    // Responsive split screen styles based on participant count
+    // 1. Battle Mode Layout (Split-screen 50% each)
+    if (isBattleMode) {
+      const itemsToRender = [];
+      
+      // Slot 1: Host / Challenger
+      if (activeTracks[0]) {
+        itemsToRender.push({
+          type: 'track',
+          data: activeTracks[0]
+        });
+      }
+
+      // Slot 2: Oponente / Contendiente
+      if (activeTracks[1]) {
+        itemsToRender.push({
+          type: 'track',
+          data: activeTracks[1]
+        });
+      } else {
+        itemsToRender.push({
+          type: 'placeholder',
+          id: 'opponent_slot',
+          label: 'Esperando oponente...'
+        });
+      }
+
+      const itemStyle = { width: '50%', height: '100%' };
+
+      return (
+        <View style={styles.gridContainer}>
+          {itemsToRender.map((item) => {
+            if (item.type === 'placeholder') {
+              return (
+                <View key={item.id} style={[styles.gridItem, itemStyle, styles.placeholderItem]}>
+                  <Text style={styles.placeholderEmoji}>⚡</Text>
+                  <Text style={styles.placeholderLabel}>{item.label}</Text>
+                  {isHost && (
+                    <TouchableOpacity 
+                      style={styles.placeholderInviteBtn}
+                      onPress={() => setPkHostSearchVisible(true)}
+                    >
+                      <Text style={styles.placeholderInviteBtnText}>Retar Host ⚔️</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            }
+
+            // Render track
+            const { participantSid, track, identity } = item.data;
+            return renderTrackItem(participantSid, track, identity, itemStyle);
+          })}
+        </View>
+      );
+    }
+
+    // 2. Group Mode Layout (Fixed 2x2 Grid, 4 squares)
+    if (isGroupMode) {
+      const slots = [];
+      for (let i = 0; i < 4; i++) {
+        if (activeTracks[i]) {
+          slots.push({ type: 'track', data: activeTracks[i] });
+        } else {
+          slots.push({ type: 'placeholder', id: `group_slot_${i}` });
+        }
+      }
+
+      const itemStyle = { width: '50%', height: '50%' };
+
+      return (
+        <View style={styles.gridContainer}>
+          {slots.map((slot) => {
+            if (slot.type === 'placeholder') {
+              return (
+                <View key={slot.id} style={[styles.gridItem, itemStyle, styles.placeholderItem]}>
+                  <Text style={styles.placeholderEmoji}>👥</Text>
+                  <Text style={styles.placeholderLabel}>Asiento libre</Text>
+                  {isHost && (
+                    <TouchableOpacity 
+                      style={styles.placeholderPlusBtn}
+                      onPress={handleGroupPlusPress}
+                    >
+                      <Text style={styles.placeholderPlusBtnText}>+</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            }
+
+            // Render track
+            const { participantSid, track, identity } = slot.data;
+            return renderTrackItem(participantSid, track, identity, itemStyle);
+          })}
+        </View>
+      );
+    }
+
+    // 3. Normal / Solo Mode Layout (Dynamic list scaling)
     let itemStyle: any = { width: '100%', height: '100%' };
     if (count === 2) {
       itemStyle = { width: '50%', height: '100%' };
@@ -177,160 +438,9 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
 
     return (
       <View style={styles.gridContainer}>
-        {activeTracks.map(({ participantSid, track, identity }) => {
-          const participantUser = viewers.find(v => v.userId === identity);
-          const displayName = identity === userProfile?.uid ? 'Tú' : (participantUser?.displayName || 'Co-Host');
-
-          // Power and Dice checks
-          const isParticipantHostA = activeBattle && identity === activeBattle.hostAId;
-          const isParticipantHostB = activeBattle && identity === activeBattle.hostBId;
-
-          const diceAvailable = isParticipantHostA ? activeBattle.hostADiceAvailable : (isParticipantHostB ? activeBattle.hostBDiceAvailable : false);
-          const isMe = identity === userProfile?.uid;
-
-          // Check if participant is frozen (opponent block_gifts is active)
-          let isFrozen = false;
-          if (activeBattle) {
-            if (isParticipantHostA) {
-              const oppPower = activeBattle.hostBActivePower;
-              const oppExpiry = activeBattle.hostBPowerExpiry;
-              if (oppPower === 'block_gifts' && oppExpiry) {
-                const expiryMs = oppExpiry.toMillis ? oppExpiry.toMillis() : new Date(oppExpiry).getTime();
-                isFrozen = Date.now() < expiryMs;
-              }
-            } else if (isParticipantHostB) {
-              const oppPower = activeBattle.hostAActivePower;
-              const oppExpiry = activeBattle.hostAPowerExpiry;
-              if (oppPower === 'block_gifts' && oppExpiry) {
-                const expiryMs = oppExpiry.toMillis ? oppExpiry.toMillis() : new Date(oppExpiry).getTime();
-                isFrozen = Date.now() < expiryMs;
-              }
-            }
-          }
-
-          // Check if participant has shield active
-          let hasShield = false;
-          if (activeBattle) {
-            const power = isParticipantHostA ? activeBattle.hostAActivePower : (isParticipantHostB ? activeBattle.hostBActivePower : null);
-            const expiry = isParticipantHostA ? activeBattle.hostAPowerExpiry : (isParticipantHostB ? activeBattle.hostBPowerExpiry : null);
-            if (power === 'shield' && expiry) {
-              const expiryMs = expiry.toMillis ? expiry.toMillis() : new Date(expiry).getTime();
-              hasShield = Date.now() < expiryMs;
-            }
-          }
-
-          // Check if participant has double points active
-          let hasDouble = false;
-          if (activeBattle) {
-            const power = isParticipantHostA ? activeBattle.hostAActivePower : (isParticipantHostB ? activeBattle.hostBActivePower : null);
-            const expiry = isParticipantHostA ? activeBattle.hostAPowerExpiry : (isParticipantHostB ? activeBattle.hostBPowerExpiry : null);
-            if (power === 'double_points' && expiry) {
-              const expiryMs = expiry.toMillis ? expiry.toMillis() : new Date(expiry).getTime();
-              hasDouble = Date.now() < expiryMs;
-            }
-          }
-
-          const isParticipantHost = identity === live?.hostId;
-          const frame = isParticipantHost ? live?.selectedFrame : 'none';
-          const filter = isParticipantHost ? live?.selectedFilter : 'none';
-
-          // Frame Border Styles
-          let frameStyle: any = {};
-          if (frame === 'simple') {
-            frameStyle = { borderWidth: 3, borderColor: '#FFFFFF' };
-          } else if (frame === 'neon') {
-            frameStyle = { borderWidth: 3, borderColor: colors.primary };
-          } else if (frame === 'gold_vip') {
-            frameStyle = { borderWidth: 3.5, borderColor: '#FFD700' };
-          } else if (frame === 'fire') {
-            frameStyle = { borderWidth: 3.5, borderColor: '#FF4500' };
-          }
-
-          return (
-            <View key={participantSid} style={[styles.gridItem, itemStyle, frameStyle]}>
-              <VideoView
-                videoTrack={track}
-                style={styles.videoView}
-                mirror={identity === userProfile?.uid}
-              />
-
-              {/* Filter Overlays */}
-              {filter === 'retro' && (
-                <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(120, 60, 0, 0.28)', zIndex: 1 }]} />
-              )}
-              {filter === 'beauty' && (
-                <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 180, 200, 0.18)', zIndex: 1 }]} />
-              )}
-              {filter === 'neon' && (
-                <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(100, 0, 200, 0.22)', zIndex: 1 }]} />
-              )}
-              {filter === 'neon_pro' && (
-                <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0, 200, 255, 0.20)', zIndex: 1 }]} />
-              )}
-
-              {/* Active filter/frame badge (only visible to the streaming host) */}
-              {identity === userProfile?.uid && filter && filter !== 'none' && (
-                <View style={styles.filterActiveBadge} pointerEvents="none">
-                  <Text style={styles.filterActiveBadgeText}>
-                    {filter === 'retro' ? '📼 Retro' : filter === 'beauty' ? '✨ Belleza' : filter === 'neon' ? '⚡ Neon' : '🔮 Neon Pro'}
-                  </Text>
-                </View>
-              )}
-
-              {/* Frame Crown/Fire Badges */}
-              {frame === 'gold_vip' && (
-                <View style={styles.crownFrameIconContainer}>
-                  <Text style={{ fontSize: 14 }}>👑</Text>
-                </View>
-              )}
-              {frame === 'fire' && (
-                <View style={styles.crownFrameIconContainer}>
-                  <Text style={{ fontSize: 14 }}>🔥</Text>
-                </View>
-              )}
-              
-              {/* Frost Overlay */}
-              {isFrozen && (
-                <View style={styles.frostOverlay}>
-                  <Text style={styles.frostEmoji}>❄️</Text>
-                  <Text style={styles.frostText}>BLOQUEADO</Text>
-                </View>
-              )}
-
-              {/* Shield Glow aura */}
-              {hasShield && (
-                <View style={styles.shieldOverlay}>
-                  <Text style={styles.shieldEmoji}>🛡️</Text>
-                </View>
-              )}
-
-              {/* Double Points badge */}
-              {hasDouble && (
-                <View style={styles.doublePointsOverlay}>
-                  <Text style={styles.doublePointsText}>🔥 2x</Text>
-                </View>
-              )}
-
-              {/* Dice Overlay */}
-              {diceAvailable && (
-                <TouchableOpacity
-                  style={styles.floatingDice}
-                  onPress={isMe ? rollDice : undefined}
-                  disabled={!isMe}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.diceText}>❓</Text>
-                </TouchableOpacity>
-              )}
-
-              <View style={styles.participantNameTag}>
-                <Text style={styles.participantNameText} numberOfLines={1}>
-                  {displayName}
-                </Text>
-              </View>
-            </View>
-          );
-        })}
+        {activeTracks.map(({ participantSid, track, identity }) => 
+          renderTrackItem(participantSid, track, identity, itemStyle)
+        )}
       </View>
     );
   };
@@ -1112,6 +1222,53 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 10,
     fontWeight: 'bold',
+  },
+  placeholderItem: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1E1B30',
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    borderColor: '#3D385E',
+  },
+  placeholderEmoji: {
+    fontSize: 32,
+    marginBottom: spacing.xs,
+    opacity: 0.6,
+  },
+  placeholderLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: spacing.md,
+  },
+  placeholderInviteBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    elevation: 3,
+  },
+  placeholderInviteBtnText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  placeholderPlusBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderPlusBtnText: {
+    color: '#FFF',
+    fontSize: 26,
+    fontWeight: '300',
+    lineHeight: 30,
   },
 });
 export default LiveDetailsScreen;
