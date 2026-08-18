@@ -33,6 +33,7 @@ import { HostThankYouButton } from '../../components/lives/HostThankYouButton';
 import { PkHostSearchModal } from '../../components/pk/PkHostSearchModal';
 import { PkResultModal } from '../../components/pk/PkResultModal';
 import { PkTopContributorsPanel } from '../../components/pk/PkTopContributorsPanel';
+import { TapLikeOverlay } from '../../components/lives/TapLikeOverlay';
 import { inviteCoHost, listenToCoHostInvites, respondToCoHostInvite, updateLive } from '../../services/firebase/firestore';
 
 export const LiveDetailsScreen = ({ route, navigation }: any) => {
@@ -500,6 +501,15 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
             />
           )}
           
+          {/* 👍 Tap Like Overlay — full-screen tap zone over video */}
+          {live && (
+            <TapLikeOverlay
+              liveId={liveId}
+              totalLikes={live?.likesCount || 0}
+              likesPerMinute={0}
+            />
+          )}
+
           {/* Top Overlays */}
           {live && (
             <LiveHeaderOverlay
@@ -597,7 +607,7 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
       {/* PK Result Modal */}
       <PkResultModal
         visible={pkResultModalVisible}
-        battle={pkBattle}
+        battle={activeBattle}
         onClose={() => setPkResultModalVisible(false)}
       />
 

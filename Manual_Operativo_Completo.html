@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Operativo Maestro - PartyLive</title>
+    <style>
+        :root {
+            --primary: #d946ef;
+            --primary-dark: #a21caf;
+            --background: #0f0f16;
+            --surface: #1e1e2d;
+            --surface-hover: #2b2b3d;
+            --text: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border: #374151;
+            --accent: #f59e0b;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e1b4b 0%, #311042 100%);
+            padding: 40px 20px;
+            text-align: center;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.8rem;
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(217, 70, 239, 0.4);
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        nav.toc {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 40px;
+        }
+
+        nav.toc h2 {
+            margin-top: 0;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        nav.toc ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        nav.toc li {
+            margin: 10px 0;
+        }
+
+        nav.toc a {
+            color: var(--text);
+            text-decoration: none;
+            transition: color 0.2s;
+            font-weight: 500;
+        }
+
+        nav.toc a:hover {
+            color: var(--primary);
+        }
+
+        section {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 35px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        section h2 {
+            color: var(--primary);
+            font-size: 1.8rem;
+            margin-top: 0;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        section h3 {
+            color: var(--accent);
+            font-size: 1.3rem;
+            margin-top: 25px;
+        }
+
+        p {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            text-align: justify;
+        }
+
+        strong {
+            color: #ffffff;
+        }
+
+        .alert {
+            background-color: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 20px 0;
+        }
+
+        .alert-title {
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 5px;
+        }
+
+        .alert-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--success);
+            color: var(--success);
+        }
+        .alert-success .alert-title {
+            color: var(--success);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: rgba(219, 70, 239, 0.15);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        ul.features-list {
+            padding-left: 20px;
+        }
+
+        ul.features-list li {
+            margin-bottom: 10px;
+            color: var(--text-muted);
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>PartyLive</h1>
+        <p>Manual Operativo Maestro Completo del Ecosistema PartyLiveApp</p>
+    </header>
+
+    <div class="container">
+        
+        <nav class="toc">
+            <h2>Índice General Meticuloso</h2>
+            <ul>
+                <li><a href="#intro">1. Introducción y Arquitectura General</a></li>
+                <li><a href="#auth">2. Flujo de Autenticación, Registro y setup de Perfil</a></li>
+                <li><a href="#navigation">3. Estructura de Navegación (Bottom Tabs y Stacks)</a></li>
+                <li><a href="#voice-rooms">4. Salas de Voz (Voice Rooms) y Asientos de Micro</a></li>
+                <li><a href="#roles">5. Matriz Exhaustiva de Roles y Permisos de Salas</a></li>
+                <li><a href="#lives">6. Transmisiones en Vivo (Lives) y Batallas PK</a></li>
+                <li><a href="#karaoke">7. Karaoke, Cola de Canto e Instrumentales</a></li>
+                <li><a href="#wallet">8. Economía Virtual: Billetera, Monedas y Diamantes</a></li>
+                <li><a href="#monetization">9. Monetización, Panel de Creadores y Agencias</a></li>
+                <li><a href="#missions">10. Misiones Diarias y Prevención de Abuso (Anti-Spam)</a></li>
+                <li><a href="#social">11. Redes Sociales, Clips Cortos y Mensajería DM</a></li>
+                <li><a href="#moderation">12. Consola de Administración y Moderación Regional</a></li>
+            </ul>
+        </nav>
+
+        <section id="intro">
+            <h2>1. Introducción y Arquitectura General</h2>
+            <p><strong>PartyLive</strong> es un ecosistema social móvil premium diseñado para la interacción interactiva en tiempo real mediante transmisión de voz de alta fidelidad, Lives de video HD, sistemas de juego integrados y monetización descentralizada para creadores. La aplicación aprovecha protocolos de comunicación modernos para asegurar una latencia ultra baja.</p>
+            
+            <h3>La Estructura Técnica:</h3>
+            <ul class="features-list">
+                <li><strong>React Native (App Cliente):</strong> Controla la visualización móvil en Android e iOS utilizando optimización de ciclos de render para animaciones de regalos.</li>
+                <li><strong>Firebase Admin & Firestore:</strong> Motor reactivo de base de datos. Controla el chat en vivo, el estado de los micrófonos de salas y las invitaciones a batallas PK.</li>
+                <li><strong>LiveKit (Servidor WebRTC):</strong> Servidor de streaming de audio/video de baja latencia auto-hospedado en local o staging. Maneja los flujos SFU para transmisiones grupales.</li>
+                <li><strong>Node.js Backend Server:</strong> Encargado de los procesos que requieren seguridad criptográfica como compras, retiros de dinero real y validaciones de seguridad económica.</li>
+            </ul>
+        </section>
+
+        <section id="auth">
+            <h2>2. Flujo de Autenticación, Registro y setup de Perfil</h2>
+            <p>La incorporación de los usuarios cuenta con flujos optimizados para prevenir cuentas duplicadas y registros maliciosos:</p>
+            <ul class="features-list">
+                <li><strong>Registro Social:</strong> Integración fluida con Google Sign-In que recupera datos básicos como el avatar oficial y el correo electrónico verificado.</li>
+                <li><strong>Formulario Profile Setup:</strong> Obligatorio al registrarse. Requiere un Nombre de usuario único, Avatar cargado localmente, Género y Fecha de Nacimiento (para validar que el usuario no sea menor de edad).</li>
+                <li><strong>Colección <code>users</code> en Firestore:</strong> Mantiene los metadatos globales de la cuenta, incluyendo estadísticas agregadas de uso y estado de VIP activo.</li>
+            </ul>
+        </section>
+
+        <section id="navigation">
+            <h2>3. Estructura de Navegación (Bottom Tabs y Stacks)</h2>
+            <p>La navegación utiliza React Navigation estructurado para no saturar los hilos de render:</p>
+            <ul class="features-list">
+                <li><strong>Bottom Tabs (Navegador Inferior):</strong> Acceso constante a las pantallas principales:
+                    <ul>
+                        <li><strong>Home Tab:</strong> Carruseles, accesos directos a minijuegos y banners de Host Dashboard.</li>
+                        <li><strong>Rooms Tab:</strong> Filtro de salas por categorías.</li>
+                        <li><strong>Lives Tab:</strong> Transmisiones de video activas.</li>
+                        <li><strong>Games Tab:</strong> Central de matchmaking y listado de juegos.</li>
+                        <li><strong>Profile Tab:</strong> Estadísticas de usuario, inventario e ingresos.</li>
+                    </ul>
+                </li>
+                <li><strong>Main Stack (Navegador de Pila):</strong> Carga pantallas de juego o salas que requieren ocultar las pestañas inferiores y tomar pantalla completa para una inmersión total.</li>
+            </ul>
+        </section>
+
+        <section id="voice-rooms">
+            <h2>4. Salas de Voz (Voice Rooms) y Asientos de Micro</h2>
+            <p>Las salas de voz de PartyLive permiten la interacción grupal a través de voz en tiempo real con capacidad para cientos de oyentes interactuando mediante chat y envío de regalos.</p>
+            <ul class="features-list">
+                <li><strong>Mesa de Micrófonos:</strong> Una cuadrícula interactiva de 8 a 12 asientos virtuales. Ocupar un asiento activa la conexión de audio con el servidor LiveKit local.</li>
+                <li><strong>Flujo de Solicitud de Micro (Mic Request):</strong> Los oyentes solicitan hablar y su petición ingresa a una subcolección en tiempo real. Un administrador o el dueño aprueba la petición y el usuario sube al asiento.</li>
+                <li><strong>Control de Micrófonos:</strong> Cada asiento puede bloquearse o desbloquearse. El propietario de la sala puede silenciar local y remotamente el audio de cualquier asiento.</li>
+            </ul>
+        </section>
+
+        <section id="roles">
+            <h2>5. Matriz Exhaustiva de Roles y Permisos de Salas</h2>
+            <p>Para asegurar una excelente moderación y evitar abusos, existe una matriz jerárquica inmutable definida en el archivo de configuración de seguridad de la sala:</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Acción / Permiso</th>
+                        <th>Owner</th>
+                        <th>Host</th>
+                        <th>Moderator</th>
+                        <th>Speaker</th>
+                        <th>Listener</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>CLOSE_ROOM</strong> (Finalizar Sala)</td>
+                        <td>✅</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ASSIGN_HOST / REMOVE_HOST</strong></td>
+                        <td>✅</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ASSIGN_MODERATOR</strong></td>
+                        <td>✅</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                    </tr>
+                    <tr>
+                        <td><strong>APPROVE_MIC_REQUEST</strong></td>
+                        <td>✅</td>
+                        <td>✅</td>
+                        <td>✅ (Si está activado)</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                    </tr>
+                    <tr>
+                        <td><strong>LOCK_MIC_SEAT</strong> (Bloquear Asiento)</td>
+                        <td>✅</td>
+                        <td>✅</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MUTE_MEMBER</strong> (Silenciar Orador)</td>
+                        <td>✅</td>
+                        <td>✅</td>
+                        <td>✅</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                    </tr>
+                    <tr>
+                        <td><strong>KICK_MEMBER</strong> (Expulsar de Sala)</td>
+                        <td>✅</td>
+                        <td>❌</td>
+                        <td>✅</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                    </tr>
+                    <tr>
+                        <td><strong>DELETE_MESSAGE</strong> (Moderación de Chat)</td>
+                        <td>✅</td>
+                        <td>✅</td>
+                        <td>✅</td>
+                        <td>❌</td>
+                        <td>❌</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Reglas de Gestión Jerárquica:</h3>
+            <ul class="features-list">
+                <li>El <strong>Owner</strong> puede degradar y expulsar a cualquier miembro sin restricciones.</li>
+                <li>El <strong>Host</strong> puede moderar a moderadores, speakers y oyentes, pero nunca a otros hosts ni al dueño.</li>
+                <li>El <strong>Moderador</strong> solo puede moderar a speakers y oyentes.</li>
+                <li>El sistema de logs inmutable registra cada acción en <code>rooms/{roomId}/moderationLogs</code> para auditorías de soporte.</li>
+            </ul>
+        </section>
+
+        <section id="lives">
+            <h2>6. Transmisiones en Vivo (Lives) y Batallas PK</h2>
+            <p>Los creadores aprobados transmiten video y audio en tiempo real directamente a su audiencia. La aplicación incluye la funcionalidad competitiva de **Batallas PK**:</p>
+            <ul class="features-list">
+                <li><strong>Emparejamiento PK:</strong> Los hosts pueden buscar oponentes en la pantalla "PK Discovery" o invitar a un host amigo.</li>
+                <li><strong>Progreso de la Batalla:</strong> Durante la batalla PK (de 3 a 5 minutos), la pantalla se divide en dos. Los hosts interactúan mientras el público envía regalos para darles puntos.</li>
+                <li><strong>Barra de Progreso Bicolor:</strong> Muestra en tiempo real qué host lleva la delantera basado en la cantidad de diamantes recibidos.</li>
+                <li><strong>Punishment Time (Tiempo de Reto):</strong> Al finalizar la cuenta atrás, el host perdedor debe realizar una actividad divertida impuesta por el ganador mientras dura el tiempo de penalización.</li>
+            </ul>
+        </section>
+
+        <section id="karaoke">
+            <h2>7. Karaoke, Cola de Canto e Instrumentales</h2>
+            <p>El karaoke está diseñado para convertir salas en bares virtuales de música:</p>
+            <ul class="features-list">
+                <li><strong>Peticiones Instrumentales:</strong> Los usuarios agregan canciones a una cola. Las letras y tempos se sincronizan en pantalla para el cantante.</li>
+                <li><strong>Audio Mezclado:</strong> El sistema de audio de la aplicación mezcla la pista instrumental reproducida desde la nube con el audio del micrófono del usuario y los reproduce con baja latencia a toda la sala mediante LiveKit.</li>
+            </ul>
+        </section>
+
+        <section id="wallet">
+            <h2>8. Economía Virtual: Billetera, Monedas y Diamantes</h2>
+            <p>La economía de la aplicación cuenta con un flujo seguro en el backend para evitar inyecciones ilícitas de saldo:</p>
+            
+            <h3>La Estructura de Balance Dual:</h3>
+            <ul>
+                <li><strong>Coins (Monedas) 🪙:</strong> Moneda que los usuarios compran con dinero real para enviar regalos a los creadores de contenido. No son retirables.</li>
+                <li><strong>Diamonds (Diamantes) 💎:</strong> Moneda que reciben los hosts al recibir un regalo de monedas (equivalente al 50% del valor del regalo). Se acumulan para el retiro de ganancias reales.</li>
+            </ul>
+
+            <div class="alert">
+                <div class="alert-title">Auditoría Transaccional</div>
+                <p>Las escrituras en las billeteras y transacciones están bloqueadas a nivel de Firestore rules. Todo consumo de saldo se procesa atómicamente a través de transacciones en el Backend Server de Node.js.</p>
+            </div>
+        </section>
+
+        <section id="monetization">
+            <h2>9. Monetización, Panel de Creadores y Agencias</h2>
+            <p>Los creadores de contenido (Hosts) y administradores de agencias cuentan con paneles especializados para monitorear e iniciar solicitudes de retiro de ganancias reales basadas en las siguientes especificaciones inmutables de negocio:</p>
+            
+            <h3>Reglas de Conversión Financiera y Retiros:</h3>
+            <ul class="features-list">
+                <li><strong>Tasa de Conversión Oficial:</strong> 10,000 Diamantes = $50 USD ($0.005 USD por cada Diamante recibido).</li>
+                <li><strong>Monto Mínimo de Retiro:</strong> 10,000 Diamantes ($50 USD). La aplicación bloquea cualquier solicitud por debajo de esta meta.</li>
+                <li><strong>Comisión de Plataforma:</strong> Actualmente es de $0 USD (100% de la conversión para el creador, libre de comisiones de PartyLive).</li>
+                <li><strong>Métodos de Cobro Soportados:</strong> PayPal (correo electrónico de cuenta), Transferencia Bancaria Directa (Nombre del titular, Banco, Número de cuenta, Código de ruta/interbancario) y Payoneer.</li>
+                <li><strong>Frecuencia de Pago:</strong> Retiros manuales procesados por el equipo de finanzas en un plazo de 1 a 3 días hábiles.</li>
+            </ul>
+
+            <h3>Ciclo de Vida y Estados de una Solicitud de Retiro:</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Estado del Retiro</th>
+                        <th>Acción en Firestore y Billetera</th>
+                        <th>Derecho a Cancelación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Solicitado (<code>pending</code>)</strong></td>
+                        <td>Los diamantes se deducen del balance disponible (<code>availableDiamonds</code>) y se bloquean en la billetera del host (<code>lockedDiamonds</code>) para evitar que se vuelvan a gastar. Se genera una transacción inmutable de tipo <code>withdrawal</code> en <code>walletTransactions</code>.</td>
+                        <td>✅ El Host puede cancelar la solicitud desde su app. Los diamantes bloqueados se reembolsan a su saldo disponible.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Aprobado (<code>approved</code>)</strong></td>
+                        <td>El administrador revisa el comportamiento del Host para asegurar que no hubo fraude de auto-donación o infracciones de contenido. Los fondos se preparan para envío.</td>
+                        <td>❌ El Host ya no puede cancelar la solicitud de retiro.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pagado (<code>paid</code>)</strong></td>
+                        <td>El administrador realiza la transferencia de dinero real (PayPal/Banco) y marca la transacción como completada. Los diamantes se eliminan definitivamente del saldo bloqueado y se incrementa el acumulado histórico (<code>lifetimeDiamondsWithdrawn</code>).</td>
+                        <td>❌ Completado.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Rechazado (<code>rejected</code>)</strong></td>
+                        <td>Si hay errores en los datos de la cuenta o sospecha de fraude, el administrador cancela la transacción. Los diamantes bloqueados se devuelven al saldo disponible del host y la transacción se marca como fallida.</td>
+                        <td>❌ Cancelado por el Admin.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Estructura de Agencias:</h3>
+            <ul class="features-list">
+                <li><strong>Reclutamiento:</strong> Los dueños de agencias vinculan hosts oficiales enviando solicitudes de vinculación desde el panel administrativo.</li>
+                <li><strong>Control de Rendimiento:</strong> Permite ver estadísticas agregadas de horas de transmisión y diamantes acumulados de todos los hosts asociados en tiempo real.</li>
+                <li><strong>Comisión de Agencia:</strong> Los dueños reciben un porcentaje configurado automáticamente sobre las ganancias de sus hosts por su rol de reclutamiento y soporte.</li>
+            </ul>
+        </section>
+
+        <section id="missions">
+            <h2>10. Misiones Diarias y Prevención de Abuso (Anti-Spam)</h2>
+            <p>PartyLive premia la constancia de los usuarios a través de misiones diarias (reinicio a las 00:00 UTC) y misiones semanales.</p>
+
+            <h3>Mecanismos de Seguridad del Anti-Abuse Service:</h3>
+            <ul class="features-list">
+                <li><strong>Spam Limit:</strong> Máximo de 10 actualizaciones de progreso de misiones por minuto para evitar hackeos de peticiones HTTP.</li>
+                <li><strong>Join Room Rapid Fire:</strong> El progreso para la misión de "Unirse a Salas" se congela si el usuario entra y sale repetidamente de la misma sala en menos de 30 segundos.</li>
+                <li><strong>Longitud de Mensajes:</strong> Solo los mensajes de chat con más de 2 caracteres cuentan para el progreso de la misión de escritura de chat.</li>
+                <li><strong>Filtro de Fraude:</strong> Cualquier usuario con una puntuación de riesgo alta en `/fraudSignals` queda bloqueado para reclamar recompensas.</li>
+            </ul>
+        </section>
+
+        <section id="social">
+            <h2>11. Redes Sociales, Clips Cortos y Mensajería DM</h2>
+            <p>La retención de usuarios se complementa con herramientas de socialización asincrónica:</p>
+            <ul class="features-list">
+                <li><strong>Direct Messages (DM):</strong> Chats individuales seguros. Si dos usuarios no se siguen mutuamente, los mensajes entrantes se clasifican en **Message Requests** (Solicitudes de Mensaje) para evitar spam de desconocidos.</li>
+                <li><strong>Social Feed (Muro):</strong> Muestra publicaciones, fotos y estados del círculo de amigos del usuario.</li>
+                <li><strong>Clips Feed:</strong> Un reproductor continuo de videos verticales tipo reel que permite descubrir nuevos creadores de contenido y hosts activos en tiempo real.</li>
+            </ul>
+        </section>
+
+        <section id="moderation">
+            <h2>12. Consola de Administración y Moderación Regional</h2>
+            <p>El panel de administración web accesible por moderadores oficiales permite mantener el ecosistema libre de conductas tóxicas o ilegales:</p>
+            <ul class="features-list">
+                <li><strong>Report Center (Centro de Reportes):</strong> Recibe reportes enviados por usuarios sobre salas, perfiles o transmisiones inapropiadas.</li>
+                <li><strong>Disciplinary Actions (Acciones de Control):</strong> Los moderadores pueden aplicar suspensiones temporales o permanentes, revocar el estatus de Host Oficial y aplicar **Baneos por Dispositivo (Device Ban)** bloqueando el identificador del hardware del celular.</li>
+            </ul>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 PartyLive Inc. Manual Técnico Operativo Maestro v1.4.</p>
+        </footer>
+
+    </div>
+
+</body>
+</html>

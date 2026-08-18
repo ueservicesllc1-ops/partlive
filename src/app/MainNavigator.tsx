@@ -55,7 +55,45 @@ import { ClipsFeedScreen } from '../screens/clips/ClipsFeedScreen';
 import { MySubscriptionsScreen } from '../screens/profile/MySubscriptionsScreen';
 import { ReferralDashboardScreen } from '../screens/profile/ReferralDashboardScreen';
 import { AdminControlCenterScreen } from '../screens/admin/AdminControlCenterScreen';
-import { SocialFeedScreen } from '../screens/social/SocialFeedScreen';
+import { CreatorStudioScreen } from '../screens/host/CreatorStudioScreen';
+import { MusicAdminCenterScreen } from '../screens/admin/MusicAdminCenterScreen';
+import { SafetyCenterScreen } from '../screens/profile/SafetyCenterScreen';
+import { InAppNotificationCenterScreen } from '../screens/notifications/InAppNotificationCenterScreen';
+import { HelpCenterScreen } from '../screens/support/HelpCenterScreen';
+import { AdminRegionalCenterScreen } from '../screens/admin/AdminRegionalCenterScreen';
+import { AdminMonetizationCenterScreen } from '../screens/admin/AdminMonetizationCenterScreen';
+import { AdminCreatorCenterScreen } from '../screens/admin/AdminCreatorCenterScreen';
+import { AdminDiscoveryCenterScreen } from '../screens/admin/AdminDiscoveryCenterScreen';
+import { AdminGamificationCenterScreen } from '../screens/admin/AdminGamificationCenterScreen';
+import { AdminSafetyCenterScreen } from '../screens/admin/AdminSafetyCenterScreen';
+import { AdminSuperCenterScreen } from '../screens/admin/AdminSuperCenterScreen';
+import { AdminComplianceCenterScreen } from '../screens/admin/AdminComplianceCenterScreen';
+import { AdminProductionCenterScreen } from '../screens/admin/AdminProductionCenterScreen';
+import { AdminPerformanceCenterScreen } from '../screens/admin/AdminPerformanceCenterScreen';
+import { AdminQACenterScreen } from '../screens/admin/AdminQACenterScreen';
+import { AdminLaunchCenterScreen } from '../screens/admin/AdminLaunchCenterScreen';
+import { AdminGrowthCenterScreen } from '../screens/admin/AdminGrowthCenterScreen';
+import { AdminCFOCenterScreen } from '../screens/admin/AdminCFOCenterScreen';
+import { AdminExpansionCenterScreen } from '../screens/admin/AdminExpansionCenterScreen';
+import { AdminAICenterScreen } from '../screens/admin/AdminAICenterScreen';
+import { CreatorStudioProScreen } from '../screens/host/CreatorStudioProScreen';
+import { AdminLiveEngagementScreen } from '../screens/admin/AdminLiveEngagementScreen';
+import { AdminViralGrowthCenterScreen } from '../screens/admin/AdminViralGrowthCenterScreen';
+import { AdminTrustSafetyScreen } from '../screens/admin/AdminTrustSafetyScreen';
+import { AdminCommandCenterScreen } from '../screens/admin/AdminCommandCenterScreen';
+import { AdminInfrastructureCenterScreen } from '../screens/admin/AdminInfrastructureCenterScreen';
+import { AdminDataIntelligenceScreen } from '../screens/admin/AdminDataIntelligenceScreen';
+import { AdminSubscriptionCenterScreen } from '../screens/admin/AdminSubscriptionCenterScreen';
+import { AdminOfferCenterScreen } from '../screens/admin/AdminOfferCenterScreen';
+import { AdminGrowthAcquisitionScreen } from '../screens/admin/AdminGrowthAcquisitionScreen';
+import { AdminTrustSafety2Screen } from '../screens/admin/AdminTrustSafety2Screen';
+import { AdminGlobalizationCenterScreen } from '../screens/admin/AdminGlobalizationCenterScreen';
+import { AdminInfrastructure2Screen } from '../screens/admin/AdminInfrastructure2Screen';
+import { AdminComplianceLaunchScreen } from '../screens/admin/AdminComplianceLaunchScreen';
+import { AdminUxConversionScreen } from '../screens/admin/AdminUxConversionScreen';
+import { AdminMasterAuditScreen } from '../screens/admin/AdminMasterAuditScreen';
+import { AdminLiveOperationsScreen } from '../screens/admin/AdminLiveOperationsScreen';
+import { AdminCreatorEconomy2Screen } from '../screens/admin/AdminCreatorEconomy2Screen';
 import { AgencyApplicationScreen } from '../screens/host/AgencyApplicationScreen';
 import { AgencyDashboardScreen } from '../screens/host/AgencyDashboardScreen';
 import { AgencyHostsScreen } from '../screens/host/AgencyHostsScreen';
@@ -137,7 +175,45 @@ export const MainNavigator = () => {
       <Stack.Screen name={MAIN_ROUTES.MY_SUBSCRIPTIONS} component={MySubscriptionsScreen} />
       <Stack.Screen name={MAIN_ROUTES.REFERRAL_DASHBOARD} component={ReferralDashboardScreen} />
       <Stack.Screen name={MAIN_ROUTES.ADMIN_CONTROL_CENTER} component={AdminControlCenterScreen} />
-      <Stack.Screen name={MAIN_ROUTES.SOCIAL_FEED} component={SocialFeedScreen} />
+      <Stack.Screen name={MAIN_ROUTES.CREATOR_STUDIO} component={CreatorStudioScreen} />
+      <Stack.Screen name={MAIN_ROUTES.MUSIC_ADMIN_CENTER} component={MusicAdminCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.SAFETY_CENTER} component={SafetyCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.NOTIFICATION_CENTER} component={InAppNotificationCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.HELP_CENTER} component={HelpCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_REGIONAL_CENTER} component={AdminRegionalCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_MONETIZATION_CENTER} component={AdminMonetizationCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_CREATOR_CENTER} component={AdminCreatorCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_DISCOVERY_CENTER} component={AdminDiscoveryCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_GAMIFICATION_CENTER} component={AdminGamificationCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_SAFETY_CENTER} component={AdminSafetyCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_SUPER_CENTER} component={AdminSuperCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_COMPLIANCE_CENTER} component={AdminComplianceCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_PRODUCTION_CENTER} component={AdminProductionCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_PERFORMANCE_CENTER} component={AdminPerformanceCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_QA_CENTER} component={AdminQACenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_LAUNCH_CENTER} component={AdminLaunchCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_GROWTH_CENTER} component={AdminGrowthCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_CFO_CENTER} component={AdminCFOCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_EXPANSION_CENTER} component={AdminExpansionCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_AI_CENTER} component={AdminAICenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.CREATOR_STUDIO_PRO} component={CreatorStudioProScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_LIVE_ENGAGEMENT} component={AdminLiveEngagementScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_VIRAL_GROWTH_CENTER} component={AdminViralGrowthCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_TRUST_SAFETY} component={AdminTrustSafetyScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_COMMAND_CENTER} component={AdminCommandCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_INFRASTRUCTURE_CENTER} component={AdminInfrastructureCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_DATA_INTELLIGENCE} component={AdminDataIntelligenceScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_SUBSCRIPTION_CENTER} component={AdminSubscriptionCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_OFFER_CENTER} component={AdminOfferCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_GROWTH_ACQUISITION} component={AdminGrowthAcquisitionScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_TRUST_SAFETY_2} component={AdminTrustSafety2Screen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_GLOBALIZATION_CENTER} component={AdminGlobalizationCenterScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_INFRASTRUCTURE_2} component={AdminInfrastructure2Screen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_COMPLIANCE_LAUNCH} component={AdminComplianceLaunchScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_UX_CONVERSION} component={AdminUxConversionScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_MASTER_AUDIT} component={AdminMasterAuditScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_LIVE_OPERATIONS} component={AdminLiveOperationsScreen} />
+      <Stack.Screen name={MAIN_ROUTES.ADMIN_CREATOR_ECONOMY_2} component={AdminCreatorEconomy2Screen} />
       <Stack.Screen name={MAIN_ROUTES.AGENCY_APPLICATION} component={AgencyApplicationScreen} />
       <Stack.Screen name={MAIN_ROUTES.AGENCY_DASHBOARD} component={AgencyDashboardScreen} />
       <Stack.Screen name={MAIN_ROUTES.AGENCY_HOSTS} component={AgencyHostsScreen} />
