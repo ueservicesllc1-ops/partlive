@@ -66,6 +66,10 @@ export const recordRevenueEvent = async (
   return entry;
 };
 
+export const recordDiamondPurchaseRevenue = async (priceUsd: number, totalDiamonds: number) => {
+  return await recordRevenueEvent('COIN_PURCHASE', `tx_${Date.now()}`, 'system', priceUsd);
+};
+
 export const processRefundReversal = async (revenueId: string, reason?: string): Promise<void> => {
   const ledgerRef = db.collection('revenueLedger').doc(revenueId);
 
@@ -130,3 +134,54 @@ export const getPlatformRevenueDashboard = async (): Promise<any> => {
     netPlatformRevenue,
   };
 };
+
+export const recordGiftPlatformMargin = async (
+  diamondsSpent: number,
+  beansToHost: number,
+  beansToAgency: number
+): Promise<void> => {
+  const dateStr = new Date().toISOString().split('T')[0];
+  const revenueRef = db.collection('platformRevenue').doc(dateStr);
+  const now = admin.firestore.FieldValue.serverTimestamp();
+
+  const platformRetainedBeans = Math.max(0, diamondsSpent - beansToHost - beansToAgency);
+
+  await db.runTransaction(async (transaction) => {
+    const snap = await transaction.get(revenueRef);
+    if (!snap.exists) {
+      transaction.set(revenueRef, {
+        period: dateStr,
+        diamondsSold: 0,
+        revenueUsd: 0,
+        platformBeansEquivalent: platformRetainedBeans,
+        hostBeansPaid: beansToHost,
+        agencyCommissionBeans: beansToAgency,
+        payoutUsd: 0,
+        estimatedMarginPercent: diamondsSpent > 0 ? (platformRetainedBeans / diamondsSpent) * 100 : 0,
+        giftsSentCount: 1,
+        activePayingUsers: 1,
+        activeHosts: 1,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } else {
+      transaction.update(revenueRef, {
+        platformBeansEquivalent: admin.firestore.FieldValue.increment(platformRetainedBeans),
+        hostBeansPaid: admin.firestore.FieldValue.increment(beansToHost),
+        agencyCommissionBeans: admin.firestore.FieldValue.increment(beansToAgency),
+        giftsSentCount: admin.firestore.FieldValue.increment(1),
+        updatedAt: now,
+      });
+    }
+  });
+};
+
+export const getRevenueSummary = async (limitDays = 30): Promise<any[]> => {
+  const snap = await db.collection('platformRevenue')
+    .orderBy('period', 'desc')
+    .limit(limitDays)
+    .get();
+
+  return snap.docs.map(doc => doc.data());
+};
+
