@@ -16,6 +16,15 @@ import { generateInviteCode } from '../../../utils/inviteCode';
 
 const db = firestore;
 
+/** Remove keys whose value is `undefined` — Firestore rejects them. */
+const stripUndefined = <T extends Record<string, any>>(obj: T): T => {
+  const clean = { ...obj };
+  for (const key of Object.keys(clean)) {
+    if (clean[key] === undefined) delete clean[key];
+  }
+  return clean;
+};
+
 // ─── Session CRUD ──────────────────────────────────────────────────────────────
 
 export const createGameSession = async (
@@ -50,10 +59,10 @@ export const createGameSession = async (
     maxPlayers: options.maxPlayers,
     playerCount: 0,
     visibility: options.visibility || 'public',
-    inviteCode: options.inviteCode,
+    inviteCode: options.inviteCode ?? null,
     invitedUserIds: options.invitedUserIds || [],
-    region: options.region,
-    language: options.language,
+    region: options.region ?? null,
+    language: options.language ?? null,
     skillLevel: options.skillLevel || 'any',
     matchmakingEnabled: options.matchmakingEnabled !== undefined ? options.matchmakingEnabled : true,
     expiresAt: options.expiresAt || null,
@@ -98,13 +107,13 @@ export const joinGameSession = async (
 ) => {
   const playerRef = db().collection(getGameSessionPlayersPath(sessionId)).doc(player.userId);
 
-  const playerData: GamePlayer = {
+  const playerData: GamePlayer = stripUndefined({
     ...player,
     score: 0,
     roundsWon: 0,
     isReady: false,
     joinedAt: firestore.FieldValue.serverTimestamp(),
-  };
+  });
 
   await playerRef.set(playerData);
   await db()

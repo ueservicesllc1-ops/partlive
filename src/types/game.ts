@@ -1,6 +1,9 @@
 // ─── Game Types ─────────────────────────────────────────────────────────────
 
 export type GameType =
+  | 'billiards'
+  | 'blackjack'
+  | 'parchis'
   | 'trivia'
   | 'rock_paper_scissors'
   | 'dice'
@@ -175,11 +178,19 @@ export interface GameCardData {
   estimatedMinutes: number;
 }
 
+export interface TriviaCategory {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+}
+
 export interface TriviaQuestion {
   id: string;
   question: string;
   options: string[];
   correctIndex: number;
-  category: string;
+  categoryId: string;
+  level: number;
   difficulty: 'easy' | 'medium' | 'hard';
 }

@@ -11,6 +11,7 @@ export interface Room {
   countryName?: string;
   languageCode?: string;
   languageName?: string;
+  roomType?: 'voice' | 'karaoke' | 'dj';
   visibility: 'public' | 'private' | 'vip';
   accessType: 'open' | 'password' | 'approval' | 'invite_only';
   passwordHash?: string;
@@ -28,6 +29,13 @@ export interface Room {
   lockedSeats?: number[];
   tags?: string[];
   coverImageUrl?: string;
+  activeSong?: {
+    videoId: string;
+    title: string;
+    addedBy: string;
+    addedAt: any;
+    isPlaying: boolean;
+  };
   isPrivate?: boolean;
   createdAt: any;
   updatedAt: any;

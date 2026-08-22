@@ -1,5 +1,6 @@
 import { db } from '../config/firebase';
 import * as admin from 'firebase-admin';
+import { createNotificationAndPush } from './notificationService';
 
 // Check if user is banned from the voice room
 export const isUserBannedFromRoom = async (userId: string, roomId: string): Promise<{ banned: boolean; reason?: string }> => {
@@ -150,6 +151,35 @@ export const inviteUserToRoom = async (actorId: string, roomId: string, invitedU
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   };
   await inviteRef.set(inviteData);
+
+  // Send push notification to the invited user
+  try {
+    const [actorSnap, roomSnap] = await Promise.all([
+      db.collection('users').doc(actorId).get(),
+      db.collection('rooms').doc(roomId).get(),
+    ]);
+    const actorName = actorSnap.exists ? (actorSnap.data()?.displayName || actorSnap.data()?.username || 'Alguien') : 'Alguien';
+    const roomName = roomSnap.exists ? (roomSnap.data()?.name || 'una sala') : 'una sala';
+
+    await createNotificationAndPush({
+      userId: invitedUserId,
+      type: 'room_invite',
+      channel: 'both',
+      title: `🎙️ Invitación de ${actorName}`,
+      body: `Te invitó a unirte a "${roomName}"`,
+      actionType: 'open_room',
+      actionValue: roomId,
+      data: {
+        roomId,
+        inviteId: inviteRef.id,
+        invitedBy: actorId,
+      },
+    });
+  } catch (err) {
+    console.error('[RoomAccess] Error sending room invite push:', err);
+    // Don't throw — invite was already saved
+  }
+
   return inviteData;
 };
 

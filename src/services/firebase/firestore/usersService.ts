@@ -164,7 +164,7 @@ export const ensureUserProfile = async (firebaseUser: FirebaseAuthTypes.User): P
       displayName: displayName || email?.split('@')[0] || 'Nuevo Usuario',
       username: '', // Enforce profile setup for username
       email: email || undefined,
-      photoURL: photoURL || undefined,
+      photoURL: photoURL || null,
       level: 1,
       xp: 0,
       diamonds: 0,

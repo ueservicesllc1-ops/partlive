@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ChatMessage } from '../../types';
 import { colors, spacing } from '../../theme';
@@ -9,7 +9,26 @@ interface RoomMessageItemProps {
 }
 
 export const RoomMessageItem: React.FC<RoomMessageItemProps> = ({ message }) => {
+  const [visible, setVisible] = useState(true);
+
+  // Auto-hide system messages after 3 seconds
+  useEffect(() => {
+    if (message.type === 'system') {
+      const msgTime = message.createdAt?.toMillis?.() || Date.now();
+      const age = Date.now() - msgTime;
+      const timeToHide = 3000 - age;
+
+      if (timeToHide > 0) {
+        const timer = setTimeout(() => setVisible(false), timeToHide);
+        return () => clearTimeout(timer);
+      } else {
+        setVisible(false);
+      }
+    }
+  }, [message]);
+
   if (message.type === 'system') {
+    if (!visible) return null;
     return (
       <View style={styles.systemContainer}>
         <Text style={styles.systemText}>{message.text}</Text>

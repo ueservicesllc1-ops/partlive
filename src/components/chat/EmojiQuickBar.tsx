@@ -36,11 +36,12 @@ export const EmojiQuickBar: React.FC<EmojiQuickBarProps> = ({ onSendEmoji, disab
 
 const styles = StyleSheet.create({
   container: {
-    height: 42,
+    minHeight: 50,
     backgroundColor: '#1E1B30',
-    borderRadius: 20,
+    borderRadius: 25,
     justifyContent: 'center',
     paddingHorizontal: 8,
+    paddingVertical: 4,
     borderWidth: 1,
     borderColor: '#292440',
     marginBottom: 6,
@@ -56,9 +57,13 @@ const styles = StyleSheet.create({
   },
   emojiBtn: {
     paddingHorizontal: 6,
-    paddingVertical: 4,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emojiText: {
-    fontSize: 20,
+    fontSize: 24,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

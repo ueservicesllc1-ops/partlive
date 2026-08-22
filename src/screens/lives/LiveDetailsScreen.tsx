@@ -232,12 +232,15 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
       frameStyle = { borderWidth: 3.5, borderColor: '#FF4500' };
     }
 
+    const isBattleMode = live?.streamMode === 'battle';
+
     return (
       <View key={participantSid} style={[styles.gridItem, itemStyle, frameStyle]}>
         <VideoView
           videoTrack={track}
           style={styles.videoView}
           mirror={identity === userProfile?.uid}
+          scaleType={isBattleMode ? 'fit' : 'fill'}
         />
 
         {/* Filter Overlays */}
@@ -383,10 +386,10 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
       );
     }
 
-    // 2. Group Mode Layout (Fixed 2x2 Grid, 4 squares)
+    // 2. Group Mode Layout (Fixed 2x3 Grid, 6 squares)
     if (isGroupMode) {
       const slots = [];
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 6; i++) {
         if (activeTracks[i]) {
           slots.push({ type: 'track', data: activeTracks[i] });
         } else {
@@ -394,7 +397,7 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
         }
       }
 
-      const itemStyle = { width: '50%', height: '50%' };
+      const itemStyle = { width: '50%', height: '33.33%' };
 
       return (
         <View style={styles.gridContainer}>
@@ -403,7 +406,7 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
               return (
                 <View key={slot.id} style={[styles.gridItem, itemStyle, styles.placeholderItem]}>
                   <Text style={styles.placeholderEmoji}>👥</Text>
-                  <Text style={styles.placeholderLabel}>Asiento libre</Text>
+                  <Text style={styles.placeholderLabel} numberOfLines={1}>Asiento libre</Text>
                   {isHost && (
                     <TouchableOpacity 
                       style={styles.placeholderPlusBtn}
@@ -569,7 +572,7 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
   const handleModeChange = async (newMode: 'solo' | 'battle' | 'group') => {
     if (!live) return;
     try {
-      const maxGuests = newMode === 'group' ? 4 : newMode === 'battle' ? 4 : 0;
+      const maxGuests = newMode === 'group' ? 6 : newMode === 'battle' ? 4 : 0;
       await updateLive(live.id, {
         streamMode: newMode,
         maxGuests,
@@ -582,8 +585,17 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Main video area (placed behind everything, constant full screen dimensions) */}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0F0C1B' }]}>
+      {/* Main video area */}
+      <View 
+        style={[
+          live?.streamMode === 'battle'
+            ? { position: 'absolute', top: 120, height: 260, left: 0, right: 0 }
+            : live?.streamMode === 'group'
+            ? { position: 'absolute', top: 120, height: 420, left: 0, right: 0 }
+            : StyleSheet.absoluteFill,
+          { backgroundColor: '#0F0C1B' }
+        ]}
+      >
         {renderVideoGrid()}
       </View>
 
@@ -598,7 +610,6 @@ export const LiveDetailsScreen = ({ route, navigation }: any) => {
             <View style={styles.pkOverlayContainer}>
               <PkScoreBoard battle={activeBattle} />
               <PkTimer timeLeft={timeLeft} />
-              <PkHostPanel battle={activeBattle} />
             </View>
           )}
 
@@ -964,7 +975,7 @@ const styles = StyleSheet.create({
   },
   pkOverlayContainer: {
     position: 'absolute',
-    top: 100,
+    top: 120,
     left: 0,
     right: 0,
     zIndex: 999,
@@ -1232,15 +1243,15 @@ const styles = StyleSheet.create({
     borderColor: '#3D385E',
   },
   placeholderEmoji: {
-    fontSize: 32,
-    marginBottom: spacing.xs,
+    fontSize: 16,
+    marginBottom: 2,
     opacity: 0.6,
   },
   placeholderLabel: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: '600',
-    marginBottom: spacing.md,
+    marginBottom: 4,
   },
   placeholderInviteBtn: {
     backgroundColor: colors.primary,
@@ -1255,20 +1266,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   placeholderPlusBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1.5,
+    borderWidth: 1.2,
     borderColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   placeholderPlusBtnText: {
     color: '#FFF',
-    fontSize: 26,
+    fontSize: 14,
     fontWeight: '300',
-    lineHeight: 30,
+    lineHeight: 16,
   },
 });
 export default LiveDetailsScreen;

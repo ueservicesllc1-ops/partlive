@@ -10,11 +10,13 @@ import {
 import { useTapLikeEngine } from '../../hooks/useTapLikeEngine';
 
 const MAX_VISIBLE_TAPS = 25;
+const EMOJIS = ['❤️', '💖', '💕', '💙', '💜', '💛', '🧡', '💚'];
 
 interface TapParticle {
   id: string;
   x: number;
   y: number;
+  emoji: string;
   anim: Animated.Value;
   sway: Animated.Value;
   scale: Animated.Value;
@@ -50,6 +52,7 @@ export const TapLikeOverlay: React.FC<TapLikeOverlayProps> = ({
       const rotation = Math.floor(Math.random() * 50) - 25; // -25° to +25°
       const swayAmount = (Math.random() * 40 - 20);          // ±20px
       const duration = 1400 + Math.random() * 400;           // 1.4s – 1.8s
+      const emoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
 
       // Kick off animation immediately
       Animated.parallel([
@@ -79,15 +82,21 @@ export const TapLikeOverlay: React.FC<TapLikeOverlayProps> = ({
         setParticles((ps) => ps.filter((p) => p.id !== id));
       });
 
-      return [...prev, { id, x, y, anim, sway, scale, rotation }];
+      return [...prev, { id, x, y, emoji, anim, sway, scale, rotation }];
     });
   }, []);
 
   const { handleTap } = useTapLikeEngine({ liveId, onAnimateTap: spawnParticle });
 
+  const lastTapRef = useRef<number>(0);
   const onPress = useCallback((evt: any) => {
-    const { locationX, locationY } = evt.nativeEvent;
-    handleTap(locationX, locationY);
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      const { locationX, locationY } = evt.nativeEvent;
+      handleTap(locationX, locationY);
+    }
+    lastTapRef.current = now;
   }, [handleTap]);
 
   const formatCount = (n: number) => {
@@ -103,7 +112,7 @@ export const TapLikeOverlay: React.FC<TapLikeOverlayProps> = ({
         {particles.map((p) => {
           const translateY = p.anim.interpolate({
             inputRange: [0, 1],
-            outputRange: [0, -160],
+            outputRange: [0, -220],
           });
           const opacity = p.anim.interpolate({
             inputRange: [0, 0.65, 1],
@@ -128,7 +137,7 @@ export const TapLikeOverlay: React.FC<TapLikeOverlayProps> = ({
                 },
               ]}
             >
-              👍
+              {p.emoji}
             </Animated.Text>
           );
         })}
@@ -141,7 +150,7 @@ export const TapLikeOverlay: React.FC<TapLikeOverlayProps> = ({
 
       {/* Tap counter badge — top-right or wherever positioned */}
       <View style={styles.counterBadge} pointerEvents="none">
-        <Text style={styles.counterText}>👍 {formatCount(totalLikes)}</Text>
+        <Text style={styles.counterText}>❤️ {formatCount(totalLikes)}</Text>
         {likesPerMinute > 0 && (
           <Text style={styles.rateText}>🔥 +{formatCount(likesPerMinute)}/min</Text>
         )}
@@ -151,11 +160,11 @@ export const TapLikeOverlay: React.FC<TapLikeOverlayProps> = ({
       <TouchableOpacity
         style={styles.accessibleBtn}
         activeOpacity={0.6}
-        onPress={() => handleTap(30, 30)}
+        onPress={() => handleTap(150, 300)}
         accessibilityLabel="Like this live"
         accessibilityRole="button"
       >
-        <Text style={styles.accessibleBtnText}>👍</Text>
+        <Text style={styles.accessibleBtnText}>❤️</Text>
       </TouchableOpacity>
     </View>
   );

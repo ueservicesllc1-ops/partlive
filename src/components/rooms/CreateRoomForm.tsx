@@ -21,6 +21,7 @@ interface CreateRoomFormProps {
     countryName?: string;
     languageCode?: string;
     languageName?: string;
+    roomType: 'voice' | 'karaoke' | 'dj';
     visibility: RoomVisibility;
     accessType: RoomAccessType;
     password?: string;
@@ -39,6 +40,7 @@ interface CreateRoomFormProps {
     languageName?: string;
     visibility?: RoomVisibility;
     accessType?: RoomAccessType;
+    roomType?: 'voice' | 'karaoke' | 'dj';
     password?: string;
     maxMics?: number;
     tags?: string[];
@@ -70,6 +72,7 @@ export const CreateRoomForm: React.FC<CreateRoomFormProps> = ({ onSubmit, loadin
 
   const [visibility, setVisibility] = useState<RoomVisibility>(initialValues?.visibility || 'public');
   const [accessType, setAccessType] = useState<RoomAccessType>(initialValues?.accessType || 'open');
+  const [roomType, setRoomType] = useState<'voice' | 'karaoke' | 'dj'>(initialValues?.roomType || 'voice');
   const [password, setPassword] = useState(initialValues?.password || '');
   const [maxMics, setMaxMics] = useState(initialValues?.maxMics || 8);
   const [tagsInput, setTagsInput] = useState(initialValues?.tags ? initialValues.tags.join(', ') : '');
@@ -90,6 +93,7 @@ export const CreateRoomForm: React.FC<CreateRoomFormProps> = ({ onSubmit, loadin
       countryName: country.name,
       languageCode: language.code,
       languageName: language.name,
+      roomType,
       visibility,
       accessType,
       password: accessType === 'password' ? password : '',
@@ -124,6 +128,36 @@ export const CreateRoomForm: React.FC<CreateRoomFormProps> = ({ onSubmit, loadin
         numberOfLines={3}
       />
       <Text style={styles.charCount}>{description.length}/200</Text>
+
+      {/* Room Type Selector */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Modo de la Sala</Text>
+        <View style={styles.roomTypeContainer}>
+          <TouchableOpacity 
+            style={[styles.roomTypeBtn, roomType === 'voice' && styles.roomTypeBtnActive]}
+            onPress={() => setRoomType('voice')}
+          >
+            <Text style={styles.roomTypeIcon}>💬</Text>
+            <Text style={[styles.roomTypeBtnText, roomType === 'voice' && styles.roomTypeBtnTextActive]}>Voz</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.roomTypeBtn, roomType === 'karaoke' && styles.roomTypeBtnActive]}
+            onPress={() => setRoomType('karaoke')}
+          >
+            <Text style={styles.roomTypeIcon}>🎤</Text>
+            <Text style={[styles.roomTypeBtnText, roomType === 'karaoke' && styles.roomTypeBtnTextActive]}>Karaoke</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.roomTypeBtn, roomType === 'dj' && styles.roomTypeBtnActive]}
+            onPress={() => setRoomType('dj')}
+          >
+            <Text style={styles.roomTypeIcon}>🎧</Text>
+            <Text style={[styles.roomTypeBtnText, roomType === 'dj' && styles.roomTypeBtnTextActive]}>DJ</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <RoomCategoryPicker
         selectedCategory={category}
@@ -207,6 +241,45 @@ export const CreateRoomForm: React.FC<CreateRoomFormProps> = ({ onSubmit, loadin
 const styles = StyleSheet.create({
   form: {
     flex: 1,
+  },
+  section: {
+    marginBottom: spacing.md,
+  },
+  sectionLabel: {
+    ...textPresets.bodySmall,
+    color: colors.text,
+    fontWeight: 'bold',
+    marginBottom: spacing.xs,
+  },
+  roomTypeContainer: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  roomTypeBtn: {
+    flex: 1,
+    backgroundColor: '#1E1B30',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#292440',
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  roomTypeBtnActive: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(138, 79, 255, 0.15)',
+  },
+  roomTypeIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  roomTypeBtnText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontWeight: '500',
+  },
+  roomTypeBtnTextActive: {
+    color: colors.primary,
+    fontWeight: 'bold',
   },
   contentContainer: {
     padding: spacing.lg,

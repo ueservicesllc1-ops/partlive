@@ -27,6 +27,8 @@ export const PayoutMethodCard: React.FC<PayoutMethodCardProps> = ({
         return '🏦';
       case 'payoneer':
         return '💸';
+      case 'usdt':
+        return '🪙';
       default:
         return '💳';
     }

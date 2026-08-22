@@ -29,6 +29,24 @@ import { AvailableSessionsList } from '../../components/games/AvailableSessionsL
 
 // ─── Rules per game type ──────────────────────────────────────────────────────
 const GAME_RULES: Record<string, { icon: string; text: string }[]> = {
+  billiards: [
+    { icon: '🎱', text: 'Juego clásico 8 Ball Pool en 3D con físicas reales.' },
+    { icon: '🎯', text: 'Apunta con el dedo o los botones y gradúa la fuerza del taco.' },
+    { icon: '⚪', text: 'Emboca tus bolas (sólidas o rayadas) y finaliza con la bola 8.' },
+    { icon: '🪙', text: 'Gana 100 monedas por partida ganada.' },
+  ],
+  blackjack: [
+    { icon: '🃏', text: 'Llega a 21 o acércate más que el crupier sin pasarte.' },
+    { icon: '💰', text: 'Apuesta fichas/monedas virtuales antes de cada mano.' },
+    { icon: '✌️', text: 'Opciones de Pedir (Hit), Plantarse (Stand) o Doblar (Double).' },
+    { icon: '🔒', text: 'Próximamente disponible.' },
+  ],
+  parchis: [
+    { icon: '🎲', text: 'Mueve tus 4 fichas desde la casa hasta la meta.' },
+    { icon: '⚔️', text: 'Come las fichas de tus oponentes para enviarlas a su casa.' },
+    { icon: '🛡️', text: 'Crea barreras en las casillas seguras para bloquear el paso.' },
+    { icon: '🔒', text: 'Próximamente disponible.' },
+  ],
   trivia: [
     { icon: '💡', text: '5 preguntas de cultura general, ciencia, música y más.' },
     { icon: '⏱️', text: '15 segundos para responder cada pregunta.' },
@@ -63,6 +81,9 @@ const GAME_RULES: Record<string, { icon: string; text: string }[]> = {
 
 // ─── Emoji / color fallback (for mock) ───────────────────────────────────────
 const GAME_META: Record<string, { icon: string; color: string; emoji: string; estimatedMinutes: number }> = {
+  billiards: { icon: '🎱', color: '#106348', emoji: '🎱', estimatedMinutes: 6 },
+  blackjack: { icon: '🃏', color: '#D4AF37', emoji: '🃏', estimatedMinutes: 5 },
+  parchis: { icon: '🎯', color: '#E53935', emoji: '🎲', estimatedMinutes: 15 },
   trivia: { icon: '💡', color: '#8A4FFF', emoji: '🧠', estimatedMinutes: 5 },
   rock_paper_scissors: { icon: '✂️', color: '#00E5FF', emoji: '🪨📄✂️', estimatedMinutes: 3 },
   dice: { icon: '🎲', color: '#FF3366', emoji: '🎲', estimatedMinutes: 4 },
@@ -70,6 +91,20 @@ const GAME_META: Record<string, { icon: string; color: string; emoji: string; es
   draw_guess: { icon: '🎨', color: '#FFC400', emoji: '🖼️', estimatedMinutes: 10 },
   ludo: { icon: '🎯', color: '#FF5722', emoji: '🎯', estimatedMinutes: 20 },
   domino: { icon: '🀄', color: '#9C27B0', emoji: '🀄', estimatedMinutes: 15 },
+};
+
+// ─── Human-readable title map (fallback when Firestore is empty) ──────────────
+const GAME_TITLE_MAP: Record<string, string> = {
+  billiards: 'Billar 8 Ball 3D',
+  blackjack: 'Blackjack 3D Casino',
+  parchis: 'Parchís 3D Real',
+  trivia: 'Trivia Live',
+  rock_paper_scissors: 'Piedra, Papel o Tijeras',
+  dice: 'Dados Locos',
+  bingo: 'Bingo Loco',
+  draw_guess: 'Draw & Guess',
+  ludo: 'Ludo Party',
+  domino: 'Dominó Pro',
 };
 
 export const GameDetailsScreen = ({ route, navigation }: any) => {
@@ -104,14 +139,39 @@ export const GameDetailsScreen = ({ route, navigation }: any) => {
     }
   };
 
+  // Resolved values used across all play actions (safe even if Firestore game is null)
+  const resolvedSlug = game?.slug ?? gameId;
+  const resolvedTitle = game?.title ?? GAME_TITLE_MAP[gameId] ?? gameId.replace(/_/g, ' ');
+
   const handleQuickMatch = async () => {
-    if (!game || !currentUser) return;
+    if (!currentUser) return;
     try {
-      const sessionId = await quickMatch(game);
+      // If game loaded from Firestore use it; otherwise build a minimal game object
+      const gameForMatch = game ?? {
+        id: gameId,
+        slug: resolvedSlug,
+        title: resolvedTitle,
+        minPlayers: 1,
+        maxPlayers: 4,
+        status: 'active' as const,
+        playersOnline: 0,
+        estimatedMinutes: GAME_META[gameId]?.estimatedMinutes ?? 5,
+        icon: GAME_META[gameId]?.icon ?? '🎮',
+        color: GAME_META[gameId]?.color ?? '#8A4FFF',
+        description: '',
+        category: '',
+        rewardCoinsMin: 10,
+        rewardCoinsMax: 120,
+        rewardXp: 50,
+        isActive: true,
+        createdAt: null as any,
+        updatedAt: null as any,
+      };
+      const sessionId = await quickMatch(gameForMatch);
       navigation.navigate(MAIN_ROUTES.GAME_SESSION, {
         sessionId,
-        gameSlug: game.slug,
-        gameTitle: game.title,
+        gameSlug: resolvedSlug,
+        gameTitle: resolvedTitle,
       });
     } catch (e: any) {
       Alert.alert('Error', e.message || 'No se encontró partida rápida.');
@@ -119,19 +179,39 @@ export const GameDetailsScreen = ({ route, navigation }: any) => {
   };
 
   const handleCreatePublic = async () => {
-    if (!game || !currentUser) return;
+    if (!currentUser) return;
     setCreating(true);
     try {
       const hostProfile = {
         uid: currentUser.uid,
         displayName: currentUser.displayName || 'Usuario',
-        photoURL: currentUser.photoURL || undefined,
+        photoURL: currentUser.photoURL || null,
       };
-      const session = await createPublicSession(game, hostProfile);
+      const gameForSession = game ?? {
+        id: gameId,
+        slug: resolvedSlug,
+        title: resolvedTitle,
+        minPlayers: 1,
+        maxPlayers: 4,
+        status: 'active' as const,
+        playersOnline: 0,
+        estimatedMinutes: GAME_META[gameId]?.estimatedMinutes ?? 5,
+        icon: GAME_META[gameId]?.icon ?? '🎮',
+        color: GAME_META[gameId]?.color ?? '#8A4FFF',
+        description: '',
+        category: '',
+        rewardCoinsMin: 10,
+        rewardCoinsMax: 120,
+        rewardXp: 50,
+        isActive: true,
+        createdAt: null as any,
+        updatedAt: null as any,
+      };
+      const session = await createPublicSession(gameForSession, hostProfile);
       navigation.navigate(MAIN_ROUTES.GAME_SESSION, {
         sessionId: session.id,
-        gameSlug: game.slug,
-        gameTitle: game.title,
+        gameSlug: resolvedSlug,
+        gameTitle: resolvedTitle,
       });
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Error al crear la partida pública.');
@@ -141,19 +221,39 @@ export const GameDetailsScreen = ({ route, navigation }: any) => {
   };
 
   const handleCreatePrivate = async () => {
-    if (!game || !currentUser) return;
+    if (!currentUser) return;
     setCreating(true);
     try {
       const hostProfile = {
         uid: currentUser.uid,
         displayName: currentUser.displayName || 'Usuario',
-        photoURL: currentUser.photoURL || undefined,
+        photoURL: currentUser.photoURL || null,
       };
-      const session = await createPrivateSession(game, hostProfile);
+      const gameForSession = game ?? {
+        id: gameId,
+        slug: resolvedSlug,
+        title: resolvedTitle,
+        minPlayers: 1,
+        maxPlayers: 4,
+        status: 'active' as const,
+        playersOnline: 0,
+        estimatedMinutes: GAME_META[gameId]?.estimatedMinutes ?? 5,
+        icon: GAME_META[gameId]?.icon ?? '🎮',
+        color: GAME_META[gameId]?.color ?? '#8A4FFF',
+        description: '',
+        category: '',
+        rewardCoinsMin: 10,
+        rewardCoinsMax: 120,
+        rewardXp: 50,
+        isActive: true,
+        createdAt: null as any,
+        updatedAt: null as any,
+      };
+      const session = await createPrivateSession(gameForSession, hostProfile);
       navigation.navigate(MAIN_ROUTES.GAME_SESSION, {
         sessionId: session.id,
-        gameSlug: game.slug,
-        gameTitle: game.title,
+        gameSlug: resolvedSlug,
+        gameTitle: resolvedTitle,
       });
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Error al crear la partida privada.');
@@ -200,10 +300,11 @@ export const GameDetailsScreen = ({ route, navigation }: any) => {
         isHost: false,
         isOnline: true,
       });
+      const joinSlug = session.gameSlug ?? resolvedSlug;
       navigation.navigate(MAIN_ROUTES.GAME_SESSION, {
         sessionId: session.id,
-        gameSlug: session.gameSlug,
-        gameTitle: session.gameSlug.toUpperCase(),
+        gameSlug: joinSlug,
+        gameTitle: GAME_TITLE_MAP[joinSlug] ?? joinSlug.replace(/_/g, ' '),
       });
     } catch (e: any) {
       Alert.alert('Error', e.message || 'No se pudo unir a la partida.');

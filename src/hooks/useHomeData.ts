@@ -66,7 +66,7 @@ export const useHomeData = () => {
       try {
         const { getPopularRooms } = await import('../services/firebase/firestore/roomsService');
         const fetchedRooms = await getPopularRooms();
-        if (fetchedRooms && fetchedRooms.length > 0) {
+        if (fetchedRooms) {
           remoteRooms = fetchedRooms;
         }
       } catch (e) {
@@ -78,15 +78,31 @@ export const useHomeData = () => {
       try {
         const { getLiveStreams } = await import('../services/firebase/firestore/livesService');
         const activeLives = await getLiveStreams();
-        if (activeLives && activeLives.length > 0) {
+        if (activeLives) {
           remoteLives = activeLives;
         }
       } catch (e) {
         console.warn('[useHomeData] Error al cargar transmisiones en vivo:', e);
       }
 
-      // ─── 4. Juegos (datos estáticos — sin colección dinámica aún) ────────
-      const remoteGames: HomeGame[] | null = null;
+      // ─── 4. Juegos activos reales desde Firestore ───────────────────────
+      let remoteGames: HomeGame[] | null = null;
+      try {
+        const { getActiveGames } = await import('../services/firebase/firestore/gamesService');
+        const fetchedGames = await getActiveGames();
+        if (fetchedGames && fetchedGames.length > 0) {
+          remoteGames = fetchedGames.map(g => ({
+            id: g.id,
+            name: g.title,
+            icon: g.icon,
+            description: g.description,
+            playersOnline: g.playersOnline ?? 0,
+            color: g.color,
+          }));
+        }
+      } catch (e) {
+        console.warn('[useHomeData] Error al cargar juegos:', e);
+      }
 
       // ─── 5. Rankings reales (tipo: daily_hosts) ───────────────────────────
       let remoteRankings: RankingEntry[] | null = null;

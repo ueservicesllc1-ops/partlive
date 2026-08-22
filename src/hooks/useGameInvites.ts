@@ -48,7 +48,7 @@ export const useGameInvites = () => {
         const userProfile = {
           uid,
           displayName: currentUser?.displayName || `User_${uid.slice(0, 4)}`,
-          photoURL: currentUser?.photoURL || undefined,
+          photoURL: currentUser?.photoURL || null,
         };
         const sessionId = await acceptGameInvite(inviteId, userProfile);
         return sessionId;

@@ -27,7 +27,7 @@ export const QuickGamesSection = ({ games, onGamePress }: QuickGamesProps) => {
             <View style={styles.iconWrapper}>
               <Text style={styles.icon}>{game.icon}</Text>
             </View>
-            <Text style={styles.name} numberOfLines={1}>{game.name}</Text>
+            <Text style={styles.name} numberOfLines={1}>{game.name ?? game.title}</Text>
             <Text style={styles.players}>{formatCompactNumber(game.playersOnline)} jugando</Text>
           </TouchableOpacity>
         ))}

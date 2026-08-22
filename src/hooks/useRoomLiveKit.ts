@@ -71,10 +71,16 @@ export const useRoomLiveKit = (
       const tokenData = await getLiveKitRoomToken(roomId);
       setCanPublish(tokenData.canPublish);
 
-      // 2. Create LiveKit Room instance
+      // 2. Create LiveKit Room instance with high fidelity audio settings (Karaoke Mode)
       const roomOptions: RoomOptions = {
         adaptiveStream: true,
         dynacast: true,
+        audioCaptureDefaults: {
+          autoGainControl: false,
+          echoCancellation: false,
+          noiseSuppression: false,
+          channelCount: 2, // Stereo if supported
+        },
       };
 
       const roomInstance = new Room(roomOptions);

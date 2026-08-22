@@ -20,6 +20,7 @@ import { TriviaGame } from '../../components/games/trivia/TriviaGame';
 import { RockPaperScissorsGame } from '../../components/games/rps/RockPaperScissorsGame';
 import { DiceGame } from '../../components/games/dice/DiceGame';
 import { BingoGame } from '../../components/games/bingo/BingoGame';
+import { BilliardsGame } from '../../components/games/billiards/BilliardsGame';
 import { DrawGuessPlaceholder } from '../../components/games/placeholder/DrawGuessPlaceholder';
 import { LudoPlaceholder } from '../../components/games/placeholder/LudoPlaceholder';
 
@@ -46,12 +47,31 @@ const overlayStyles = StyleSheet.create({
 // ─── Local/offline game (no Firestore session) ────────────────────────────────
 const LOCAL_PREFIX = 'local_';
 
+// ─── Title fallback map ───────────────────────────────────────────────────────
+const GAME_TITLE_MAP: Record<string, string> = {
+  billiards: 'Billar 8 Ball 3D',
+  blackjack: 'Blackjack 3D Casino',
+  parchis: 'Parchís 3D Real',
+  trivia: 'Trivia Live',
+  rock_paper_scissors: 'Piedra, Papel o Tijeras',
+  dice: 'Dados Locos',
+  bingo: 'Bingo Loco',
+  draw_guess: 'Draw & Guess',
+  ludo: 'Ludo Party',
+  domino: 'Dominó Pro',
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export const GameSessionScreen = ({ route, navigation }: any) => {
   const { sessionId, gameSlug, gameTitle } = route.params ?? {};
   const currentUser = auth().currentUser;
   const uid = currentUser?.uid ?? 'guest';
   const username = currentUser?.displayName ?? 'Jugador';
+
+  // Ensure title is always a readable string, never undefined
+  const displayGameTitle =
+    (gameTitle && gameTitle !== 'undefined' ? gameTitle : null) ??
+    (gameSlug ? GAME_TITLE_MAP[gameSlug] ?? gameSlug.replace(/_/g, ' ') : 'Juego');
 
   const isLocalSession = String(sessionId).startsWith(LOCAL_PREFIX);
   const [giftModalVisible, setGiftModalVisible] = useState(false);
@@ -60,6 +80,7 @@ export const GameSessionScreen = ({ route, navigation }: any) => {
   const {
     session,
     players,
+    currentMoves,
     myPlayer,
     uiPhase,
     countdown,
@@ -104,6 +125,8 @@ export const GameSessionScreen = ({ route, navigation }: any) => {
   // ── Render game engine ────────────────────────────────────────────────────
   const renderGame = () => {
     const gameProps = {
+      session,
+      currentMoves,
       players: displayPlayers,
       myUserId: uid,
       onFinish: handleGameFinish,
@@ -111,6 +134,8 @@ export const GameSessionScreen = ({ route, navigation }: any) => {
     };
 
     switch (gameSlug) {
+      case 'billiards':
+        return <BilliardsGame {...gameProps} onBack={handleLeave} />;
       case 'trivia':
         return <TriviaGame {...gameProps} />;
       case 'rock_paper_scissors':
@@ -143,7 +168,7 @@ export const GameSessionScreen = ({ route, navigation }: any) => {
         <TouchableOpacity onPress={handleLeave} style={styles.leaveBtn}>
           <Text style={styles.leaveIcon}>✕</Text>
         </TouchableOpacity>
-        <Text style={styles.topTitle}>{gameTitle ?? gameSlug}</Text>
+        <Text style={styles.topTitle}>{displayGameTitle}</Text>
         {!isLocalSession && session ? (
           <TouchableOpacity onPress={() => setGiftModalVisible(true)} style={styles.giftBtn}>
             <Text style={styles.giftBtnText}>🎁 Regalar</Text>
@@ -213,7 +238,7 @@ export const GameSessionScreen = ({ route, navigation }: any) => {
             .map((p) => ({
               userId: p.userId,
               displayName: p.username,
-              photoURL: undefined,
+              photoURL: null,
             }))}
           onGoToPayout={() => {
             setGiftModalVisible(false);

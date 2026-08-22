@@ -157,7 +157,8 @@ export const PrivateChatScreen = ({ route, navigation }: any) => {
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'android' ? 0 : 0}
       >
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -177,6 +178,8 @@ export const PrivateChatScreen = ({ route, navigation }: any) => {
             )}
             contentContainerStyle={styles.messagesList}
             inverted
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
           />
         )}
 
@@ -251,6 +254,8 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     paddingVertical: spacing.md,
+    flexGrow: 1,
+    justifyContent: 'flex-end',
   },
   bannerContainer: {
     backgroundColor: colors.surfaceLight,

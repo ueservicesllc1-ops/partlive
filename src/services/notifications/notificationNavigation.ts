@@ -11,6 +11,11 @@ export function handleNotificationAction(notificationData: any, navigation: any)
   if (!actionType || actionType === 'none') return;
 
   switch (actionType) {
+    case 'open_private_chat':
+      if (actionValue) {
+        navigation.navigate(MAIN_ROUTES.PRIVATE_CHAT, { conversationId: actionValue });
+      }
+      break;
     case 'open_profile':
       if (actionValue) {
         navigation.navigate(MAIN_ROUTES.PUBLIC_PROFILE, { userId: actionValue });

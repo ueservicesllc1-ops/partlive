@@ -94,7 +94,7 @@ export const createLive = async (
     allowGifts: data.allowGifts !== undefined ? data.allowGifts : true,
     moderatorIds: [],
     streamMode: data.streamMode || 'solo',
-    maxGuests: data.streamMode === 'group' ? (data.maxGuests || 4) : data.streamMode === 'battle' ? 4 : 0,
+    maxGuests: data.streamMode === 'group' ? (data.maxGuests || 6) : data.streamMode === 'battle' ? 4 : 0,
     coHostIds: [],
     selectedFilter: (data as any).selectedFilter || 'none',
     selectedFrame: (data as any).selectedFrame || 'none',

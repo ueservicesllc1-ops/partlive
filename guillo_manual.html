@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual de Usuario y Guía de Pruebas de PartyLive (Para Guillo)</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 12mm 10mm 15mm 10mm;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0d0a1a;
+      color: #e2e8f0;
+      line-height: 1.5;
+      font-size: 11.5px;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Portada / Header principal */
+    .header-banner {
+      background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 40%, #c026d3 80%, #e11d48 100%);
+      padding: 26px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      color: white;
+      box-shadow: 0 10px 25px rgba(124, 58, 237, 0.4);
+    }
+
+    .header-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(8px);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .header-title { font-size: 28px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 6px; }
+    .header-subtitle { font-size: 14px; opacity: 0.95; font-weight: 400; line-height: 1.4; }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .meta-item { font-size: 11px; }
+    .meta-item span { display: block; opacity: 0.8; font-size: 9.5px; text-transform: uppercase; }
+    .meta-item strong { font-size: 12px; color: #fff; }
+
+    /* Secciones */
+    .section {
+      background: #151026;
+      border: 1px solid #2a204a;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      page-break-inside: avoid;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #f3e8ff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      border-bottom: 2px solid #3c2c6e;
+      padding-bottom: 8px;
+    }
+
+    .section-icon {
+      background: linear-gradient(135deg, #7c3aed, #c026d3);
+      color: white;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .sub-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #c084fc;
+      margin: 12px 0 6px 0;
+    }
+
+    /* Targetas de características */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .card {
+      background: #1c1536;
+      border: 1px solid #302459;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .card-icon { font-size: 22px; margin-bottom: 4px; }
+    .card-title { font-size: 12.5px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+    .card-desc { font-size: 11px; color: #94a3b8; line-height: 1.4; }
+
+    /* Lista de pasos numerados */
+    .step-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .step-item {
+      display: flex;
+      gap: 10px;
+      background: #1b1538;
+      border: 1px solid #2f245c;
+      padding: 10px 12px;
+      border-radius: 8px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      background: linear-gradient(135deg, #7c3aed, #c026d3);
+      color: white;
+      font-weight: 900;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 11.5px;
+      margin-top: 1px;
+    }
+
+    .step-content h4 { color: #fff; font-size: 12px; margin-bottom: 2px; }
+    .step-content p { color: #cbd5e1; font-size: 11px; }
+
+    /* Destacados */
+    .callout {
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin: 10px 0;
+      font-size: 11px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .callout-info { background: rgba(59, 130, 246, 0.15); border-left: 4px solid #3b82f6; color: #93c5fd; }
+    .callout-warning { background: rgba(245, 158, 11, 0.15); border-left: 4px solid #f59e0b; color: #fde68a; }
+    .callout-success { background: rgba(16, 185, 129, 0.15); border-left: 4px solid #10b981; color: #a7f3d0; }
+
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+
+  <!-- PORTADA / BIENVENIDA A GUILLO -->
+  <div class="header-banner">
+    <div class="header-badge">📱 GUÍA COMPLETA DE PRUEBAS PARA GUILLO</div>
+    <div class="header-title">Manual de Usuario: PartyLive App</div>
+    <div class="header-subtitle">
+      ¡Hola Guillo! Esta es tu guía definitiva para probar la aplicación en tu celular. Aquí aprenderás qué es la app, para qué sirve cada pantalla, cómo usar sus funciones y cómo evaluarla paso a paso.
+    </div>
+    
+    <div class="meta-grid">
+      <div class="meta-item"><span>Para Quien Es</span><strong>Guillo (Tester Principal)</strong></div>
+      <div class="meta-item"><span>Archivo APK</span><strong>PartyLive.apk</strong></div>
+      <div class="meta-item"><span>Fecha</span><strong>17 de Agosto, 2026</strong></div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 1: ¿QUÉ ES PARTY LIVE Y PARA QUÉ SIRVE? -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">🎉</div>
+      1. ¿Qué es PartyLive y para qué sirve?
+    </div>
+    
+    <p style="color: #cbd5e1; font-size: 12px; margin-bottom: 10px;">
+      <strong>PartyLive</strong> es una super-aplicación social interactiva donde las personas pueden reunirse a hablar en vivo, transmitir video, cantar Karaoke, jugar y enviarse regalos virtuales.
+    </p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">🎙️</div>
+        <div class="card-title">Salas de Voz en Vivo</div>
+        <div class="card-desc">Salas virtuales donde hasta 12 personas pueden hablar por micrófono al mismo tiempo mientras cientos de oyentes escuchan.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🎵</div>
+        <div class="card-title">Karaoke Integrado</div>
+        <div class="card-desc">Canta tus canciones favoritas con pista instrumental de fondo sonando en directo para toda la sala.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">📺</div>
+        <div class="card-title">Transmisiones Live y PK</div>
+        <div class="card-desc">Streaming de video HD de creadores y batallas cara a cara (1v1) de 5 minutos donde gana quien reciba más regalos.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🎮</div>
+        <div class="card-title">Mini-Juegos (Dominó y Ludo)</div>
+        <div class="card-desc">Juega partidas de Dominó o Ludo en tiempo real con apuestas de monedas mientras hablas por voz.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 2: PRIMER PASO OBLIGATORIO PARA GUILLO -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">🚀</div>
+      2. Primer Paso Obligatorio al Abrir la App
+    </div>
+
+    <div class="callout callout-warning">
+      <div class="callout-icon">⚡</div>
+      <div>
+        <strong>¡Muy Importante para Guillo!</strong><br>
+        Al instalar el APK e iniciar sesión por primera vez, la aplicación estará vacía. Para poblarla de inmediato con salas, misiones, regalos y juegos de prueba, debes realizar este paso sencillo:
+      </div>
+    </div>
+
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Abre PartyLive e Inicia Sesión</h4>
+          <p>Crea una cuenta rápida con cualquier correo y contraseña en la pantalla de inicio.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Desliza al Final de la Pantalla de Inicio (Home 🏠)</h4>
+          <p>Quédate en la pestaña de Inicio y baja con tu dedo hasta el final de la pantalla.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Presiona el Botón Rojo "Seed Test Data"</h4>
+          <p>Toca el botón rojo. En 2 segundos la base de datos creará automáticamente salas con usuarios ficticios, regalos animados y partidas de juegos para que puedas probar todo sin estar solo.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SECCIÓN 3: LAS 5 PESTAÑAS Y CÓMO USAR CADA PANTALLA -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">📱</div>
+      3. Las 5 Pestañas de la App y Cómo Navegarlas
+    </div>
+
+    <div class="sub-title">🏠 1. Pestaña de Inicio (Home)</div>
+    <p style="color: #cbd5e1; margin-bottom: 8px;">
+      Es tu centro de mando. En la barra superior verás tu saldo de 🪙 <strong>Monedas</strong> (para comprar regalos o jugar) y 💎 <strong>Diamantes</strong> (ganados al recibir regalos).
+    </p>
+
+    <div class="sub-title">🎙️ 2. Pestaña de Salas de Voz (Voice Rooms)</div>
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num">A</div>
+        <div class="step-content">
+          <h4>¿Cómo entrar a una sala?</h4>
+          <p>Toca cualquier tarjeta de la lista. Entrarás como oyente para escuchar la conversación.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">B</div>
+        <div class="step-content">
+          <h4>¿Cómo pedir el micrófono para hablar?</h4>
+          <p>Toca cualquiera de los círculos de micrófono vacíos (asientos libres) para subir a la parrilla.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">C</div>
+        <div class="step-content">
+          <h4>¿Cómo enviar un Regalo Animado?</h4>
+          <p>Toca el icono de la <strong>Caja de Regalo 🎁</strong> abajo a la derecha. Elige un regalo (Rosa, Dragón 3D), selecciona al usuario que lo recibirá y pulsa "Enviar".</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">D</div>
+        <div class="step-content">
+          <h4>¿Cómo cantar Karaoke en la sala?</h4>
+          <p>Toca el icono de la <strong>Nota Musical 🎵</strong>. Busca una canción, agrégala a la cola y presiona "Cantar" en tu turno.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-title" style="margin-top: 14px;">📺 3. Pestaña de Transmisiones Live y Batallas PK</div>
+    <p style="color: #cbd5e1; margin-bottom: 8px;">
+      Aquí puedes ver emisiones de video en directo. Si ves una <strong>Batalla PK ⚔️</strong>, verás a dos creadores en pantalla dividida compitiendo durante 5 minutos para ver quién junta más regalos de su público.
+    </p>
+
+    <div class="sub-title" style="margin-top: 14px;">🎮 4. Pestaña de Juegos (Dominó y Ludo)</div>
+    <p style="color: #cbd5e1; margin-bottom: 8px;">
+      Toca en <strong>Dominó</strong>, elige una mesa con apuesta de monedas y pulsa "Buscar Partida". Se abrirá un tablero en tiempo real donde puedes mover tus fichas y chatear por voz mientras juegas.
+    </p>
+
+    <div class="sub-title" style="margin-top: 14px;">👤 5. Pestaña de Perfil y Billetera</div>
+    <p style="color: #cbd5e1;">
+      Aquí ves tu foto de avatar, tu nivel XP, tus misiones diarias listas para reclamar monedas gratis y tu billetera de ganancias.
+    </p>
+  </div>
+
+  <!-- SECCIÓN 4: LISTA DE 6 PRUEBAS QUE DEBE HACER GUILLO -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">✅</div>
+      4. Misiones de Prueba Recomendadas para Guillo
+    </div>
+
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <h4>Prueba 1: Ejecutar "Seed Test Data"</h4>
+          <p>Verifica que al presionar el botón rojo en el Home aparezcan salas y regalos automáticamente.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <h4>Prueba 2: Entrar a una Sala de Voz y Hablar</h4>
+          <p>Toca un micrófono libre en la sala y presiona el icono 🎤 para verificar que el audio esté activo.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <h4>Prueba 3: Enviar un Regalo Animado</h4>
+          <p>Abre la caja de regalos 🎁 en la sala y envía un regalo de prueba para ver el efecto en pantalla.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">4</div>
+        <div class="step-text">
+          <h4>Prueba 4: Probar el Karaoke</h4>
+          <p>Abre la nota musical 🎵, busca un tema y ponlo en cola para reproducir la música.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">5</div>
+        <div class="step-text">
+          <h4>Prueba 5: Jugar una Partida de Dominó</h4>
+          <p>Entra a Juegos → Dominó y prueba colocar tus fichas en la mesa.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">6</div>
+        <div class="step-text">
+          <h4>Prueba 6: Reclamar Misiones Diarias</h4>
+          <p>Ve a Perfil → Misiones y reclama tus recompensas de monedas gratis.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="text-align: center; color: #64748b; font-size: 10px; margin-top: 20px; padding-top: 10px; border-top: 1px solid #1e1938;">
+    PartyLive App © 2026 • Manual de Usuario y Guía de Pruebas Elaborado Especialmente para Guillo
+  </div>
+
+</body>
+</html>

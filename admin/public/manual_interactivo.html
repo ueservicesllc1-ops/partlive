@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual Maestro Interactivo - PartyLive App & Admin Suite</title>
+  <style>
+    :root {
+      --bg-dark: #070510;
+      --panel-bg: #120e24;
+      --card-bg: #1a1433;
+      --border-color: #2b2252;
+      --accent-purple: #8b5cf6;
+      --accent-pink: #ec4899;
+      --accent-cyan: #06b6d4;
+      --accent-gold: #f59e0b;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: linear-gradient(90deg, #18092e, #2e1065, #4c1d95, #831843);
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    }
+
+    .logo-group { display: flex; align-items: center; gap: 8px; }
+    .logo-badge { background: var(--accent-pink); color: white; font-weight: 900; font-size: 10px; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; }
+    .logo-title { font-size: 18px; font-weight: 900; background: linear-gradient(135deg, #fff, #f472b6, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    .view-mode-selector {
+      display: flex;
+      background: rgba(0,0,0,0.4);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .view-mode-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .view-mode-btn.active { background: var(--accent-purple); color: white; box-shadow: 0 0 10px rgba(139, 92, 246, 0.5); }
+
+    .nav-categories { display: flex; gap: 4px; overflow-x: auto; padding: 4px; border-bottom: 1px solid var(--border-color); background: #0f0b1f; }
+    .cat-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #cbd5e1;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .cat-btn:hover { background: rgba(139, 92, 246, 0.35); color: #fff; border-color: var(--accent-purple); }
+    .cat-btn.active { background: var(--accent-purple); color: #fff; border-color: var(--accent-purple); box-shadow: 0 0 10px rgba(139, 92, 246, 0.4); }
+
+    .app-layout {
+      display: grid;
+      grid-template-columns: 370px 1fr;
+      gap: 20px;
+      padding: 16px;
+      max-width: 1700px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+    }
+
+    .admin-layout-view {
+      display: none;
+      grid-template-columns: 240px 1fr;
+      gap: 16px;
+      width: 100%;
+      padding: 16px;
+      max-width: 1700px;
+      margin: 0 auto;
+    }
+
+    /* Phone Simulator */
+    .phone-container {
+      background: #000;
+      border: 12px solid #231b3a;
+      border-radius: 42px;
+      height: 740px;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 65px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.9), 0 0 35px rgba(139, 92, 246, 0.25);
+      overflow: hidden;
+    }
+
+    .phone-notch { width: 110px; height: 18px; background: #231b3a; margin: 0 auto; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+
+    .phone-screen {
+      flex: 1;
+      background: #0d0a1b;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .phone-header {
+      background: #17122b;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #29204a;
+    }
+
+    .wallet-chip {
+      background: rgba(255,255,255,0.12);
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .wallet-chip:hover { background: rgba(139, 92, 246, 0.4); transform: scale(1.06); border-color: var(--accent-purple); }
+
+    .phone-body {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .phone-nav {
+      background: #140f26;
+      border-top: 1.5px solid #29204a;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      padding: 6px 0;
+    }
+
+    .phone-nav-item {
+      text-align: center;
+      font-size: 9px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px 0;
+    }
+    .phone-nav-item.active { color: var(--accent-pink); font-weight: bold; }
+    .phone-nav-item span { display: block; font-size: 17px; margin-bottom: 1px; }
+
+    .sim-card {
+      background: #191330;
+      border: 1px solid #2e2454;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .sim-card:hover { border-color: var(--accent-pink); transform: translateY(-2px); background: #221a42; }
+
+    .sim-btn {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+      color: white;
+      border: none;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 10.5px;
+      width: 100%;
+      cursor: pointer;
+      margin-top: 5px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    .sim-btn:hover { filter: brightness(1.25); transform: translateY(-1px); }
+
+    .gift-overlay {
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      font-size: 60px;
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 50;
+    }
+    .gift-overlay.active { transform: translate(-50%, -50%) scale(1.5); }
+
+    .heart-float {
+      position: absolute;
+      font-size: 24px;
+      pointer-events: none;
+      animation: floatUp 1.2s ease-out forwards;
+      z-index: 40;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-100px) scale(1.5); }
+    }
+
+    .explanation-panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .section-header { border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
+    .section-header h2 { font-size: 22px; font-weight: 800; color: #fff; }
+    .section-header p { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+
+    .action-display {
+      background: #17122b;
+      border: 2px solid var(--accent-purple);
+      border-radius: 14px;
+      padding: 18px;
+      animation: fadeIn 0.25s ease-in-out;
+    }
+
+    .action-badge {
+      display: inline-block;
+      background: rgba(236, 72, 153, 0.2);
+      color: var(--accent-pink);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .action-title { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+    .action-desc { font-size: 12.5px; color: #cbd5e1; line-height: 1.5; margin-bottom: 14px; }
+
+    .step-box {
+      background: #0e0a1c;
+      border: 1px solid #281e47;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .step-num { background: var(--accent-purple); color: white; font-weight: 900; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #10b981;
+      color: white;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 13.5px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    .admin-sidebar {
+      background: #140f26;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 750px;
+      overflow-y: auto;
+    }
+
+    .admin-nav-item {
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .admin-nav-item:hover { background: rgba(139, 92, 246, 0.2); color: #fff; }
+    .admin-nav-item.active { background: var(--accent-purple); color: #fff; }
+
+    .admin-content-area {
+      background: #120e24;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #281e47; }
+    th { background: #1c1538; color: #c084fc; font-weight: 700; }
+    tr:hover { background: rgba(255,255,255,0.03); }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-group">
+      <div class="logo-badge">PROYECTO COMPLETO</div>
+      <div class="logo-title">PartyLive Manual Maestro Interactivo</div>
+    </div>
+
+    <div class="view-mode-selector">
+      <button class="view-mode-btn active" id="btnModeMobile" onclick="switchViewMode('mobile')">📱 Vista App Móvil (Guillo)</button>
+      <button class="view-mode-btn" id="btnModeAdmin" onclick="switchViewMode('admin')">🛡️ Vista Panel Admin Next.js</button>
+    </div>
+  </header>
+
+  <!-- CATEGORÍAS NAVEGABLES DEL MANUAL MÓVIL -->
+  <div class="nav-categories" id="mobileNavCategories">
+    <button class="cat-btn active" id="btn-auth" onclick="loadMobileCat('auth')">🔑 Registro & Login</button>
+    <button class="cat-btn" id="btn-home" onclick="loadMobileCat('home')">🏠 Home & Seed Data</button>
+    <button class="cat-btn" id="btn-voice" onclick="loadMobileCat('voice')">🎙️ Salas & Karaoke</button>
+    <button class="cat-btn" id="btn-lives" onclick="loadMobileCat('lives')">📺 Lives & Tap-Tap & PK</button>
+    <button class="cat-btn" id="btn-games" onclick="loadMobileCat('games')">🎮 Dominó & Ludo & Ruleta</button>
+    <button class="cat-btn" id="btn-social" onclick="loadMobileCat('social')">👥 Red Social & Chat 1a1</button>
+    <button class="cat-btn" id="btn-clubs" onclick="loadMobileCat('clubs')">⭐ Clubs & Clips Feed</button>
+    <button class="cat-btn" id="btn-economy" onclick="loadMobileCat('economy')">💎 Monedas & Retiros USD</button>
+    <button class="cat-btn" id="btn-missions" onclick="loadMobileCat('missions')">🎯 Misiones & Gamificación</button>
+    <button class="cat-btn" id="btn-creator" onclick="loadMobileCat('creator')">🏬 Agencias & Studio Pro</button>
+    <button class="cat-btn" id="btn-safety" onclick="loadMobileCat('safety')">🛡️ Moderación & Soporte</button>
+    <button class="cat-btn" id="btn-admin" style="background: rgba(6, 182, 212, 0.25); border-color: #06b6d4;" onclick="loadMobileCat('admin')">🛡️ Los 35 Centros Admin</button>
+  </div>
+
+  <!-- VISTA 1: APP MÓVIL -->
+  <div class="app-layout" id="mobileAppLayout">
+    <div class="phone-container">
+      <div class="phone-notch"></div>
+      
+      <div class="phone-screen" id="phoneScreen">
+        <div class="gift-overlay" id="giftOverlay">🐉</div>
+
+        <div class="phone-header">
+          <div class="wallet-chip" onclick="buyCoinsAction()">🪙 <span id="coinsVal">5,000</span></div>
+          <div class="wallet-chip" onclick="withdrawDiamondsAction()">💎 <span id="diamondsVal">1,200</span></div>
+          <div style="font-size: 14px; cursor: pointer;" onclick="showNotificationsAction()">🔔</div>
+        </div>
+
+        <div class="phone-body" id="phoneBody"></div>
+
+        <div class="phone-nav">
+          <div class="phone-nav-item active" id="navHome" onclick="loadMobileCat('home')"><span>🏠</span>Inicio</div>
+          <div class="phone-nav-item" id="navVoice" onclick="loadMobileCat('voice')"><span>🎙️</span>Salas</div>
+          <div class="phone-nav-item" id="navLives" onclick="loadMobileCat('lives')"><span>📺</span>Lives</div>
+          <div class="phone-nav-item" id="navGames" onclick="loadMobileCat('games')"><span>🎮</span>Juegos</div>
+          <div class="phone-nav-item" id="navProfile" onclick="loadMobileCat('economy')"><span>👤</span>Perfil</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="explanation-panel">
+      <div class="section-header">
+        <h2 id="catTitle">🔑 Autenticación & Registro de Usuario</h2>
+        <p id="catSubtitle">¡Haz clic sobre cualquier botón del teléfono a la izquierda! Verás cambiar el estado de la pantalla en tiempo real y desplegar la guía operativa.</p>
+      </div>
+      <div class="action-display" id="actionDisplay"></div>
+    </div>
+  </div>
+
+  <!-- VISTA 2: PANEL DE ADMINISTRACIÓN NEXT.JS -->
+  <div class="admin-layout-view" id="adminAppLayout">
+    <div class="admin-sidebar" id="adminSidebarList">
+      <div style="font-size: 11px; font-weight: 800; color: var(--accent-pink); margin-bottom: 8px; text-transform: uppercase;">TODOS LOS 35 CENTROS ADMIN</div>
+      <!-- Inyección dinámica de los 35 centros -->
+    </div>
+
+    <div class="admin-content-area" id="adminContentArea"></div>
+  </div>
+
+  <div class="toast" id="toast">✅ Acción ejecutada correctamente</div>
+
+  <script>
+    // Catálogo completo de los 35 Centros Administrativos del Proyecto
+    const adminCentersList = [
+      { id: 'control', name: '🏢 1. Admin Control Center', desc: 'Panel Maestro y KPIs Globales del sistema.' },
+      { id: 'cfo', name: '💵 2. Admin CFO Center', desc: 'Control Financiero, Balances USD y Aprobación de Retiros (Payouts).' },
+      { id: 'command', name: '🚀 3. Admin Command Center', desc: 'Monitoreo de Servidores LiveKit WebRTC y Sockets.' },
+      { id: 'safety', name: '🛡️ 4. Admin Safety Center', desc: 'Moderación de Denuncias por acoso o spam y Baneos Globale.' },
+      { id: 'monetization', name: '💎 5. Admin Monetization Center', desc: 'Precios de Monedas, Valor del Diamante y Tienda 3D.' },
+      { id: 'creator', name: '🎤 6. Admin Creator Economy Center', desc: 'Contratación de Hosts Oficiales y Metas Mensuales.' },
+      { id: 'agencies', name: '🏬 7. Admin Agency Center', desc: 'Directorio de Agencias de Talento y Comisiones Institucionales.' },
+      { id: 'globalization', name: '🌐 8. Admin Globalization Center', desc: 'Reglas por País, Idiomas y Filtros Regionales.' },
+      { id: 'gamification', name: '🎮 9. Admin Gamification Center', desc: 'Configuración de Puntos XP, Niveles y Misiones Diarias.' },
+      { id: 'discovery', name: '🧭 10. Admin Discovery Center', desc: 'Algoritmo de Posicionamiento y Recomendación de Salas.' },
+      { id: 'intelligence', name: '📊 11. Admin Data Intelligence', desc: 'Analítica de Usuarios, Retención y Embudos de Pago.' },
+      { id: 'ai', name: '🤖 12. Admin AI Center', desc: 'Filtros de Inteligencia Artificial para Texto y Audio Inapropiado.' },
+      { id: 'liveops', name: '⚡ 13. Admin Live Operations', desc: 'Despacho Masivo de Notificaciones Push Emergentes.' },
+      { id: 'growth', name: '📈 14. Admin Growth & Viral Center', desc: 'Marketing de Referidos e Incentivos por Invitar Amigos.' },
+      { id: 'subscription', name: '💳 15. Admin Subscription Center', desc: 'Membresías VIP y Pases de Batalla.' },
+      { id: 'ux', name: '📐 16. Admin UX Conversion', desc: 'Optimización de Experiencia de Usuario y Conversiones.' },
+      { id: 'infrastructure', name: '⚙️ 17. Admin Infrastructure Center', desc: 'Contenedores Docker LiveKit, Firebase y Webhooks.' },
+      { id: 'compliance', name: '📜 18. Admin Compliance Center', desc: 'Políticas Google Play Store, GDPR y Protección de Menores.' },
+      { id: 'masteraudit', name: '🔍 19. Admin Master Audit', desc: 'Registro Inalterable de Auditoría de Acciones de Admins.' },
+      { id: 'music', name: '🎼 20. Music Admin Center', desc: 'Catálogo de Canciones de Karaoke y Licencias Musicales.' },
+      { id: 'supercenter', name: '⭐ 21. Admin Super Center', desc: 'Control de Super-Administradores y Permisos Master.' },
+      { id: 'qa', name: '🧪 22. Admin QA Center', desc: 'Pruebas de Calidad, Suites de Test y Cobertura.' },
+      { id: 'launch', name: '🚀 23. Admin Launch Center', desc: 'Lanzamiento de Versiones y Despliegues APK/AAB.' },
+      { id: 'production', name: '🏭 24. Admin Production Center', desc: 'Monitoreo de Producción y Cargas de Trabajo.' },
+      { id: 'performance', name: '⚡ 25. Admin Performance Center', desc: 'Latencias de Red, FPS y Tiempos de Respuesta.' },
+      { id: 'regional', name: '🌎 26. Admin Regional Center', desc: 'Gestión por Regiones Geográficas.' },
+      { id: 'expansion', name: '📍 27. Admin Expansion Center', desc: 'Apertura de Nuevos Mercados Internacionales.' },
+      { id: 'trustsafety2', name: '🛡️ 28. Admin Trust Safety II', desc: 'Protocolos Avanzados de Seguridad e Identificación.' },
+      { id: 'infrastructure2', name: '⚙️ 29. Admin Infrastructure II', desc: 'Servidores de Redundancia y Backup.' },
+      { id: 'creatoreconomy2', name: '🎤 30. Admin Creator Economy II', desc: 'Bonificaciones de Creadores y Premios.' },
+      { id: 'offercenter', name: '🏷️ 31. Admin Offer Center', desc: 'Ofertas Limitadas de Monedas y Packs.' },
+      { id: 'growthacq', name: '📊 32. Admin Growth Acquisition', desc: 'Adquisición de Tráfico y Campañas.' },
+      { id: 'compliancelaunch', name: '📜 33. Admin Compliance Launch', desc: 'Verificación Legal de Lanzamiento.' },
+      { id: 'liveengage', name: '🔥 34. Admin Live Engagement', desc: 'Engagement de Salas en Vivo.' },
+      { id: 'viralgrowthcenter', name: '🚀 35. Admin Viral Growth Center', desc: 'Crecimiento Viral y Loops Social.' }
+    ];
+
+    let appState = {
+      coins: 5000,
+      diamonds: 1200,
+      isMuted: false,
+      isKaraokePlaying: false,
+      userLevel: 14,
+      userXp: 850,
+      isFollowingHost: false,
+      pkScoreA: 450,
+      pkScoreB: 320,
+      dominoTiles: ['6-6', '6-4', '4-1', '1-0', '5-5'],
+      playedTiles: ['6-6'],
+      chatMessages: [
+        { sender: 'Maria', text: '¡Hola Guillo! ¿Cantamos Karaoke?' },
+        { sender: 'Tú', text: '¡Claro! Voy a elegir una canción.' }
+      ]
+    };
+
+    window.onload = () => {
+      renderAdminSidebar();
+      loadMobileCat('auth');
+    };
+
+    function renderAdminSidebar() {
+      const list = document.getElementById('adminSidebarList');
+      list.innerHTML = `
+        <div style="font-size: 11px; font-weight: 800; color: var(--accent-pink); margin-bottom: 8px; text-transform: uppercase;">TODOS LOS 35 CENTROS ADMIN</div>
+        ${adminCentersList.map((c, i) => `
+          <div class="admin-nav-item ${i === 0 ? 'active' : ''}" onclick="loadAdminCenterDetail('${c.id}')">${c.name}</div>
+        `).join('')}
+      `;
+    }
+
+    function switchViewMode(mode) {
+      document.getElementById('btnModeMobile').classList.toggle('active', mode === 'mobile');
+      document.getElementById('btnModeAdmin').classList.toggle('active', mode === 'admin');
+
+      if (mode === 'mobile') {
+        document.getElementById('mobileNavCategories').style.display = 'flex';
+        document.getElementById('mobileAppLayout').style.display = 'grid';
+        document.getElementById('adminAppLayout').style.display = 'none';
+        loadMobileCat('auth');
+      } else {
+        document.getElementById('mobileNavCategories').style.display = 'none';
+        document.getElementById('mobileAppLayout').style.display = 'none';
+        document.getElementById('adminAppLayout').style.display = 'grid';
+        loadAdminCenterDetail('control');
+      }
+    }
+
+    function setHeaderTitles(title, subtitle) {
+      document.getElementById('catTitle').innerText = title;
+      document.getElementById('catSubtitle').innerText = subtitle;
+    }
+
+    function loadMobileCat(cat) {
+      document.querySelectorAll('#mobileNavCategories .cat-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById(`btn-${cat}`);
+      if (btn) btn.classList.add('active');
+
+      const phoneBody = document.getElementById('phoneBody');
+
+      if (cat === 'auth') {
+        setHeaderTitles("🔑 Autenticación & Registro de Usuario", "Pantalla de ingreso de prueba con correo y contraseña.");
+        phoneBody.innerHTML = `
+          <div style="text-align: center; padding: 16px 10px;">
+            <div style="font-size: 28px; margin-bottom: 4px;">👑</div>
+            <div style="font-size: 15px; font-weight: 900; color: #fff;">PartyLive</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 12px;">Ingreso de Prueba & Registro</div>
+
+            <input type="text" value="guillo_tester@partylive.app" style="width: 100%; background: #1a1336; border: 1px solid #3b2d6b; color: white; padding: 7px; border-radius: 6px; font-size: 10px; margin-bottom: 6px;">
+            <input type="password" value="••••••••" style="width: 100%; background: #1a1336; border: 1px solid #3b2d6b; color: white; padding: 7px; border-radius: 6px; font-size: 10px; margin-bottom: 10px;">
+
+            <button class="sim-btn" onclick="loginAction()">🔑 INICIAR SESIÓN DE PRUEBA</button>
+          </div>
+        `;
+        explainAuth();
+      } else if (cat === 'home') {
+        setHeaderTitles("🏠 Pantalla de Inicio & Botón Seed Data", "Banners, saldos de monedas y el botón rojo de siembra de prueba.");
+        phoneBody.innerHTML = `
+          <div style="background: linear-gradient(135deg, #6366f1, #a855f7); padding: 10px; border-radius: 8px; margin-bottom: 8px; color: white;">
+            <div style="font-size: 9px; font-weight: bold; opacity: 0.8;">EVENTO DESTACADO</div>
+            <div style="font-size: 13px; font-weight: 900;">🔥 Batalla PK de Karaoke Internacional</div>
+          </div>
+
+          <div class="sim-card" onclick="loadMobileCat('voice')">
+            <strong style="color: #fbbf24; font-size: 11px;">🎙️ Sala Popular: Fiesta Latina 🎶</strong>
+            <p style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">8 Hablantes • 142 Oyentes en vivo</p>
+          </div>
+
+          <div style="margin-top: 10px; padding: 10px; background: rgba(239, 68, 68, 0.15); border: 1px dashed #ef4444; border-radius: 8px; text-align: center;">
+            <div style="font-size: 10px; font-weight: bold; color: #fca5a5; margin-bottom: 4px;">⚠️ SIEMBRA DE DATOS</div>
+            <button class="sim-btn" style="background: #dc2626;" onclick="seedDataAction()">🌱 Seed Test Data (Inyectar Firebase)</button>
+          </div>
+        `;
+        explainHome();
+      } else if (cat === 'voice') {
+        setHeaderTitles("🎙️ Salas de Voz, Micrófonos & Karaoke", "Prueba los botones de Mute, Regalo Dragón 3D y reproductor de Karaoke.");
+        phoneBody.innerHTML = `
+          <div style="background: #1a1336; padding: 8px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 10px; font-weight: bold; color: #fbbf24;">👑 Sala: Fiesta Latina 🎶</span>
+            <span style="font-size: 8px; background: #10b981; color: white; padding: 2px 4px; border-radius: 4px;">EN VIVO</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;">
+            <div style="background: #231a47; padding: 8px; border-radius: 6px; text-align: center; border: 1.5px solid #fbbf24; cursor: pointer;" onclick="toggleMicAction()">
+              <div style="font-size: 18px;">👑</div>
+              <div style="font-size: 8px; font-weight: bold; color: #fbbf24;">Host (Tú)</div>
+              <div style="font-size: 7px; color: ${appState.isMuted ? '#ef4444' : '#10b981'}; font-weight: bold;">
+                ${appState.isMuted ? '🔇 SILENCIADO' : '🎤 HABLANDO...'}
+              </div>
+            </div>
+            <div style="background: #231a47; padding: 8px; border-radius: 6px; text-align: center; cursor: pointer;" onclick="explainVoice()">
+              <div style="font-size: 18px;">🎤</div>
+              <div style="font-size: 8px; font-weight: bold; color: #fff;">Maria</div>
+            </div>
+            <div style="background: #231a47; padding: 8px; border-radius: 6px; text-align: center; border: 1px dashed #6366f1; cursor: pointer;" onclick="showToast('🪑 Solicitud enviada al Host.')">
+              <div style="font-size: 18px;">➕</div>
+              <div style="font-size: 8px; font-weight: bold; color: #6366f1;">Pedir Micro</div>
+            </div>
+          </div>
+
+          <button class="sim-btn" style="background: ${appState.isMuted ? '#ef4444' : '#10b981'};" onclick="toggleMicAction()">
+            ${appState.isMuted ? '🔇 ACTIVAR MICRÓFONO' : '🎤 SILENCIAR MICRÓFONO (MUTE)'}
+          </button>
+          <button class="sim-btn" style="background: #ec4899;" onclick="sendGiftAction()">🎁 ENVIAR REGALO DRAGÓN 3D (500 Monedas)</button>
+          <button class="sim-btn" style="background: #8b5cf6;" onclick="toggleKaraokeAction()">🎵 ${appState.isKaraokePlaying ? '⏹️ DETENER KARAOKE' : '▶️ INICIAR KARAOKE'}</button>
+        `;
+        explainVoice();
+      } else if (cat === 'admin') {
+        setHeaderTitles("🛡️ Suite Completa de los 35 Centros de Administración", "Listado íntegro de los 35 centros administrativos del proyecto.");
+        phoneBody.innerHTML = `
+          <div style="font-size: 11px; font-weight: bold; color: #fff; margin-bottom: 6px;">🛡️ Lista de los 35 Centros Admin</div>
+          <div style="display: flex; flex-direction: column; gap: 4px; max-height: 520px; overflow-y: auto;">
+            ${adminCentersList.map(c => `
+              <div class="sim-card" style="padding: 6px;" onclick="switchViewMode('admin'); loadAdminCenterDetail('${c.id}');">
+                <div style="font-size: 10.5px; font-weight: bold; color: #c084fc;">${c.name}</div>
+                <div style="font-size: 8.5px; color: var(--text-muted);">${c.desc}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        explainAdmin();
+      } else if (cat === 'lives') {
+        setHeaderTitles("📺 Transmisiones Live & Tap-Tap & PK", "Efecto Tap-Tap interactivo y batallas PK 1v1.");
+        phoneBody.innerHTML = `
+          <div style="background: #000; height: 130px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; margin-bottom: 10px; border: 1px solid #e11d48; cursor: pointer;" onclick="triggerTapTapAction(event)">
+            <span style="font-size: 32px;">❤️</span>
+            <div style="font-size: 10px; color: #ec4899; font-weight: bold;">¡TOCAR PANTALLA (TAP-TAP)!</div>
+          </div>
+          <button class="sim-btn" style="background: #dc2626;" onclick="boostPkAction()">⚔️ APOYAR PK EN VIVO (+100 Puntuación)</button>
+        `;
+        explainLives();
+      } else if (cat === 'games') {
+        setHeaderTitles("🎮 Dominó Multijugador & Ludo", "Fichas jugables en tiempo real y dado interactivo.");
+        phoneBody.innerHTML = `
+          <div style="background: #17122e; padding: 8px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #3b2d6b;">
+            <div style="font-size: 11px; font-weight: bold; color: #fbbf24; margin-bottom: 4px;">🀄 Tablero de Dominó en Tiempo Real</div>
+            <div style="background: #0b0817; padding: 8px; border-radius: 6px; display: flex; gap: 4px; justify-content: center; margin-bottom: 8px;">
+              ${appState.playedTiles.map(t => `<div style="background: #fff; color: #000; padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 9px;">${t}</div>`).join('')}
+            </div>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+              ${appState.dominoTiles.map((t, idx) => `<button style="background: #3b82f6; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; cursor: pointer;" onclick="playDominoTile(${idx})">${t}</button>`).join('')}
+            </div>
+          </div>
+        `;
+        explainGames();
+      } else if (cat === 'social') {
+        setHeaderTitles("👥 Red Social & Chat 1 a 1", "Publicaciones, seguidores y chat privado.");
+        phoneBody.innerHTML = `
+          <div class="sim-card">
+            <strong style="color: #fff; font-size: 11px;">💬 Chat Privado (1 a 1)</strong>
+            <div style="background: #0f0b21; padding: 6px; border-radius: 6px; height: 80px; overflow-y: auto; margin: 6px 0;">
+              ${appState.chatMessages.map(m => `<div style="font-size: 9px; margin-bottom: 3px;"><strong>${m.sender}:</strong> ${m.text}</div>`).join('')}
+            </div>
+            <div style="display: flex; gap: 4px;">
+              <input type="text" id="chatInput" placeholder="Mensaje..." style="flex: 1; background: #1a1336; border: 1px solid #3b2d6b; color: white; padding: 4px; border-radius: 4px; font-size: 9px;">
+              <button style="background: #10b981; border: none; color: white; padding: 4px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; cursor: pointer;" onclick="sendChatMessageAction()">Enviar</button>
+            </div>
+          </div>
+        `;
+        explainSocial();
+      } else if (cat === 'economy') {
+        setHeaderTitles("💎 Monedas, Diamantes & Retiros Bancarios", "Recarga de monedas y retiros de dinero en USD.");
+        phoneBody.innerHTML = `
+          <button class="sim-btn" style="background: #f59e0b;" onclick="buyCoinsAction()">🪙 COMPRAR 1,000 MONEDAS ($4.99 USD)</button>
+          <button class="sim-btn" style="background: #10b981;" onclick="withdrawDiamondsAction()">💸 SOLICITAR RETIRO A BANCO ($50 USD)</button>
+        `;
+        explainEconomy();
+      }
+    }
+
+    // CARGAR DETALLE DE CUALQUIERA DE LOS 35 CENTROS EN VISTA ADMIN
+    function loadAdminCenterDetail(centerId) {
+      const center = adminCentersList.find(c => c.id === centerId) || adminCentersList[0];
+      
+      document.querySelectorAll('#adminSidebarList .admin-nav-item').forEach(i => {
+        i.classList.toggle('active', i.innerText.includes(center.name.split('.')[1].trim()));
+      });
+
+      const area = document.getElementById('adminContentArea');
+
+      if (centerId === 'cfo') {
+        area.innerHTML = `
+          <h3 style="color: #fff; font-size: 18px; margin-bottom: 4px;">${center.name}</h3>
+          <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 14px;">${center.desc}</p>
+          
+          <div style="background: #181233; padding: 12px; border-radius: 8px; border: 1px solid #382c61; margin-bottom: 14px;">
+            <div style="font-size: 11px; font-weight: bold; color: #a7f3d0; margin-bottom: 4px;">💰 Balance Contable Global</div>
+            <div style="font-size: 18px; font-weight: bold; color: #fff;">$48,500.00 USD acumulados</div>
+          </div>
+
+          <table>
+            <thead><tr><th>Host</th><th>Diamantes acumulados</th><th>Monto en USD</th><th>Método de Pago</th><th>Acción</th></tr></thead>
+            <tbody>
+              <tr><td>MariaSinger</td><td>5,000 💎</td><td>$500.00 USD</td><td>Banco Santander</td><td><button style="background:#10b981; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="showToast('💵 $500.00 USD aprobados para MariaSinger.')">Aprobar Transferencia</button></td></tr>
+              <tr><td>CarlosLive</td><td>2,400 💎</td><td>$240.00 USD</td><td>PayPal</td><td><button style="background:#10b981; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="showToast('💵 $240.00 USD aprobados para CarlosLive.')">Aprobar Transferencia</button></td></tr>
+            </tbody>
+          </table>
+        `;
+      } else if (centerId === 'safety') {
+        area.innerHTML = `
+          <h3 style="color: #fff; font-size: 18px; margin-bottom: 4px;">${center.name}</h3>
+          <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 14px;">${center.desc}</p>
+
+          <table>
+            <thead><tr><th>Usuario Reportado</th><th>Motivo de Denuncia</th><th>Evidencia</th><th>Acción de Moderador</th></tr></thead>
+            <tbody>
+              <tr><td>Juan99</td><td>Lenguaje ofensivo en Sala #4</td><td>Log de Audio WebRTC</td><td><button style="background:#ef4444; color:white; border:none; padding:6px 10px; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="showToast('🛡️ Usuario Juan99 BANEDO por acoso.')">Baneo Permanente</button></td></tr>
+            </tbody>
+          </table>
+        `;
+      } else {
+        area.innerHTML = `
+          <h3 style="color: #fff; font-size: 18px; margin-bottom: 4px;">${center.name}</h3>
+          <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 14px;">${center.desc}</p>
+
+          <div style="background: #181233; padding: 16px; border-radius: 10px; border: 1px solid #382c61;">
+            <div style="font-size: 13px; font-weight: bold; color: #c084fc; margin-bottom: 6px;">⚙️ Panel de Operación en Tiempo Real</div>
+            <p style="font-size: 11.5px; color: #cbd5e1; margin-bottom: 12px;">Módulo habilitado para supervisar métricas, configuraciones y ejecutar acciones de control en directo.</p>
+            <button style="background: var(--accent-purple); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;" onclick="showToast('⚙️ Acción ejecutada en ${center.name}.')">Ejecutar Comando de Control</button>
+          </div>
+        `;
+      }
+    }
+
+    // ACCIONES REACTIVAS MÓVIL
+    function loginAction() { showToast("🔑 Sesión de prueba iniciada como Guillo (Tester)."); loadMobileCat('home'); }
+    function seedDataAction() { appState.coins = 5000; appState.diamonds = 1200; updateHeaderStats(); showToast("🌱 ¡Seed Test Data inyectado en Firebase!"); loadMobileCat('home'); }
+    function toggleMicAction() { appState.isMuted = !appState.isMuted; showToast(appState.isMuted ? "🔇 Micrófono SILENCIADO." : "🎤 Micrófono ACTIVADO (WebRTC en vivo)."); loadMobileCat('voice'); }
+    function sendGiftAction() { appState.coins -= 500; appState.diamonds += 250; updateHeaderStats(); document.getElementById('giftOverlay').classList.add('active'); setTimeout(() => document.getElementById('giftOverlay').classList.remove('active'), 1200); showToast("🎁 Regalo Dragón 3D enviado al Host."); loadMobileCat('voice'); }
+    function toggleKaraokeAction() { appState.isKaraokePlaying = !appState.isKaraokePlaying; showToast(appState.isKaraokePlaying ? "🎵 Karaoke iniciado." : "⏹️ Karaoke detenido."); loadMobileCat('voice'); }
+    function triggerTapTapAction(e) { showToast("❤️ ¡Tap-Tap enviado!"); }
+    function boostPkAction() { appState.pkScoreA += 100; showToast("⚔️ +100 Puntos PK añadidos."); loadMobileCat('lives'); }
+    function playDominoTile(idx) { const tile = appState.dominoTiles.splice(idx, 1)[0]; appState.playedTiles.push(tile); showToast(`🀄 Ficha ${tile} jugada.`); loadMobileCat('games'); }
+    function sendChatMessageAction() { const input = document.getElementById('chatInput'); if (!input.value) return; appState.chatMessages.push({ sender: 'Tú', text: input.value }); showToast("💬 Mensaje privado enviado."); loadMobileCat('social'); }
+    function buyCoinsAction() { appState.coins += 1000; updateHeaderStats(); showToast("🪙 +1,000 Monedas compradas."); }
+    function withdrawDiamondsAction() { appState.diamonds -= 500; updateHeaderStats(); showToast("💸 Solicitud de $50 USD enviada."); }
+    function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000); }
+
+    function explainAuth() { document.getElementById('actionDisplay').innerHTML = `<h3>🔑 Autenticación & Login de Prueba</h3><p>Módulo de registro con correo y contraseña. Al presionar 'Iniciar Sesión' ingresarás con el perfil de tester.</p>`; }
+    function explainHome() { document.getElementById('actionDisplay').innerHTML = `<h3>🏠 Home & Botón "Seed Test Data"</h3><p>Presiona el botón rojo para inyectar salas de voz, canciones, regalos y partidas en Firebase.</p>`; }
+    function explainVoice() { document.getElementById('actionDisplay').innerHTML = `<h3>🎙️ Salas de Voz, Micrófonos & Karaoke</h3><p>Presiona Mute/Unmute para alternar tu voz en vivo o envía el regalo Dragón 3D.</p>`; }
+    function explainLives() { document.getElementById('actionDisplay').innerHTML = `<h3>📺 Lives & Tap-Tap & Batallas PK</h3><p>Toca la pantalla para enviar corazones flotantes en tiempo real o suma puntos a la batalla PK 1v1.</p>`; }
+    function explainGames() { document.getElementById('actionDisplay').innerHTML = `<h3>🎮 Dominó & Ludo</h3><p>Haz clic sobre las fichas de tu mano (ej. 6-6, 6-4) para moverlas en vivo al tablero de juego.</p>`; }
+    function explainSocial() { document.getElementById('actionDisplay').innerHTML = `<h3>👥 Red Social & Chat Privado</h3><p>Escribe en la casilla de chat para enviar mensajes directos 1 a 1.</p>`; }
+    function explainAdmin() { document.getElementById('actionDisplay').innerHTML = `<h3>🛡️ Suite de los 35 Centros de Administración</h3><p>Haz clic en cualquier centro de la lista de 35 para abrir su simulador administrativo con botones de acción directa.</p>`; }
+  </script>
+
+</body>
+</html>

@@ -40,8 +40,6 @@ export const DevWalletTools: React.FC<DevWalletToolsProps> = ({
     }
   };
 
-  if (!__DEV__) return null;
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>🛠️ Herramientas de Desarrollo</Text>

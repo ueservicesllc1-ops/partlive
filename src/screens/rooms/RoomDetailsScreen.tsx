@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,8 @@ import { RoomChat } from '../../components/rooms/RoomChat';
 import { RoomMessageInput } from '../../components/rooms/RoomMessageInput';
 import { MicRequestsPanel } from '../../components/rooms/MicRequestsPanel';
 import { RoomActionsBar } from '../../components/rooms/RoomActionsBar';
+import { KaraokePlayer } from '../../components/rooms/KaraokePlayer';
+import { GiftSelectorModal } from '../../components/gifts/GiftSelectorModal';
 import { RoomChatPanel } from '../../components/chat/RoomChatPanel';
 import { ScreenLoading } from '../../components/ScreenLoading';
 import { ScreenError } from '../../components/ScreenError';
@@ -153,6 +155,15 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
   const [memberActionsVisible, setMemberActionsVisible] = useState(false);
   const [giftModalVisible, setGiftModalVisible] = useState(false);
 
+  // Track previous count to detect newly arriving mic requests
+  const prevMicRequestsCountRef = useRef<number>(0);
+  // Banner toast for new mic request notification
+  const [newRequestBanner, setNewRequestBanner] = useState<{ visible: boolean; requesterName: string }>({
+    visible: false,
+    requesterName: '',
+  });
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Handle kicked user - must use useEffect to avoid calling Alert during render
   useEffect(() => {
     if (currentMember?.isKicked) {
@@ -171,7 +182,57 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
     }
   }, [room?.status, navigation]);
 
+  // ─── Detect new mic requests → alert the host/moderator automatically ─────
+  useEffect(() => {
+    const prevCount = prevMicRequestsCountRef.current;
+    const newCount = micRequests.length;
 
+    if (newCount > prevCount) {
+      const isPrivilegedNow =
+        currentUserRole === 'owner' ||
+        currentUserRole === 'host' ||
+        currentUserRole === 'moderator';
+
+      if (isPrivilegedNow) {
+        const newest = micRequests[micRequests.length - 1];
+        const requesterName = newest?.displayName || 'Alguien';
+        const added = newCount - prevCount;
+        const alertMsg =
+          added > 1
+            ? `${added} nuevas solicitudes de micrófono pendientes.`
+            : `${requesterName} quiere subir al micrófono.`;
+
+        Alert.alert(
+          '🎤 Nueva Solicitud de Micrófono',
+          alertMsg,
+          [
+            {
+              text: 'Ver Solicitudes',
+              onPress: () => setAdminPanelVisible(true),
+            },
+            { text: 'Ahora no', style: 'cancel' },
+          ],
+          { cancelable: true }
+        );
+
+        // Show floating banner toast
+        if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+        setNewRequestBanner({ visible: true, requesterName });
+        bannerTimerRef.current = setTimeout(() => {
+          setNewRequestBanner(prev => ({ ...prev, visible: false }));
+        }, 6000);
+      }
+    }
+
+    prevMicRequestsCountRef.current = newCount;
+  }, [micRequests.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup banner timer on unmount
+  useEffect(() => {
+    return () => {
+      if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+    };
+  }, []);
 
   if (socialLoading) {
     return <ScreenLoading message="Entrando a la sala..." />;
@@ -395,6 +456,33 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         </View>
       )}
 
+      {/* Floating banner: new mic request alert for host/moderator */}
+      {newRequestBanner.visible && isPrivileged && (
+        <TouchableOpacity
+          style={styles.micRequestBanner}
+          onPress={() => {
+            setNewRequestBanner(prev => ({ ...prev, visible: false }));
+            setAdminPanelVisible(true);
+          }}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.micRequestBannerEmoji}>🎤</Text>
+          <View style={styles.micRequestBannerTextCol}>
+            <Text style={styles.micRequestBannerTitle}>Nueva solicitud de micrófono</Text>
+            <Text style={styles.micRequestBannerSub}>
+              {newRequestBanner.requesterName} quiere subir · Toca para ver
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setNewRequestBanner(prev => ({ ...prev, visible: false }))}
+            style={styles.micRequestBannerClose}
+          >
+            <Text style={styles.micRequestBannerCloseText}>✕</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
+
       <View style={styles.mainContainer}>
         {/* Background Content: Seats Grid & Listeners */}
         <ScrollView 
@@ -408,7 +496,10 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
             onSeatPress={handleSeatPress}
             maxMics={room.maxMics || 8}
           />
-          <RoomMembersList members={enrichedMembers} onMemberPress={handleMemberPress} />
+          {/* Karaoke/Video Feature */}
+          {room.roomType === 'karaoke' && (
+            <KaraokePlayer room={room} isPrivileged={isPrivileged} />
+          )}
         </ScrollView>
 
         {/* Real-time Moderable Chat Panel (Floating Layer on top) */}
@@ -861,6 +952,51 @@ const styles = StyleSheet.create({
   permissionWarningBtnText: {
     color: '#FF1744',
     fontSize: 12,
+    fontWeight: 'bold',
+  },
+  // ─── Floating mic-request banner ─────────────────────────────────────────────
+  micRequestBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A2E1A',
+    borderLeftWidth: 4,
+    borderLeftColor: '#00E676',
+    borderRadius: 12,
+    marginHorizontal: spacing.md,
+    marginTop: 4,
+    marginBottom: 2,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    zIndex: 200,
+    elevation: 8,
+    shadowColor: '#00E676',
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    gap: spacing.sm,
+  },
+  micRequestBannerEmoji: {
+    fontSize: 24,
+  },
+  micRequestBannerTextCol: {
+    flex: 1,
+  },
+  micRequestBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#00E676',
+  },
+  micRequestBannerSub: {
+    fontSize: 11,
+    color: '#A5D6A7',
+    marginTop: 2,
+  },
+  micRequestBannerClose: {
+    padding: 4,
+  },
+  micRequestBannerCloseText: {
+    fontSize: 14,
+    color: '#4CAF50',
     fontWeight: 'bold',
   },
 });

@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>8 Ball Pool Arcade Pro — PartyLive</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+      touch-action: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #090c14;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #fff;
+    }
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      background: radial-gradient(circle at center, #162032 0%, #080c14 100%);
+    }
+
+    /* Top HUD */
+    #top-hud {
+      width: 100%;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.55);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .player-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1.5px solid transparent;
+      min-width: 130px;
+      transition: all 0.25s ease;
+    }
+    .player-box.active {
+      border-color: #00e5ff;
+      background: rgba(0, 229, 255, 0.15);
+      box-shadow: 0 0 16px rgba(0, 229, 255, 0.35);
+      transform: scale(1.03);
+    }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      border: 1.5px solid #ffcc00;
+    }
+    .player-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .player-name {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #ffcc00;
+    }
+    .player-target {
+      font-size: 10px;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    #vs-badge {
+      font-size: 12px;
+      font-weight: 900;
+      color: #e2e8f0;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 8px;
+      border-radius: 8px;
+    }
+
+    /* Speech bubble for chat / emotes */
+    .speech-bubble {
+      position: absolute;
+      top: 48px;
+      left: 10px;
+      background: #ffffff;
+      color: #0f172a;
+      padding: 6px 12px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: 800;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+      z-index: 50;
+      opacity: 0;
+      transform: scale(0.6) translateY(-6px);
+      transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .speech-bubble.show {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+    .speech-bubble::after {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: 14px;
+      border-width: 0 6px 6px;
+      border-style: solid;
+      border-color: #ffffff transparent;
+      display: block;
+      width: 0;
+    }
+    #p2-bubble::after {
+      left: auto;
+      right: 14px;
+    }
+
+    /* Main Table Area */
+    #canvas-wrapper {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      border-radius: 12px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Floating Status Message */
+    #status-banner {
+      position: absolute;
+      top: 56px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(255, 204, 0, 0.35);
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #f8fafc;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      pointer-events: none;
+      z-index: 20;
+      backdrop-filter: blur(8px);
+    }
+
+    /* Bottom Controls */
+    #bottom-controls {
+      width: 100%;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.55);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 10;
+    }
+    .btn-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .btn-icon:active {
+      background: rgba(0, 229, 255, 0.25);
+      transform: scale(0.95);
+    }
+
+    .cue-power-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 5px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .power-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: #f6cc4f;
+      text-transform: uppercase;
+    }
+    .power-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 10px;
+      border-radius: 5px;
+      background: linear-gradient(90deg, #10b981 0%, #f59e0b 60%, #ef4444 100%);
+      outline: none;
+    }
+    .power-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 3px solid #ffcc00;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0,0,0,0.5);
+    }
+
+    .action-btn {
+      padding: 9px 16px;
+      border-radius: 12px;
+      border: none;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      color: #000;
+      background: linear-gradient(180deg, #ffd700 0%, #ff9900 100%);
+      box-shadow: 0 4px 14px rgba(255, 170, 0, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .action-btn:active {
+      transform: scale(0.96);
+    }
+
+    /* Spin Selector Floating Widget */
+    #spin-widget-btn {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid #ffcc00;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+    }
+    #spin-dot-indicator {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 4px #ef4444;
+    }
+
+    /* Spin Modal */
+    #spin-modal {
+      position: absolute;
+      bottom: 64px;
+      left: 14px;
+      width: 170px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1.5px solid #ffcc00;
+      border-radius: 16px;
+      padding: 12px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      z-index: 40;
+    }
+    #spin-modal.open {
+      display: flex;
+    }
+    .spin-title {
+      font-size: 10px;
+      font-weight: 800;
+      color: #ffcc00;
+      text-transform: uppercase;
+    }
+    #spin-ball-pad {
+      position: relative;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 60%, #64748b 100%);
+      border: 2px solid #94a3b8;
+      box-shadow: inset 0 -4px 8px rgba(0,0,0,0.3);
+      cursor: crosshair;
+    }
+    #spin-touch-dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ef4444;
+      border: 2px solid #ffffff;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+      pointer-events: none;
+    }
+    #spin-label {
+      font-size: 10px;
+      color: #38bdf8;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    /* Chat / Emotes Modal */
+    #chat-modal {
+      position: absolute;
+      bottom: 64px;
+      left: 50px;
+      width: 250px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1.5px solid #00e5ff;
+      border-radius: 16px;
+      padding: 12px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      z-index: 40;
+    }
+    #chat-modal.open {
+      display: flex;
+    }
+    .chat-modal-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: #00e5ff;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+    }
+    .emotes-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    .emote-btn {
+      font-size: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 4px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .emote-btn:active {
+      transform: scale(1.2);
+      background: rgba(0, 229, 255, 0.2);
+    }
+    .quick-msgs-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+    .quick-msg-item {
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .quick-msg-item:active {
+      background: #00e5ff;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <!-- Top HUD -->
+    <div id="top-hud">
+      <div id="p1-box" class="player-box active">
+        <div class="avatar">🤠</div>
+        <div class="player-info">
+          <span class="player-name">TÚ (P1)</span>
+          <span id="p1-target" class="player-target">Cualquiera</span>
+        </div>
+        <div id="p1-bubble" class="speech-bubble">¡Hola! 👋</div>
+      </div>
+
+      <div id="vs-badge">VS</div>
+
+      <div id="p2-box" class="player-box">
+        <div class="avatar">🤖</div>
+        <div class="player-info">
+          <span class="player-name">BOT (IA)</span>
+          <span id="p2-target" class="player-target">Cualquiera</span>
+        </div>
+        <div id="p2-bubble" class="speech-bubble">¡Suerte! 🎱</div>
+      </div>
+    </div>
+
+    <div id="status-banner">🎱 ¡Tu turno! Toca y arrastra para apuntar</div>
+
+    <!-- Canvas Area -->
+    <div id="canvas-wrapper">
+      <canvas id="pool-canvas"></canvas>
+    </div>
+
+    <!-- Spin Selector Modal -->
+    <div id="spin-modal">
+      <span class="spin-title">Efecto de Taco (Spin)</span>
+      <div id="spin-ball-pad">
+        <div id="spin-touch-dot"></div>
+      </div>
+      <span id="spin-label">Centro (Sin efecto)</span>
+    </div>
+
+    <!-- Chat & Emotes Modal -->
+    <div id="chat-modal">
+      <div class="chat-modal-title">
+        <span>💬 Mensajes & Emojis</span>
+        <span style="cursor:pointer;" onclick="toggleChatModal()">✕</span>
+      </div>
+      <div class="emotes-grid">
+        <div class="emote-btn" onclick="sendEmote('😎')">😎</div>
+        <div class="emote-btn" onclick="sendEmote('🔥')">🔥</div>
+        <div class="emote-btn" onclick="sendEmote('👏')">👏</div>
+        <div class="emote-btn" onclick="sendEmote('🤣')">🤣</div>
+        <div class="emote-btn" onclick="sendEmote('🎱')">🎱</div>
+        <div class="emote-btn" onclick="sendEmote('😱')">😱</div>
+        <div class="emote-btn" onclick="sendEmote('🏆')">🏆</div>
+        <div class="emote-btn" onclick="sendEmote('💥')">💥</div>
+        <div class="emote-btn" onclick="sendEmote('🎯')">🎯</div>
+        <div class="emote-btn" onclick="sendEmote('🤩')">🤩</div>
+      </div>
+      <div class="quick-msgs-list">
+        <div class="quick-msg-item" onclick="sendQuickMsg('¡Buen tiro! 🔥')">¡Buen tiro! 🔥</div>
+        <div class="quick-msg-item" onclick="sendQuickMsg('¡Casi entra! 😱')">¡Casi entra! 😱</div>
+        <div class="quick-msg-item" onclick="sendQuickMsg('¡Buena partida! 👏')">¡Buena partida! 👏</div>
+        <div class="quick-msg-item" onclick="sendQuickMsg('Jajaja 😂')">Jajaja 😂</div>
+        <div class="quick-msg-item" onclick="sendQuickMsg('¡Buena suerte! 🍀')">¡Buena suerte! 🍀</div>
+        <div class="quick-msg-item" onclick="sendQuickMsg('¡GG! 🏆')">¡GG! 🏆</div>
+      </div>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div id="bottom-controls">
+      <!-- Spin button -->
+      <div id="spin-widget-btn" onclick="toggleSpinModal()" title="Efecto de Taco">
+        <div id="spin-dot-indicator"></div>
+      </div>
+
+      <!-- Chat button -->
+      <button class="btn-icon" onclick="toggleChatModal()" title="Chat">💬</button>
+
+      <!-- Fine tune left -->
+      <button class="btn-icon" id="btn-left">↺</button>
+
+      <!-- Power slider -->
+      <div class="cue-power-container">
+        <span class="power-label">Fuerza:</span>
+        <input type="range" id="power-slider" class="power-slider" min="15" max="100" value="60" />
+      </div>
+
+      <!-- Fine tune right -->
+      <button class="btn-icon" id="btn-right">↻</button>
+
+      <!-- Shoot Button -->
+      <button class="action-btn" id="btn-shoot">🎱 TIRAR</button>
+    </div>
+  </div>
+
+  <script>
+    // ─── Web Audio Sound Effects ──────────────────────────────────────────────
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) audioCtx = new AudioContext();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playHitSound(vol = 0.5, freq = 320) {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.08);
+        gain.gain.setValueAtTime(vol * 0.4, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.08);
+      } catch (e) {}
+    }
+
+    function playPocketSound() {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+      } catch (e) {}
+    }
+
+    function playPopSound() {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+      } catch (e) {}
+    }
+
+    // ─── Setup Canvas & Geometry ──────────────────────────────────────────────
+    const canvas = document.getElementById('pool-canvas');
+    const ctx = canvas.getContext('2d');
+    const wrapper = document.getElementById('canvas-wrapper');
+
+    let scale = 1;
+    const TABLE_WIDTH = 700;
+    const TABLE_HEIGHT = 380;
+    const CUSHION = 32;
+    const PLAY_W = TABLE_WIDTH - CUSHION * 2;
+    const PLAY_H = TABLE_HEIGHT - CUSHION * 2;
+    const BALL_RADIUS = 12;
+    const POCKET_RADIUS = 22;
+
+    const POCKETS = [
+      { x: CUSHION, y: CUSHION },
+      { x: TABLE_WIDTH / 2, y: CUSHION - 4 },
+      { x: TABLE_WIDTH - CUSHION, y: CUSHION },
+      { x: CUSHION, y: TABLE_HEIGHT - CUSHION },
+      { x: TABLE_WIDTH / 2, y: TABLE_HEIGHT - CUSHION + 4 },
+      { x: TABLE_WIDTH - CUSHION, y: TABLE_HEIGHT - CUSHION }
+    ];
+
+    const BALL_COLORS = {
+      0: '#ffffff', // Cue
+      1: '#eab308', 2: '#2563eb', 3: '#dc2626', 4: '#9333ea', 5: '#ea580c', 6: '#16a34a', 7: '#991b1b',
+      8: '#0f172a', // 8-Ball
+      9: '#eab308', 10: '#2563eb', 11: '#dc2626', 12: '#9333ea', 13: '#ea580c', 14: '#16a34a', 15: '#991b1b'
+    };
+
+    function resize() {
+      const rect = wrapper.getBoundingClientRect();
+      const margin = 12;
+      const availW = rect.width - margin;
+      const availH = rect.height - margin;
+
+      scale = Math.min(availW / TABLE_WIDTH, availH / TABLE_HEIGHT, 1.3);
+      canvas.width = TABLE_WIDTH * scale;
+      canvas.height = TABLE_HEIGHT * scale;
+    }
+    window.addEventListener('resize', resize);
+
+    // ─── Spin State ───────────────────────────────────────────────────────────
+    // normalized -1 to 1 (spinX: left/right english, spinY: top/backspin)
+    let cueSpinX = 0;
+    let cueSpinY = 0;
+
+    // ─── Game State ───────────────────────────────────────────────────────────
+    let balls = [];
+    let currentPlayer = 1; // 1: Player, 2: Bot
+    let p1Target = null;
+    let p2Target = null;
+    let aimAngle = 0;
+    let isAiming = true;
+    let isShooting = false;
+    let turnPocketed = [];
+    let firstBallHit = null;
+    let gameOver = false;
+
+    class Ball {
+      constructor(id, x, y) {
+        this.id = id;
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.spinX = 0;
+        this.spinY = 0;
+        this.radius = BALL_RADIUS;
+        this.color = BALL_COLORS[id];
+        this.isStripe = id >= 9;
+        this.isCue = id === 0;
+        this.isEight = id === 8;
+        this.pocketed = false;
+      }
+
+      update() {
+        if (this.pocketed) return;
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Apply friction
+        this.vx *= 0.985;
+        this.vy *= 0.985;
+
+        // Spin Decay
+        this.spinX *= 0.96;
+        this.spinY *= 0.96;
+
+        if (Math.hypot(this.vx, this.vy) < 0.05) {
+          this.vx = 0;
+          this.vy = 0;
+        }
+
+        // Cushion bounce
+        const minX = CUSHION + this.radius;
+        const maxX = TABLE_WIDTH - CUSHION - this.radius;
+        const minY = CUSHION + this.radius;
+        const maxY = TABLE_HEIGHT - CUSHION - this.radius;
+
+        if (this.x < minX) {
+          this.x = minX;
+          this.vx *= -0.75;
+          if (this.isCue && Math.abs(this.spinX) > 0.1) this.vy += this.spinX * 3;
+          playHitSound(0.3, 200);
+        }
+        if (this.x > maxX) {
+          this.x = maxX;
+          this.vx *= -0.75;
+          if (this.isCue && Math.abs(this.spinX) > 0.1) this.vy -= this.spinX * 3;
+          playHitSound(0.3, 200);
+        }
+        if (this.y < minY) {
+          this.y = minY;
+          this.vy *= -0.75;
+          if (this.isCue && Math.abs(this.spinX) > 0.1) this.vx -= this.spinX * 3;
+          playHitSound(0.3, 200);
+        }
+        if (this.y > maxY) {
+          this.y = maxY;
+          this.vy *= -0.75;
+          if (this.isCue && Math.abs(this.spinX) > 0.1) this.vx += this.spinX * 3;
+          playHitSound(0.3, 200);
+        }
+
+        // Pockets check
+        for (const p of POCKETS) {
+          if (Math.hypot(this.x - p.x, this.y - p.y) < POCKET_RADIUS) {
+            this.pocketed = true;
+            this.vx = 0;
+            this.vy = 0;
+            turnPocketed.push(this);
+            playPocketSound();
+            break;
+          }
+        }
+      }
+
+      draw() {
+        if (this.pocketed) return;
+
+        const cx = this.x * scale;
+        const cy = this.y * scale;
+        const r = this.radius * scale;
+
+        // Ball Shadow
+        ctx.beginPath();
+        ctx.arc(cx + 2 * scale, cy + 2 * scale, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fill();
+
+        // Ball Body
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = this.isStripe ? '#ffffff' : this.color;
+        ctx.fill();
+
+        // Stripe Center
+        if (this.isStripe) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, r * 0.75, 0, Math.PI * 2);
+          ctx.fillStyle = this.color;
+          ctx.fill();
+        }
+
+        // Center number badge
+        if (!this.isCue) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, r * 0.42, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+
+          ctx.fillStyle = '#111';
+          ctx.font = `bold ${Math.max(8, r * 0.55)}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(this.id, cx, cy + 0.5 * scale);
+        }
+
+        // Gloss highlight
+        const grad = ctx.createRadialGradient(
+          cx - r * 0.35, cy - r * 0.35, r * 0.1,
+          cx, cy, r
+        );
+        grad.addColorStop(0, 'rgba(255,255,255,0.65)');
+        grad.addColorStop(0.5, 'rgba(255,255,255,0.05)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.4)');
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+    }
+
+    function initRack() {
+      balls = [];
+      // Cue Ball
+      balls.push(new Ball(0, CUSHION + PLAY_W * 0.25, TABLE_HEIGHT / 2));
+
+      // 15 Rack Balls Triangle
+      const rackOrder = [1, 9, 2, 10, 8, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15];
+      const startX = CUSHION + PLAY_W * 0.72;
+      const startY = TABLE_HEIGHT / 2;
+      const spacing = BALL_RADIUS * 2 + 0.5;
+
+      let idx = 0;
+      for (let col = 0; col < 5; col++) {
+        for (let row = 0; row <= col; row++) {
+          const x = startX + col * (spacing * 0.866);
+          const y = startY + (row - col / 2) * spacing;
+          balls.push(new Ball(rackOrder[idx++], x, y));
+        }
+      }
+
+      currentPlayer = 1;
+      p1Target = null;
+      p2Target = null;
+      aimAngle = 0;
+      isAiming = true;
+      isShooting = false;
+      gameOver = false;
+      cueSpinX = 0;
+      cueSpinY = 0;
+      updateSpinUI();
+      updateHUD();
+    }
+
+    // ─── Collisions & Spin Physics ────────────────────────────────────────────
+    function handleCollisions() {
+      for (let i = 0; i < balls.length; i++) {
+        for (let j = i + 1; j < balls.length; j++) {
+          const a = balls[i];
+          const b = balls[j];
+          if (a.pocketed || b.pocketed) continue;
+
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy);
+          const minDist = a.radius + b.radius;
+
+          if (dist < minDist && dist > 0) {
+            const overlap = minDist - dist;
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            // Separate
+            a.x -= nx * overlap * 0.5;
+            a.y -= ny * overlap * 0.5;
+            b.x += nx * overlap * 0.5;
+            b.y += ny * overlap * 0.5;
+
+            // Record first ball hit by cue
+            if (a.isCue && !firstBallHit) firstBallHit = b;
+            if (b.isCue && !firstBallHit) firstBallHit = a;
+
+            // Velocity resolution
+            const kx = a.vx - b.vx;
+            const ky = a.vy - b.vy;
+            const p = 2 * (nx * kx + ny * ky) / 2;
+
+            a.vx -= p * nx * 0.94;
+            a.vy -= p * ny * 0.94;
+            b.vx += p * nx * 0.94;
+            b.vy += p * ny * 0.94;
+
+            // ── Topspin / Backspin application on Cue impact ──
+            if (a.isCue && Math.abs(a.spinY) > 0.05) {
+              const fwdX = Math.cos(aimAngle);
+              const fwdY = Math.sin(aimAngle);
+              // Topspin pushes forward, Backspin pulls back
+              a.vx += fwdX * a.spinY * 4.5;
+              a.vy += fwdY * a.spinY * 4.5;
+              a.spinY *= 0.3; // absorbed
+            }
+
+            const speed = Math.hypot(kx, ky);
+            if (speed > 0.4) playHitSound(Math.min(1, speed / 8), 350);
+          }
+        }
+      }
+    }
+
+    function areBallsMoving() {
+      return balls.some(b => !b.pocketed && Math.hypot(b.vx, b.vy) > 0.05);
+    }
+
+    // ─── Drawing Scene ────────────────────────────────────────────────────────
+    function drawTable() {
+      // Wood border
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Outer gold rim
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 3 * scale;
+      ctx.strokeRect(4 * scale, 4 * scale, canvas.width - 8 * scale, canvas.height - 8 * scale);
+
+      // Green Felt with gradient
+      const feltGrad = ctx.createRadialGradient(
+        canvas.width / 2, canvas.height / 2, 80 * scale,
+        canvas.width / 2, canvas.height / 2, canvas.width / 2
+      );
+      feltGrad.addColorStop(0, '#059669');
+      feltGrad.addColorStop(1, '#065f46');
+
+      ctx.fillStyle = feltGrad;
+      ctx.fillRect(CUSHION * scale, CUSHION * scale, PLAY_W * scale, PLAY_H * scale);
+
+      // Cushions
+      ctx.fillStyle = '#047857';
+      ctx.lineWidth = CUSHION * scale;
+
+      // Pockets
+      for (const p of POCKETS) {
+        ctx.beginPath();
+        ctx.arc(p.x * scale, p.y * scale, POCKET_RADIUS * scale, 0, Math.PI * 2);
+        ctx.fillStyle = '#0f172a';
+        ctx.fill();
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2 * scale;
+        ctx.stroke();
+      }
+
+      // Head String / Spot markers
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.beginPath();
+      ctx.arc((CUSHION + PLAY_W * 0.25) * scale, (TABLE_HEIGHT / 2) * scale, 3 * scale, 0, Math.PI * 2);
+      ctx.arc((CUSHION + PLAY_W * 0.72) * scale, (TABLE_HEIGHT / 2) * scale, 3 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawAimGuide() {
+      if (!isAiming || isShooting || areBallsMoving()) return;
+      const cue = balls[0];
+      if (cue.pocketed) return;
+
+      const cos = Math.cos(aimAngle);
+      const sin = Math.sin(aimAngle);
+
+      // Raycast to find first hit ball or wall
+      let maxDist = 600;
+      let targetBall = null;
+
+      for (const b of balls) {
+        if (b.isCue || b.pocketed) continue;
+        const dx = b.x - cue.x;
+        const dy = b.y - cue.y;
+        const proj = dx * cos + dy * sin;
+        if (proj > 0) {
+          const perpDist = Math.abs(-sin * dx + cos * dy);
+          if (perpDist < BALL_RADIUS * 2) {
+            const hitDist = proj - Math.sqrt(Math.max(0, (BALL_RADIUS * 2) ** 2 - perpDist ** 2));
+            if (hitDist > 0 && hitDist < maxDist) {
+              maxDist = hitDist;
+              targetBall = b;
+            }
+          }
+        }
+      }
+
+      const endX = (cue.x + cos * maxDist) * scale;
+      const endY = (cue.y + sin * maxDist) * scale;
+
+      // Trajectory Line
+      ctx.save();
+      ctx.setLineDash([6 * scale, 4 * scale]);
+      ctx.beginPath();
+      ctx.moveTo(cue.x * scale, cue.y * scale);
+      ctx.lineTo(endX, endY);
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 2 * scale;
+      ctx.stroke();
+      ctx.restore();
+
+      // Ghost Ball at impact
+      ctx.beginPath();
+      ctx.arc(endX, endY, BALL_RADIUS * scale, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.7)';
+      ctx.lineWidth = 1.5 * scale;
+      ctx.stroke();
+
+      // If target ball hit, show rebound direction
+      if (targetBall) {
+        const tbx = targetBall.x * scale;
+        const tby = targetBall.y * scale;
+        const angleToTarget = Math.atan2(tby - endY, tbx - endX);
+        ctx.beginPath();
+        ctx.moveTo(tbx, tby);
+        ctx.lineTo(tbx + Math.cos(angleToTarget) * 45 * scale, tby + Math.sin(angleToTarget) * 45 * scale);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2 * scale;
+        ctx.stroke();
+
+        // Spin preview trail on cue ball
+        if (Math.abs(cueSpinY) > 0.1) {
+          ctx.beginPath();
+          ctx.moveTo(endX, endY);
+          const spinOffset = cueSpinY * 30 * scale;
+          ctx.lineTo(endX + cos * spinOffset, endY + sin * spinOffset);
+          ctx.strokeStyle = cueSpinY > 0 ? '#10b981' : '#ef4444';
+          ctx.lineWidth = 2 * scale;
+          ctx.stroke();
+        }
+      }
+
+      // Draw Cue Stick
+      const power = parseFloat(document.getElementById('power-slider').value) / 100;
+      const cueDist = (BALL_RADIUS + 10 + power * 24) * scale;
+      const cueLength = 160 * scale;
+
+      const cueStartX = (cue.x - cos * cueDist) * scale;
+      const cueStartY = (cue.y - sin * cueDist) * scale;
+      const cueEndX = (cue.x - cos * (cueDist + cueLength)) * scale;
+      const cueEndY = (cue.y - sin * (cueDist + cueLength)) * scale;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(cueStartX, cueStartY);
+      ctx.lineTo(cueEndX, cueEndY);
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 5 * scale;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Cue Tip
+      ctx.beginPath();
+      ctx.moveTo(cueStartX, cueStartY);
+      ctx.lineTo(cueStartX - cos * 6 * scale, cueStartY - sin * 6 * scale);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 4 * scale;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ─── Spin & Chat Modals Logic ─────────────────────────────────────────────
+    function toggleSpinModal() {
+      const modal = document.getElementById('spin-modal');
+      modal.classList.toggle('open');
+      document.getElementById('chat-modal').classList.remove('open');
+    }
+
+    function toggleChatModal() {
+      const modal = document.getElementById('chat-modal');
+      modal.classList.toggle('open');
+      document.getElementById('spin-modal').classList.remove('open');
+    }
+
+    const spinPad = document.getElementById('spin-ball-pad');
+    const spinDot = document.getElementById('spin-touch-dot');
+    const spinIndicator = document.getElementById('spin-dot-indicator');
+    const spinLabel = document.getElementById('spin-label');
+
+    function updateSpinFromTouch(e) {
+      const rect = spinPad.getBoundingClientRect();
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      if (!clientX || !clientY) return;
+
+      const dx = clientX - (rect.left + rect.width / 2);
+      const dy = clientY - (rect.top + rect.height / 2);
+      const maxR = rect.width / 2 - 8;
+      const dist = Math.hypot(dx, dy);
+
+      let clampedX = dx;
+      let clampedY = dy;
+      if (dist > maxR) {
+        clampedX = (dx / dist) * maxR;
+        clampedY = (dy / dist) * maxR;
+      }
+
+      cueSpinX = clampedX / maxR; // -1 (left) to 1 (right)
+      cueSpinY = -clampedY / maxR; // -1 (backspin / taco bajo) to 1 (topspin / taco alto)
+
+      updateSpinUI();
+    }
+
+    function updateSpinUI() {
+      const maxR = 37;
+      const dotX = 50 + (cueSpinX * maxR / 45) * 45;
+      const dotY = 50 - (cueSpinY * maxR / 45) * 45;
+
+      spinDot.style.left = `${dotX}%`;
+      spinDot.style.top = `${dotY}%`;
+
+      // Mini button indicator
+      spinIndicator.style.transform = `translate(${cueSpinX * 8}px, ${-cueSpinY * 8}px)`;
+
+      if (Math.abs(cueSpinX) < 0.15 && Math.abs(cueSpinY) < 0.15) {
+        spinLabel.innerText = 'Centro (Sin efecto)';
+      } else {
+        let label = '';
+        if (cueSpinY > 0.3) label += 'Taco Alto (Corrido) ⬆ ';
+        else if (cueSpinY < -0.3) label += 'Taco Bajo (Retroceso) ⬇ ';
+
+        if (cueSpinX > 0.3) label += 'Efecto Der ➡';
+        else if (cueSpinX < -0.3) label += 'Efecto Izq ⬅';
+
+        spinLabel.innerText = label;
+      }
+    }
+
+    spinPad.addEventListener('pointerdown', (e) => {
+      updateSpinFromTouch(e);
+      window.addEventListener('pointermove', updateSpinFromTouch);
+    });
+    window.addEventListener('pointerup', () => {
+      window.removeEventListener('pointermove', updateSpinFromTouch);
+    });
+
+    // ─── Chat & Emotes Sending ────────────────────────────────────────────────
+    function showSpeechBubble(playerNum, text) {
+      playPopSound();
+      const bubble = document.getElementById(playerNum === 1 ? 'p1-bubble' : 'p2-bubble');
+      bubble.innerText = text;
+      bubble.classList.add('show');
+      setTimeout(() => bubble.classList.remove('show'), 2500);
+    }
+
+    function sendEmote(emote) {
+      showSpeechBubble(1, emote);
+      toggleChatModal();
+
+      // Bot auto-reply with 60% probability
+      if (Math.random() > 0.4) {
+        setTimeout(() => {
+          const botEmotes = ['😎', '🔥', '🎱', '👏', '🤖'];
+          showSpeechBubble(2, botEmotes[Math.floor(Math.random() * botEmotes.length)]);
+        }, 1200);
+      }
+    }
+
+    function sendQuickMsg(msg) {
+      showSpeechBubble(1, msg);
+      toggleChatModal();
+
+      // Bot reply
+      setTimeout(() => {
+        const botReplies = ['¡Buena esa! 🔥', '¡A ver qué tal! 🎱', '¡Gracias! 👏', '¡Qué buena partida! 😎'];
+        showSpeechBubble(2, botReplies[Math.floor(Math.random() * botReplies.length)]);
+      }, 1500);
+    }
+
+    // ─── Turn Resolution ──────────────────────────────────────────────────────
+    function updateHUD() {
+      const p1Box = document.getElementById('p1-box');
+      const p2Box = document.getElementById('p2-box');
+      p1Box.classList.toggle('active', currentPlayer === 1);
+      p2Box.classList.toggle('active', currentPlayer === 2);
+
+      document.getElementById('p1-target').innerText = p1Target ? (p1Target === 'solids' ? 'Sólidas (1-7)' : 'Rayadas (9-15)') : 'Cualquiera';
+      document.getElementById('p2-target').innerText = p2Target ? (p2Target === 'solids' ? 'Sólidas (1-7)' : 'Rayadas (9-15)') : 'Cualquiera';
+    }
+
+    function setStatus(msg) {
+      document.getElementById('status-banner').innerText = msg;
+    }
+
+    function checkTurnEnd() {
+      if (!isShooting || areBallsMoving()) return;
+      isShooting = false;
+
+      // Handle Scratch
+      const cue = balls[0];
+      if (cue.pocketed) {
+        cue.pocketed = false;
+        cue.x = CUSHION + PLAY_W * 0.25;
+        cue.y = TABLE_HEIGHT / 2;
+        cue.vx = 0;
+        cue.vy = 0;
+        setStatus('⚠️ ¡Blanca embocada (Scratch)! Turno cambiado');
+        currentPlayer = currentPlayer === 1 ? 2 : 1;
+        updateHUD();
+        triggerBotIfNeeded();
+        return;
+      }
+
+      // Handle 8-Ball
+      const eight = balls.find(b => b.id === 8);
+      if (eight.pocketed) {
+        gameOver = true;
+        const winner = currentPlayer === 1 ? '¡TÚ GANASTE! 🏆' : '¡BOT GANÓ! 🤖';
+        setStatus(`🎱 Fin del juego: ${winner}`);
+        showSpeechBubble(currentPlayer, '¡Gané la partida! 🏆');
+        setTimeout(() => {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'GAME_END', winner: currentPlayer }));
+          }
+        }, 2000);
+        return;
+      }
+
+      // Target Assignment
+      if (!p1Target && turnPocketed.length > 0) {
+        const scored = turnPocketed.find(b => !b.isCue && !b.isEight);
+        if (scored) {
+          p1Target = scored.isStripe ? 'stripes' : 'solids';
+          p2Target = scored.isStripe ? 'solids' : 'stripes';
+          setStatus(`🎯 Tus bolas son: ${p1Target === 'solids' ? 'Sólidas' : 'Rayadas'}`);
+        }
+      }
+
+      // Switch or keep turn
+      if (turnPocketed.length > 0) {
+        setStatus(`✨ ¡Buena bola! Sigues en mesa`);
+        if (currentPlayer === 1 && Math.random() > 0.5) showSpeechBubble(1, '🔥');
+      } else {
+        currentPlayer = currentPlayer === 1 ? 2 : 1;
+        setStatus(currentPlayer === 1 ? '🎱 Tu turno de tirar' : '🤖 Turno del Bot pensando...');
+      }
+
+      turnPocketed = [];
+      firstBallHit = null;
+      updateHUD();
+      triggerBotIfNeeded();
+    }
+
+    function triggerBotIfNeeded() {
+      if (currentPlayer === 2 && !gameOver) {
+        setTimeout(() => {
+          // Bot AI: Find legal ball to shoot
+          const cue = balls[0];
+          let bestAngle = Math.random() * Math.PI * 2;
+
+          const candidateBalls = balls.filter(b => !b.isCue && !b.pocketed && (!p2Target || (p2Target === 'stripes' ? b.isStripe : !b.isStripe)));
+          if (candidateBalls.length > 0) {
+            const target = candidateBalls[Math.floor(Math.random() * candidateBalls.length)];
+            bestAngle = Math.atan2(target.y - cue.y, target.x - cue.x);
+          }
+
+          aimAngle = bestAngle;
+          document.getElementById('power-slider').value = 50 + Math.floor(Math.random() * 35);
+          setTimeout(() => executeShot(), 800);
+        }, 1000);
+      }
+    }
+
+    function executeShot() {
+      if (isShooting || areBallsMoving()) return;
+      initAudio();
+      const cue = balls[0];
+      if (cue.pocketed) return;
+
+      const power = parseFloat(document.getElementById('power-slider').value) / 100;
+      const speed = 12 + power * 22;
+
+      cue.vx = Math.cos(aimAngle) * speed;
+      cue.vy = Math.sin(aimAngle) * speed;
+
+      // Transfer chosen spin into cue physics
+      cue.spinX = cueSpinX;
+      cue.spinY = cueSpinY;
+
+      playHitSound(1.0, 480);
+      isShooting = true;
+      turnPocketed = [];
+      firstBallHit = null;
+
+      // Close open modals
+      document.getElementById('spin-modal').classList.remove('open');
+      document.getElementById('chat-modal').classList.remove('open');
+    }
+
+    // ─── Input Events ─────────────────────────────────────────────────────────
+    function handlePointer(e) {
+      if (currentPlayer !== 1 || isShooting || areBallsMoving()) return;
+      initAudio();
+
+      const rect = canvas.getBoundingClientRect();
+      const touchX = (e.clientX - rect.left) / scale;
+      const touchY = (e.clientY - rect.top) / scale;
+
+      const cue = balls[0];
+      aimAngle = Math.atan2(touchY - cue.y, touchX - cue.x);
+    }
+
+    canvas.addEventListener('pointerdown', handlePointer);
+    canvas.addEventListener('pointermove', (e) => {
+      if (e.buttons === 1) handlePointer(e);
+    });
+
+    document.getElementById('btn-left').addEventListener('click', () => { aimAngle -= 0.04; });
+    document.getElementById('btn-right').addEventListener('click', () => { aimAngle += 0.04; });
+    document.getElementById('btn-shoot').addEventListener('click', executeShot);
+
+    // ─── Main Loop ────────────────────────────────────────────────────────────
+    function loop() {
+      // Physics Step
+      for (const b of balls) b.update();
+      handleCollisions();
+      checkTurnEnd();
+
+      // Render
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawTable();
+      for (const b of balls) b.draw();
+      drawAimGuide();
+
+      requestAnimationFrame(loop);
+    }
+
+    resize();
+    initRack();
+    loop();
+  </script>
+</body>
+</html>

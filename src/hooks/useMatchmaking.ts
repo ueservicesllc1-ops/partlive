@@ -49,7 +49,7 @@ export const useMatchmaking = () => {
         const userProfile = {
           uid,
           displayName: currentUser?.displayName || `User_${uid.slice(0, 4)}`,
-          photoURL: currentUser?.photoURL || undefined,
+          photoURL: currentUser?.photoURL || null,
         };
         const sessionId = await apiQuickMatch(game, userProfile, options);
         setSearching(false);

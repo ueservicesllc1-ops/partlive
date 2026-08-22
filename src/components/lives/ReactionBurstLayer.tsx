@@ -1,16 +1,30 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const REACTION_EMOJIS = ['❤️', '🔥', '😂', '👏', '🎉'];
+/**
+ * ReactionBurstLayer — Secondary emoji reactions bar (🔥 😂 👏 🎉).
+ *
+ * NOTE: The primary 👍 Tap Like interaction is handled separately
+ * by TapLikeOverlay (full-screen tap zone + particle system).
+ * This bar provides supplementary emoji expressions only.
+ */
+
+const REACTION_EMOJIS = ['🔥', '😂', '👏', '🎉', '😍'];
+
+interface FloatingParticle {
+  id: string;
+  emoji: string;
+  left: number;
+}
 
 export const ReactionBurstLayer: React.FC = () => {
-  const [reactions, setReactions] = useState<{ id: string; emoji: string; left: number }[]>([]);
+  const [reactions, setReactions] = useState<FloatingParticle[]>([]);
 
   const handleTriggerReaction = (emoji: string) => {
     const newId = Date.now() + '_' + Math.random();
-    const randomLeft = Math.floor(Math.random() * 180) + 20;
+    const randomLeft = Math.floor(Math.random() * 160) + 20;
 
-    setReactions((prev) => [...prev.slice(-15), { id: newId, emoji, left: randomLeft }]);
+    setReactions((prev) => [...prev.slice(-12), { id: newId, emoji, left: randomLeft }]);
 
     setTimeout(() => {
       setReactions((prev) => prev.filter((r) => r.id !== newId));
@@ -19,7 +33,7 @@ export const ReactionBurstLayer: React.FC = () => {
 
   return (
     <View style={styles.container} pointerEvents="box-none">
-      {/* Floating particles */}
+      {/* Floating reaction particles */}
       <View style={styles.floatingArea} pointerEvents="none">
         {reactions.map((r) => (
           <Text key={r.id} style={[styles.floatingEmoji, { left: r.left }]}>
@@ -28,7 +42,7 @@ export const ReactionBurstLayer: React.FC = () => {
         ))}
       </View>
 
-      {/* Quick reaction bar */}
+      {/* Emoji reaction bar */}
       <View style={styles.reactionBar}>
         {REACTION_EMOJIS.map((emoji) => (
           <TouchableOpacity
@@ -53,14 +67,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   floatingArea: {
-    width: 220,
-    height: 200,
+    width: 200,
+    height: 180,
     position: 'relative',
   },
   floatingEmoji: {
     position: 'absolute',
     bottom: 0,
-    fontSize: 26,
+    fontSize: 24,
   },
   reactionBar: {
     flexDirection: 'row',
@@ -68,14 +82,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    gap: 6,
+    gap: 4,
   },
   reactionBtn: {
-    padding: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
   reactionEmoji: {
-    fontSize: 20,
+    fontSize: 22,
   },
 });

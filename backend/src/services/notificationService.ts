@@ -39,7 +39,7 @@ export async function getUserNotificationSettings(userId: string): Promise<UserN
     return { ...initData, updatedAt: new Date() };
   }
 
-  return doc.data() as UserNotificationSettings;
+  return { userId, ...DEFAULT_SETTINGS, ...doc.data() } as UserNotificationSettings;
 }
 
 /**
@@ -57,7 +57,7 @@ export async function updateUserNotificationSettings(
     updatedAt: now,
   };
 
-  await ref.update(updateData);
+  await ref.set(updateData, { merge: true });
   const updatedDoc = await ref.get();
   return updatedDoc.data() as UserNotificationSettings;
 }
@@ -78,29 +78,104 @@ export async function shouldSendNotification(userId: string, type: string): Prom
   const settings = await getUserNotificationSettings(userId);
   if (!settings.pushEnabled) return false;
 
+  let isTypeEnabled = true;
   switch (type) {
     case 'live_started':
-      return settings.liveStarted;
+      isTypeEnabled = settings.liveStarted;
+      break;
     case 'game_invite':
-      return settings.gameInvites;
+      isTypeEnabled = settings.gameInvites;
+      break;
     case 'gift_received':
-      return settings.gifts;
+      isTypeEnabled = settings.gifts;
+      break;
     case 'mission_completed':
     case 'mission_reward':
-      return settings.missions;
+      isTypeEnabled = settings.missions;
+      break;
     case 'payout_update':
-      return settings.payouts;
+      isTypeEnabled = settings.payouts;
+      break;
     case 'vip_update':
-      return settings.vip;
+      isTypeEnabled = settings.vip;
+      break;
     case 'event_started':
-      return settings.events;
+      isTypeEnabled = settings.events;
+      break;
     case 'moderation':
-      return settings.moderation;
+      isTypeEnabled = settings.moderation;
+      break;
     case 'private_message':
-      return settings.privateMessages !== false;
+      isTypeEnabled = settings.privateMessages !== false;
+      break;
     default:
-      return true;
+      isTypeEnabled = true;
   }
+
+  if (!isTypeEnabled) return false;
+
+  // Check quiet hours (security, moderation, payouts bypass quiet hours)
+  const isCritical = ['moderation', 'payout_update', 'wallet_update', 'security'].includes(type);
+  if (!isCritical && settings.quietHoursEnabled && settings.quietHoursStart && settings.quietHoursEnd) {
+    const now = new Date();
+    const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const start = settings.quietHoursStart;
+    const end = settings.quietHoursEnd;
+
+    if (start > end) { // Overnight range e.g. 23:00 to 07:00
+      if (currentHHMM >= start || currentHHMM < end) return false;
+    } else {
+      if (currentHHMM >= start && currentHHMM < end) return false;
+    }
+  }
+
+  return true;
+}
+
+export async function checkNotificationCap(
+  userId: string,
+  category: string,
+  hourlyCap: number = 5
+): Promise<boolean> {
+  const capDocId = `${userId}_${category}_${new Date().getHours()}`;
+  const ref = db.collection('notificationCaps').doc(capDocId);
+
+  let allowed = true;
+  await db.runTransaction(async (transaction) => {
+    const snap = await transaction.get(ref);
+    const count = snap.exists ? (snap.data()?.count || 0) : 0;
+
+    if (count >= hourlyCap) {
+      allowed = false;
+    } else {
+      transaction.set(ref, {
+        userId,
+        category,
+        count: count + 1,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+  });
+
+  return allowed;
+}
+
+export async function bundleGiftNotifications(
+  userId: string,
+  senderName: string,
+  giftName: string,
+  count: number = 1
+): Promise<{ title: string; body: string }> {
+  if (count > 1) {
+    return {
+      title: '🎁 ¡Múltiples Regalos Recibidos!',
+      body: `¡Has recibido ${count} regalos recientemente de tus espectadores en tu Live!`,
+    };
+  }
+  return {
+    title: '🎁 ¡Nuevo Regalo Recibido!',
+    body: `${senderName} te envió un ${giftName}.`,
+  };
 }
 
 /**

@@ -60,6 +60,8 @@ export const getPayoutMethodTypeLabel = (type: PayoutMethodType): string => {
       return 'Transferencia Bancaria';
     case 'payoneer':
       return 'Payoneer';
+    case 'usdt':
+      return 'USDT (Dirección Crypto)';
     case 'other':
       return 'Otro Método';
     default:

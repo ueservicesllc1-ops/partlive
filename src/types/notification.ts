@@ -62,6 +62,9 @@ export interface UserNotificationSettings {
   marketing: boolean;
   moderation: boolean;
   privateMessages: boolean;
+  quietHoursEnabled?: boolean;
+  quietHoursStart?: string; // e.g. "23:00"
+  quietHoursEnd?: string;   // e.g. "07:00"
   updatedAt: any; // Timestamp
 }
 

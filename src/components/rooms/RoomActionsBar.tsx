@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Animated } from 'react-native';
 import { colors, spacing } from '../../theme';
 
 interface RoomActionsBarProps {
@@ -25,6 +25,34 @@ export const RoomActionsBar: React.FC<RoomActionsBarProps> = ({
   requestsCount = 0,
   localMuted = false,
 }) => {
+  // Animated pulse for the Admin button when there are pending requests
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    if (isPrivileged && requestsCount > 0) {
+      const animation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      animation.start();
+      return () => animation.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isPrivileged, requestsCount, pulseAnim]);
+
+  const hasRequestsAndPrivileged = isPrivileged && requestsCount > 0;
+
   return (
     <View style={styles.container}>
       {/* Mic Request / Mute toggle Action */}
@@ -51,15 +79,21 @@ export const RoomActionsBar: React.FC<RoomActionsBarProps> = ({
 
       {/* Admin Panel button or generic options */}
       <TouchableOpacity style={styles.actionButton} onPress={onMorePress} activeOpacity={0.8}>
-        <View style={styles.moreIconContainer}>
+        <Animated.View style={[
+          styles.adminIconContainer,
+          hasRequestsAndPrivileged && styles.adminIconContainerActive,
+          hasRequestsAndPrivileged && { transform: [{ scale: pulseAnim }] }
+        ]}>
           <Text style={styles.actionIcon}>{isPrivileged ? '⚙️' : '💬'}</Text>
-          {isPrivileged && requestsCount > 0 && (
+          {hasRequestsAndPrivileged && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{requestsCount}</Text>
             </View>
           )}
-        </View>
-        <Text style={styles.actionLabel}>{isPrivileged ? 'Admin' : 'Más'}</Text>
+        </Animated.View>
+        <Text style={[styles.actionLabel, hasRequestsAndPrivileged && { color: '#FF1744' }]}>
+          {isPrivileged ? 'Admin' : 'Más'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -97,17 +131,25 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: 'bold',
   },
-  moreIconContainer: {
+  adminIconContainer: {
     position: 'relative',
+    padding: 4,
+    borderRadius: 12,
+  },
+  adminIconContainerActive: {
+    backgroundColor: 'rgba(255, 23, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 23, 68, 0.3)',
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -6,
+    top: -2,
+    right: -4,
     backgroundColor: '#FF1744',
-    borderRadius: 8,
-    width: 16,
-    height: 16,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,

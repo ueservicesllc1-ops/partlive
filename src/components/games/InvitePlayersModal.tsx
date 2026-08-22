@@ -84,13 +84,13 @@ export const InvitePlayersModal: React.FC<InvitePlayersModalProps> = ({
       const fromUserProfile = {
         uid: currentUser.uid,
         displayName: currentUser.displayName || 'Usuario',
-        photoURL: currentUser.photoURL || undefined,
+        photoURL: currentUser.photoURL || null,
       };
 
       const toUserProfile = {
         uid: user.uid,
         displayName: user.displayName || user.username || 'Invitado',
-        photoURL: user.photoURL || undefined,
+        photoURL: user.photoURL || null,
       };
 
       await createGameInvite(session, fromUserProfile, toUserProfile);

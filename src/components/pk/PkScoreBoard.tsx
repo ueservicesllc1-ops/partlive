@@ -258,6 +258,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 6,
+  },
   momentBadge: {
     alignSelf: 'center',
     backgroundColor: 'rgba(255, 45, 85, 0.9)',

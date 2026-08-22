@@ -36,6 +36,8 @@ export const PayoutMethodForm: React.FC<PayoutMethodFormProps> = ({
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [routingNumber, setRoutingNumber] = useState('');
+  const [usdtAddress, setUsdtAddress] = useState('');
+  const [usdtNetwork, setUsdtNetwork] = useState('TRC20');
 
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -84,6 +86,19 @@ export const PayoutMethodForm: React.FC<PayoutMethodFormProps> = ({
         accountNumber: accountNumber.trim(),
         routingNumber: routingNumber.trim() || undefined,
       };
+    } else if (type === 'usdt') {
+      if (!usdtAddress.trim()) {
+        setValidationError('Por favor ingresa tu dirección USDT.');
+        return;
+      }
+      if (usdtAddress.trim().length < 20) {
+        setValidationError('La dirección USDT ingresada no es válida.');
+        return;
+      }
+      details = {
+        usdtAddress: usdtAddress.trim(),
+        usdtNetwork: usdtNetwork.trim(),
+      };
     }
 
     onSubmit({
@@ -94,7 +109,7 @@ export const PayoutMethodForm: React.FC<PayoutMethodFormProps> = ({
     });
   };
 
-  const typesList: PayoutMethodType[] = ['paypal', 'bank_transfer', 'payoneer'];
+  const typesList: PayoutMethodType[] = ['paypal', 'bank_transfer', 'payoneer', 'usdt'];
 
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
@@ -109,7 +124,7 @@ export const PayoutMethodForm: React.FC<PayoutMethodFormProps> = ({
               onPress={() => handleTypeSelect(t)}
             >
               <Text style={[styles.typeText, isSelected && styles.selectedTypeText]}>
-                {t === 'paypal' ? '🅿️ PayPal' : t === 'bank_transfer' ? '🏦 Banco' : '💸 Payoneer'}
+                {t === 'paypal' ? '🅿️ PayPal' : t === 'bank_transfer' ? '🏦 Banco' : t === 'payoneer' ? '💸 Payoneer' : '🪙 USDT'}
               </Text>
             </TouchableOpacity>
           );
@@ -202,6 +217,34 @@ export const PayoutMethodForm: React.FC<PayoutMethodFormProps> = ({
               placeholderTextColor={colors.textDark}
               value={routingNumber}
               onChangeText={setRoutingNumber}
+            />
+          </View>
+        </View>
+      )}
+
+      {type === 'usdt' && (
+        <View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Dirección USDT (Receptor)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ej: TXxxxxxx..."
+              placeholderTextColor={colors.textDark}
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={usdtAddress}
+              onChangeText={setUsdtAddress}
+            />
+          </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Red de USDT (Ej: TRC20, ERC20)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="TRC20"
+              placeholderTextColor={colors.textDark}
+              autoCapitalize="characters"
+              value={usdtNetwork}
+              onChangeText={setUsdtNetwork}
             />
           </View>
         </View>

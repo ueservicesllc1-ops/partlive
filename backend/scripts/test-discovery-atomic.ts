@@ -1,103 +1,112 @@
 import { db } from '../src/config/firebase';
-import { seedDiscoveryConfig } from '../src/seeds/seedDiscoveryConfig';
-import { getForYouFeed, getTrendingLives, getNewHostsFeed, recordWatchTime } from '../src/services/discoveryService';
-import { createClip, getClipsFeed, interactWithClip, getClipCreatorAnalytics } from '../src/services/clipService';
+import { getForYouFeed, getRisingCreatorsFeed } from '../src/services/discoveryService';
+import { hideCreator } from '../src/services/userPreferenceService';
+import { generateShareLink, recordShareClick, getViralAnalyticsSummary } from '../src/services/viralShareService';
 
 export const runDiscoveryAtomicTests = async () => {
   console.log('\n==================================================');
-  console.log('🎬 RUNNING DISCOVERY & CLIPS ATOMIC TESTS');
+  console.log('🔍 RUNNING DISCOVERY, PERSONALIZATION & VIRAL ATOMIC TESTS');
   console.log('==================================================\n');
 
-  // 1. Seed Discovery Config
-  await seedDiscoveryConfig();
+  const userId = 'test_disc_user_' + Date.now();
+  const hiddenHostId = 'test_disc_hidden_host_' + Date.now();
+  const activeHostId = 'test_disc_active_host_' + Date.now();
 
-  const hostId = 'test_discovery_host_' + Date.now();
-  const userId = 'test_discovery_user_' + Date.now();
-  const liveId = 'test_live_stream_456';
+  await db.collection('users').doc(userId).set({ uid: userId, displayName: 'Usuario Discovery', status: 'active' });
 
-  // Create Users & Live Stream
-  await db.collection('users').doc(hostId).set({
-    uid: hostId,
-    displayName: 'Host Discovery Test',
-    isHost: true,
+  // Create sample live streams
+  const liveHiddenRef = db.collection('lives').doc('live_hidden_1');
+  await liveHiddenRef.set({
+    id: 'live_hidden_1',
+    hostId: hiddenHostId,
+    hostName: 'Host Oculto',
+    title: 'Live Oculto',
     status: 'active',
+    viewerCount: 50,
+    creatorLevel: 'Star',
   });
 
-  await db.collection('users').doc(userId).set({
-    uid: userId,
-    displayName: 'Usuario Discovery Test',
+  const liveActiveRef = db.collection('lives').doc('live_active_1');
+  await liveActiveRef.set({
+    id: 'live_active_1',
+    hostId: activeHostId,
+    hostName: 'Host Activo',
+    title: 'Live Activo Pop',
     status: 'active',
-  });
-
-  await db.collection('lives').doc(liveId).set({
-    id: liveId,
-    hostId,
-    hostName: 'Host Discovery Test',
-    title: 'Transmisión Destacada de Prueba',
-    status: 'live',
-    viewerCount: 150,
-    diamondsGenerated: 5000,
-    createdAt: new Date(),
+    viewerCount: 80,
+    creatorLevel: 'Rising',
   });
 
   console.log('✅ Datos de Prueba Creados.');
 
-  // Test 1: Host Creates Clip
-  console.log('\n▶ Test 1: Host publica un Clip en PartyLive...');
-  const clip = await createClip(hostId, liveId, 'Momento Épico PK', 'Resumen de batalla en vivo', 'https://cdn.partylive.app/clips/video1.mp4', 'https://cdn.partylive.app/clips/thumb1.jpg', 30);
+  // Test 1: Fetch initial For You feed
+  console.log('\n▶ Test 1: Consultar Feed Personalizado "For You"...');
+  const feed1 = await getForYouFeed(userId);
+  console.log(`Elementos en Feed For You: ${feed1.length}`);
+  const hasHiddenBefore = feed1.some((item) => item.hostId === hiddenHostId);
+  console.log(`¿Incluye Host Oculto antes del filtro?: ${hasHiddenBefore}`);
 
-  console.log(`Clip Creado ID: ${clip.id}, Duración: ${clip.durationSeconds}s, Status: ${clip.status}`);
-  if (clip.id && clip.status === 'PUBLISHED') {
-    console.log('✅ Test 1 PASADO: Clip publicado con éxito.');
+  if (feed1.length >= 2 && hasHiddenBefore) {
+    console.log('✅ Test 1 PASADO: Feed For You generado exitosamente.');
   } else {
     console.error('❌ Test 1 FALLIDO.');
   }
 
-  // Test 2: Interact with Clip & Track Live Conversion
-  console.log('\n▶ Test 2: Usuario interactúa y se une al Live desde el Clip (Conversión)...');
-  await interactWithClip(userId, clip.id, 'like');
-  await interactWithClip(userId, clip.id, 'join_live');
+  // Test 2: Hide Creator & Verify Exclusion
+  console.log('\n▶ Test 2: Ocultar anfitrión (Hide Creator) y verificar exclusión en Feed...');
+  await hideCreator(userId, hiddenHostId);
 
-  const updatedClipDoc = await db.collection('clips').doc(clip.id).get();
-  console.log(`Likes actualizados: ${updatedClipDoc.data()?.likesCount}, Entradas a Live: ${updatedClipDoc.data()?.liveEntriesCount}`);
-  if (updatedClipDoc.data()?.likesCount === 1 && updatedClipDoc.data()?.liveEntriesCount === 1) {
-    console.log('✅ Test 2 PASADO: Conversión de Clip a Live registrada.');
+  const feed2 = await getForYouFeed(userId);
+  const hasHiddenAfter = feed2.some((item) => item.hostId === hiddenHostId);
+  console.log(`¿Incluye Host Oculto después del filtro?: ${hasHiddenAfter}`);
+
+  if (!hasHiddenAfter) {
+    console.log('✅ Test 2 PASADO: Anfitrión ocultado excluido correctamente del algoritmo.');
   } else {
     console.error('❌ Test 2 FALLIDO.');
   }
 
-  // Test 3: Calculate Creator Analytics from Clips
-  console.log('\n▶ Test 3: Obtener métricas de conversión del creador...');
-  const analytics = await getClipCreatorAnalytics(hostId);
-  console.log(`Analíticas Creador: Clips=${analytics.totalClips}, Entradas a Live=${analytics.totalLiveEntries}`);
-  if (analytics.totalClips >= 1 && analytics.totalLiveEntries >= 1) {
-    console.log('✅ Test 3 PASADO: Métricas del creador calculadas correctamente.');
+  // Test 3: Rising Creators Feed
+  console.log('\n▶ Test 3: Consultar Feed de Creadores Emergentes (Rising Creators)...');
+  const risingFeed = await getRisingCreatorsFeed();
+  console.log(`Creadores Emergentes en Live: ${risingFeed.length}`);
+  const hasRisingHost = risingFeed.some((item) => item.hostId === activeHostId);
+
+  if (hasRisingHost) {
+    console.log('✅ Test 3 PASADO: Feed de Creadores Emergentes expone nuevo talento.');
   } else {
     console.error('❌ Test 3 FALLIDO.');
   }
 
-  // Test 4: Record Watch Time & Fetch Discovery Feeds
-  console.log('\n▶ Test 4: Registrar tiempo de visualización y consultar Feeds...');
-  await recordWatchTime(userId, liveId, 'live', 120);
+  // Test 4: Viral Share & Deep Link Click Attribution
+  console.log('\n▶ Test 4: Generar enlace profundo viral y registrar clic de atribución...');
+  const shareLink = await generateShareLink('live', 'live_active_1', userId);
+  console.log(`Enlace Generado: ${shareLink.url}, Código: ${shareLink.code}`);
 
-  const trendingFeed = await getTrendingLives(10);
-  const forYouFeed = await getForYouFeed(userId, 10);
-  console.log(`Feeds Obtenidos: Trending=${trendingFeed.length} items, ForYou=${forYouFeed.length} items`);
+  // Simulate human click
+  const clickRes = await recordShareClick(shareLink.code, '192.168.1.1', 'Mozilla/5.0 Mobile');
+  console.log(`Resultado Clic Humano: Éxito=${clickRes.success}, Bot=${clickRes.isBot}`);
 
-  if (trendingFeed.length >= 1 && forYouFeed.length >= 1) {
-    console.log('✅ Test 4 PASADO: Algoritmo de recomendación por señales funcionando.');
+  // Simulate bot click
+  const botClickRes = await recordShareClick(shareLink.code, '10.0.0.1', 'Googlebot/2.1 Crawler');
+  console.log(`Resultado Clic Bot: Éxito=${botClickRes.success}, Bot=${botClickRes.isBot}`);
+
+  const viralStats = await getViralAnalyticsSummary();
+  console.log(`Estadísticas Virales Totales: Shares=${viralStats.totalShares}, Clics=${viralStats.totalClicks}, K-Factor=${viralStats.kFactor}`);
+
+  if (clickRes.success && !clickRes.isBot && botClickRes.isBot) {
+    console.log('✅ Test 4 PASADO: Atribución de clics virales y filtro anti-bot funcionando.');
   } else {
     console.error('❌ Test 4 FALLIDO.');
   }
 
   // Cleanup
-  await db.collection('users').doc(hostId).delete();
   await db.collection('users').doc(userId).delete();
-  await db.collection('lives').doc(liveId).delete();
-  await db.collection('clips').doc(clip.id).delete();
+  await liveHiddenRef.delete();
+  await liveActiveRef.delete();
 
   console.log('\n==================================================');
-  console.log('🎉 TODAS LAS PRUEBAS ATÓMICAS DE DISCOVERY Y CLIPS COMPLETADAS!');
+  console.log('🎉 TODAS LAS PRUEBAS ATÓMICAS DE DESCUBRIMIENTO COMPLETADAS!');
   console.log('==================================================\n');
 };
 
@@ -105,7 +114,7 @@ if (require.main === module) {
   runDiscoveryAtomicTests()
     .then(() => process.exit(0))
     .catch((err) => {
-      console.error('Error en pruebas de Discovery:', err);
+      console.error('Error en pruebas de Descubrimiento:', err);
       process.exit(1);
     });
 }

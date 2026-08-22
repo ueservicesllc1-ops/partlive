@@ -1,5 +1,6 @@
 import { db } from '../config/firebase';
 import * as admin from 'firebase-admin';
+import { getUserHiddenCreators } from './userPreferenceService';
 
 export interface DiscoveryFeedItem {
   id: string;
@@ -11,8 +12,10 @@ export interface DiscoveryFeedItem {
   coverUrl?: string;
   viewerCount?: number;
   diamondsGenerated?: number;
+  creatorLevel?: string;
   score: number;
   isLive: boolean;
+  sponsored?: boolean;
 }
 
 export const recordWatchTime = async (
@@ -38,7 +41,7 @@ export const recordWatchTime = async (
 
 export const getTrendingLives = async (limitCount: number = 20): Promise<DiscoveryFeedItem[]> => {
   const livesSnap = await db.collection('lives')
-    .where('status', '==', 'live')
+    .where('status', '==', 'active')
     .limit(limitCount * 2)
     .get();
 
@@ -46,7 +49,6 @@ export const getTrendingLives = async (limitCount: number = 20): Promise<Discove
     const data = doc.data();
     const viewers = data.viewerCount || 0;
     const diamonds = data.diamondsGenerated || 0;
-    // Calculate real-signal trending score
     const score = viewers * 2.0 + diamonds * 0.1;
 
     return {
@@ -59,8 +61,10 @@ export const getTrendingLives = async (limitCount: number = 20): Promise<Discove
       coverUrl: data.coverUrl || '',
       viewerCount: viewers,
       diamondsGenerated: diamonds,
+      creatorLevel: data.creatorLevel || 'Rookie',
       score,
       isLive: true,
+      sponsored: Boolean(data.sponsored),
     };
   });
 
@@ -68,7 +72,9 @@ export const getTrendingLives = async (limitCount: number = 20): Promise<Discove
 };
 
 export const getForYouFeed = async (userId: string, limitCount: number = 20): Promise<DiscoveryFeedItem[]> => {
-  // Fetch user watch history to detect preferences
+  const hiddenHostIds = await getUserHiddenCreators(userId);
+
+  // Fetch watch history
   const historySnap = await db.collection('watchHistory')
     .where('userId', '==', userId)
     .limit(30)
@@ -80,35 +86,59 @@ export const getForYouFeed = async (userId: string, limitCount: number = 20): Pr
     if (data.hostId) watchedHostIds.add(data.hostId);
   });
 
-  const trending = await getTrendingLives(limitCount);
+  const trending = await getTrendingLives(limitCount * 2);
 
-  // Boost score for hosts user previously watched
-  const personalized = trending.map((item) => {
+  // Exclude hidden creators and boost watched hosts
+  const filtered = trending.filter((item) => !hiddenHostIds.has(item.hostId));
+
+  const personalized = filtered.map((item) => {
     let boostedScore = item.score;
     if (watchedHostIds.has(item.hostId)) {
       boostedScore *= 1.5;
     }
+    // Boost Rising creators slightly to protect new talent exposure
+    if (item.creatorLevel === 'Rookie' || item.creatorLevel === 'Rising') {
+      boostedScore *= 1.25;
+    }
     return { ...item, score: boostedScore };
   });
 
-  return personalized.sort((a, b) => b.score - a.score);
+  return personalized.sort((a, b) => b.score - a.score).slice(0, limitCount);
 };
 
-export const getNewHostsFeed = async (limitCount: number = 20): Promise<any[]> => {
-  const usersSnap = await db.collection('users')
-    .where('isHost', '==', true)
+export const getRisingCreatorsFeed = async (limitCount: number = 20): Promise<DiscoveryFeedItem[]> => {
+  const livesSnap = await db.collection('lives')
+    .where('status', '==', 'active')
+    .limit(50)
+    .get();
+
+  const items: DiscoveryFeedItem[] = livesSnap.docs
+    .map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        type: 'live' as const,
+        title: data.title || 'Live Stream',
+        hostId: data.hostId || '',
+        hostName: data.hostName || 'Nuevo Anfitrión',
+        hostPhotoURL: data.hostPhotoURL || '',
+        coverUrl: data.coverUrl || '',
+        viewerCount: data.viewerCount || 0,
+        creatorLevel: data.creatorLevel || 'Rookie',
+        score: (data.viewerCount || 0) * 1.5 + 50, // Freshness boost for new creators
+        isLive: true,
+      };
+    })
+    .filter((item) => item.creatorLevel === 'Rookie' || item.creatorLevel === 'Rising');
+
+  return items.sort((a, b) => b.score - a.score).slice(0, limitCount);
+};
+
+export const getPKDiscoveryFeed = async (limitCount: number = 20): Promise<any[]> => {
+  const pkSnap = await db.collection('pkBattles')
     .where('status', '==', 'active')
     .limit(limitCount)
     .get();
 
-  return usersSnap.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      uid: doc.id,
-      displayName: data.displayName || 'Nuevo Anfitrión',
-      photoURL: data.photoURL || '',
-      level: data.level || 1,
-      createdAt: data.createdAt,
-    };
-  });
+  return pkSnap.docs.map((doc) => doc.data());
 };

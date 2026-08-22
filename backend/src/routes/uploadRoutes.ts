@@ -130,3 +130,41 @@ uploadRoutes.get('/my', requireAuth, async (req: AuthRequest, res: any) => {
     res.status(400).json({ error: error.message });
   }
 });
+
+// Proxy público para servir imágenes de Backblaze B2 sin bloqueos de CORS
+uploadRoutes.get('/proxy', async (req: any, res: any) => {
+  try {
+    const imageUrl = (req.query.url as string) || '';
+    const fileKey = (req.query.key as string) || '';
+
+    let targetUrl = imageUrl;
+    if (!targetUrl && fileKey) {
+      targetUrl = `${process.env.B2_PUBLIC_BASE_URL}/${fileKey}`;
+    }
+
+    if (!targetUrl) {
+      return res.status(400).json({ error: 'Falta parametro url o key' });
+    }
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+    const response = await fetch(targetUrl);
+    if (!response.ok) {
+      return res.status(response.status).send('Error recuperando imagen');
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    res.send(buffer);
+  } catch (error: any) {
+    console.error('Error en CORS Proxy:', error);
+    res.status(500).json({ error: 'Error al servir imagen via proxy' });
+  }
+});
+

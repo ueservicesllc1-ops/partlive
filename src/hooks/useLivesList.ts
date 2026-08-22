@@ -5,7 +5,7 @@ import {
   getLivesByCategory,
   searchLives,
 } from '../services/firebase/firestore/livesService';
-import { mockLives } from '../constants/mockData';
+
 
 export const useLivesList = () => {
   const [lives, setLives] = useState<LiveStream[]>([]);
@@ -32,35 +32,7 @@ export const useLivesList = () => {
         data = await getLivesByCategory(selectedCategory);
       }
 
-      // Fallback mock check if Firestore returns no live streams
-      if (data.length === 0) {
-        data = mockLives.map(mock => ({
-          id: mock.id,
-          hostId: mock.hostId,
-          hostName: mock.hostName,
-          hostUsername: mock.hostName.toLowerCase(),
-          hostPhotoURL: mock.hostAvatar, // emoji as avatar
-          title: mock.title,
-          description: 'Live Stream divertido. ¡Únete a nosotros!',
-          category: selectedCategory === 'Popular' ? 'Conversación' : selectedCategory,
-          thumbnailUrl: '',
-          country: 'CL',
-          language: 'es',
-          tags: mock.tags,
-          viewersCount: mock.viewerCount,
-          peakViewersCount: mock.viewerCount,
-          likesCount: Math.floor(Math.random() * 500) + 10,
-          giftsCount: Math.floor(Math.random() * 50) + 2,
-          diamondsEarned: Math.floor(Math.random() * 1000),
-          status: 'live',
-          isPrivate: false,
-          allowChat: true,
-          allowGifts: true,
-          moderatorIds: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as LiveStream));
-      }
+
 
       setLives(data);
     } catch (err: any) {

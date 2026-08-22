@@ -1,63 +1,69 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
 import {
   getForYouFeed,
   getTrendingLives,
-  getNewHostsFeed,
-  recordWatchTime,
+  getRisingCreatorsFeed,
+  getPKDiscoveryFeed,
 } from '../services/discoveryService';
+import { hideCreator, markNotInterested } from '../services/userPreferenceService';
 
 export const discoveryRoutes = Router();
 
-// GET /api/discovery/for-you - Get personalized For You feed
-discoveryRoutes.get('/for-you', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+// GET /api/discovery/feed - Personalized For You feed
+discoveryRoutes.get('/feed', async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.user.uid;
-    const feed = await getForYouFeed(userId, 20);
+    const userId = (req.query.userId as string) || 'guest';
+    const feed = await getForYouFeed(userId);
     res.json({ success: true, feed });
   } catch (error: any) {
-    console.error('Error getting For You feed:', error);
+    console.error('Error fetching discovery feed:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-// GET /api/discovery/trending - Get Trending Lives
-discoveryRoutes.get('/trending', async (req: AuthRequest, res: Response): Promise<void> => {
+// GET /api/discovery/rising - Rising Creators feed
+discoveryRoutes.get('/rising', async (req: Request, res: Response): Promise<void> => {
   try {
-    const feed = await getTrendingLives(20);
+    const feed = await getRisingCreatorsFeed();
     res.json({ success: true, feed });
   } catch (error: any) {
-    console.error('Error getting Trending feed:', error);
+    console.error('Error fetching rising creators feed:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-// GET /api/discovery/new-hosts - Get New Hosts feed
-discoveryRoutes.get('/new-hosts', async (req: AuthRequest, res: Response): Promise<void> => {
+// GET /api/discovery/pk - Live PK Battles feed
+discoveryRoutes.get('/pk', async (req: Request, res: Response): Promise<void> => {
   try {
-    const hosts = await getNewHostsFeed(20);
-    res.json({ success: true, hosts });
+    const pkFeed = await getPKDiscoveryFeed();
+    res.json({ success: true, pkFeed });
   } catch (error: any) {
-    console.error('Error getting New Hosts feed:', error);
+    console.error('Error fetching PK discovery feed:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-// POST /api/discovery/watch-time - Batch log watch duration
-discoveryRoutes.post('/watch-time', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+// POST /api/discovery/feedback - User feed feedback (Not Interested / Hide Creator)
+discoveryRoutes.post('/feedback', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user.uid;
-    const { contentId, contentType, watchDurationSeconds } = req.body;
+    const { action, targetHostId, targetContentId } = req.body;
 
-    if (!contentId || !contentType || !watchDurationSeconds) {
-      res.status(400).json({ error: 'contentId, contentType, and watchDurationSeconds are required.' });
+    if (!action || !targetHostId) {
+      res.status(400).json({ error: 'action and targetHostId are required.' });
       return;
     }
 
-    await recordWatchTime(userId, contentId, contentType, watchDurationSeconds);
-    res.json({ success: true, message: 'Tiempo de visualización registrado.' });
+    if (action === 'HIDE_CREATOR') {
+      await hideCreator(userId, targetHostId);
+    } else {
+      await markNotInterested(userId, targetHostId, targetContentId);
+    }
+
+    res.json({ success: true });
   } catch (error: any) {
-    console.error('Error recording watch time:', error);
-    res.status(400).json({ error: error.message || 'Error recording watch time' });
+    console.error('Error recording discovery feedback:', error);
+    res.status(400).json({ error: error.message || 'Error recording feedback' });
   }
 });

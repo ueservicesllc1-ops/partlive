@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual Completo de Usuario y Pruebas - PartyLive App</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 12mm 10mm 15mm 10mm;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0c0919;
+      color: #e2e8f0;
+      line-height: 1.45;
+      font-size: 11px;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .header-banner {
+      background: linear-gradient(135deg, #3b0764 0%, #6b21a8 35%, #c026d3 75%, #e11d48 100%);
+      padding: 24px;
+      border-radius: 14px;
+      margin-bottom: 18px;
+      color: white;
+      box-shadow: 0 10px 25px rgba(124, 58, 237, 0.4);
+    }
+
+    .header-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(8px);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .header-title { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 6px; }
+    .header-subtitle { font-size: 13px; opacity: 0.95; font-weight: 400; line-height: 1.4; }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .meta-item { font-size: 10.5px; }
+    .meta-item span { display: block; opacity: 0.8; font-size: 9px; text-transform: uppercase; }
+    .meta-item strong { font-size: 11.5px; color: #fff; }
+
+    .section {
+      background: #140f26;
+      border: 1px solid #29204a;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 14px;
+      page-break-inside: avoid;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #f3e8ff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #3c2c6e;
+      padding-bottom: 6px;
+    }
+
+    .section-icon {
+      background: linear-gradient(135deg, #7c3aed, #c026d3);
+      color: white;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .sub-title { font-size: 12.5px; font-weight: 800; color: #c084fc; margin: 10px 0 4px 0; }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+
+    .card {
+      background: #1a1433;
+      border: 1px solid #2d2354;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .card-icon { font-size: 20px; margin-bottom: 3px; }
+    .card-title { font-size: 11.5px; font-weight: 800; color: #fff; margin-bottom: 2px; }
+    .card-desc { font-size: 10.5px; color: #94a3b8; line-height: 1.35; }
+
+    .step-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+    .step-item {
+      display: flex;
+      gap: 8px;
+      background: #181230;
+      border: 1px solid #2d2254;
+      padding: 8px 10px;
+      border-radius: 6px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      background: linear-gradient(135deg, #7c3aed, #c026d3);
+      color: white;
+      font-weight: 900;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 10.5px;
+      margin-top: 1px;
+    }
+
+    .step-content h4 { color: #fff; font-size: 11px; margin-bottom: 1px; }
+    .step-content p { color: #cbd5e1; font-size: 10.5px; }
+
+    .callout {
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin: 8px 0;
+      font-size: 10.5px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .callout-info { background: rgba(59, 130, 246, 0.12); border-left: 3px solid #3b82f6; color: #93c5fd; }
+    .callout-warning { background: rgba(245, 158, 11, 0.12); border-left: 3px solid #f59e0b; color: #fde68a; }
+
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+
+  <div class="header-banner">
+    <div class="header-badge">📱 MANUAL DE USUARIO COMPLETO Y TODAS SUS FUNCIONES</div>
+    <div class="header-title">PartyLive App: Guía Integral para Guillo</div>
+    <div class="header-subtitle">
+      Guía exhaustiva con TODAS las características de la app: Red Social, Chat 1a1, Karaoke, Tap-Tap en Lives, Batallas PK, Dominó, Ludo, Ruletas, Monedas, Diamantes, Retiros Bancarios y Suite de Administración.
+    </div>
+    
+    <div class="meta-grid">
+      <div class="meta-item"><span>Para Quien Es</span><strong>Guillo (Tester Principal)</strong></div>
+      <div class="meta-item"><span>Estado APK</span><strong>PartyLive.apk (Fresco)</strong></div>
+      <div class="meta-item"><span>Fecha</span><strong>17 de Agosto, 2026</strong></div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 1: TODAS LAS FUNCIONALIDADES -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">🌟</div>
+      1. Catálogo Completo de Funcionalidades de PartyLive
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-icon">🎙️</div>
+        <div class="card-title">Salas de Voz (Voice Rooms)</div>
+        <div class="card-desc">Salas de 4 a 12 micrófonos WebRTC en vivo. Mute, bloqueo de asientos y moderación.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎵</div>
+        <div class="card-title">Modo Karaoke</div>
+        <div class="card-desc">Catálogo de pistas instrumentales, cola de canciones y batallas de voz.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📺</div>
+        <div class="card-title">Streaming Live HD</div>
+        <div class="card-desc">Transmisión de video en vivo con cámara frontal/trasera y filtros de belleza.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">❤️</div>
+        <div class="card-title">Efecto Tap-Tap</div>
+        <div class="card-desc">Tocar la pantalla continuamente para enviar likes flotantes y elevar el hype.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚔️</div>
+        <div class="card-title">Batallas PK (1v1)</div>
+        <div class="card-desc">Desafíos de 5 minutos entre dos creadores donde las audiencias compiten enviando regalos.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">👥</div>
+        <div class="card-title">Red Social & Feed</div>
+        <div class="card-desc">Sistema de seguidores, amigos mutuos y publicaciones en el feed con fotos y likes.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">💬</div>
+        <div class="card-title">Chat Privado (1 a 1)</div>
+        <div class="card-desc">Mensajes directos privados, notas de voz de audio y fotos adjuntas.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🀄</div>
+        <div class="card-title">Dominó Multijugador</div>
+        <div class="card-desc">Partidas de 2 a 4 jugadores en tiempo real con apuestas de monedas virtuales.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎲</div>
+        <div class="card-title">Ludo Social & Ruletas</div>
+        <div class="card-desc">Tablero interactivo multijugador y giro diario de la Ruleta de la Fortuna.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🪙</div>
+        <div class="card-title">Monedas Virtuales</div>
+        <div class="card-desc">Comprar regalos animados 3D (Rosas, Autos, Dragones) y apostar en minijuegos.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">💎</div>
+        <div class="card-title">Retiros de Dinero (Payouts)</div>
+        <div class="card-desc">Acumular diamantes por donaciones y canjearlos a dólares reales transferidos a tu banco.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎯</div>
+        <div class="card-title">Misiones & Nivel XP</div>
+        <div class="card-desc">Misiones diarias para ganar monedas gratis y subir tu nivel de experiencia en la app.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SECCIÓN 2: INSTRUCCIONES PASO A PASO -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">🚀</div>
+      2. Guía Paso a Paso para Operar Cada Función
+    </div>
+
+    <div class="sub-title">A. ¿Cómo usar el Karaoke en una Sala de Voz?</div>
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Entrar a la Sala de Voz</h4>
+          <p>Toca cualquier sala y sube a un micrófono vacante marcando tu foto.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Tocar el Botón de Nota Musical 🎵</h4>
+          <p>Se desplegará el catálogo de Karaoke. Busca el tema por cantante o canción.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Añadir a la Cola y Cantar</h4>
+          <p>Presiona "Añadir a la Cola". Cuando sea tu turno, presiona "Cantar". La pista instrumental sonará sincronizada para todos los oyentes.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-title" style="margin-top: 12px;">B. ¿Cómo jugar a Dominó o Ludo en la pestaña Juegos?</div>
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Ir a la Pestaña 🎮 Juegos</h4>
+          <p>Selecciona la tarjeta de **Dominó** o **Ludo**.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Elegir Apuesta de Monedas</h4>
+          <p>Selecciona la mesa (ej. 50 Monedas) y presiona "Buscar Partida".</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Jugar y Ganar el Pozo</h4>
+          <p>En tu turno, toca la ficha de tu mano correspondiente. El jugador que vacíe su mano primero gana el pozo total de monedas.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-title" style="margin-top: 12px;">C. ¿Cómo funciona la Red Social y Chat Privado?</div>
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Seguir a un Usuario (Follow)</h4>
+          <p>Entra al perfil de un creador y presiona "Seguir". Se agregará a tu lista de amigos.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Enviar Mensaje Privado (Chat 1a1)</h4>
+          <p>En su perfil, pulsa "Enviar Mensaje". Podrás escribir texto, enviar fotos o mantener presionado el icono del micrófono para enviar una nota de voz.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="text-align: center; color: #64748b; font-size: 10px; margin-top: 16px; padding-top: 8px; border-top: 1px solid #1e1938;">
+    PartyLive App © 2026 • Manual Completo de Usuario y Pruebas Elaborado para Guillo
+  </div>
+
+</body>
+</html>

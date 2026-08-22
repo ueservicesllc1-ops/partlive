@@ -23,7 +23,7 @@ import { useWallet } from '../../hooks/useWallet';
 export const RequestPayoutScreen = ({ navigation }: any) => {
   const { stats } = useHostDashboard();
   const { wallet } = useWallet();
-  const { payoutMethods, requestWithdrawal, loading } = usePayouts();
+  const { payoutMethods, requestWithdrawal, loading, payouts } = usePayouts();
   
   const [beansStr, setBeansStr] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<HostPayoutMethod | null>(
@@ -52,6 +52,24 @@ export const RequestPayoutScreen = ({ navigation }: any) => {
 
     if (beans > availableBeans) {
       Alert.alert('Saldo insuficiente', 'No tienes suficientes beans en tu balance disponible.');
+      return;
+    }
+
+    // Restricción: Solo 1 solicitud de cobro cada 7 días
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const hasRecentPayout = payouts.some(p => {
+      if (p.status === 'cancelled' || p.status === 'rejected') return false;
+      const payoutTime = p.createdAt?.toMillis 
+        ? p.createdAt.toMillis() 
+        : new Date(p.createdAt).getTime();
+      return payoutTime > sevenDaysAgo;
+    });
+
+    if (hasRecentPayout) {
+      Alert.alert(
+        'Límite de Frecuencia',
+        'Solo puedes solicitar un cobro cada 7 días. Por favor espera a que transcurra el tiempo necesario.'
+      );
       return;
     }
 
@@ -98,6 +116,7 @@ export const RequestPayoutScreen = ({ navigation }: any) => {
             <Text style={styles.balanceVal}>{availableBeans.toLocaleString()}</Text>
           </View>
           <Text style={styles.minLabel}>Mínimo requerido: {PAYOUT_CONFIG.MIN_PAYOUT_BEANS.toLocaleString()} 🫘</Text>
+          <Text style={[styles.minLabel, { color: colors.primary, marginTop: 4 }]}>⚠️ Límite: 1 cobro cada 7 días</Text>
         </View>
 
         {/* Amount Input */}
@@ -138,7 +157,7 @@ export const RequestPayoutScreen = ({ navigation }: any) => {
               {selectedMethod && (
                 <View style={styles.selectedMethodRow}>
                   <Text style={styles.selectedMethodIcon}>
-                    {selectedMethod.type === 'paypal' ? '🅿️' : selectedMethod.type === 'bank_transfer' ? '🏦' : '💸'}
+                    {selectedMethod.type === 'paypal' ? '🅿️' : selectedMethod.type === 'bank_transfer' ? '🏦' : selectedMethod.type === 'usdt' ? '🪙' : '💸'}
                   </Text>
                   <View style={styles.selectedMethodInfo}>
                     <Text style={styles.selectedMethodLabel}>{selectedMethod.label}</Text>

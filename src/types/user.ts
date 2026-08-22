@@ -64,6 +64,7 @@ export interface UserProfile {
     countryName?: string;
     languageCode?: string;
     languageName?: string;
+    roomType?: 'voice' | 'karaoke' | 'dj';
     visibility: any;
     accessType: any;
     password?: string;

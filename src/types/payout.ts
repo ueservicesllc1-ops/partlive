@@ -1,6 +1,6 @@
 export type PayoutStatus = 'pending' | 'approved' | 'paid' | 'rejected' | 'cancelled';
 
-export type PayoutMethodType = 'paypal' | 'bank_transfer' | 'payoneer' | 'binance' | 'payphone' | 'manual' | 'other';
+export type PayoutMethodType = 'paypal' | 'bank_transfer' | 'payoneer' | 'binance' | 'payphone' | 'manual' | 'usdt' | 'other';
 
 export interface HostPayoutMethod {
   id: string;

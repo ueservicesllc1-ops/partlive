@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual Maestro de Administración, Operaciones y Guía de Usuario - PartyLive App</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 12mm 10mm 15mm 10mm;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0d0b18;
+      color: #e2e8f0;
+      line-height: 1.45;
+      font-size: 11.5px;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Cover / Main Banner */
+    .header-banner {
+      background: linear-gradient(135deg, #3b0764 0%, #6b21a8 35%, #7c3aed 70%, #d946ef 100%);
+      padding: 26px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      color: white;
+      box-shadow: 0 10px 30px -5px rgba(124, 58, 237, 0.5);
+    }
+
+    .header-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    .header-title {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .header-subtitle {
+      font-size: 13.5px;
+      opacity: 0.95;
+      font-weight: 400;
+      margin-bottom: 16px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .meta-item {
+      font-size: 10.5px;
+    }
+    .meta-item span {
+      display: block;
+      opacity: 0.75;
+      font-size: 9.5px;
+      text-transform: uppercase;
+    }
+    .meta-item strong {
+      font-size: 11.5px;
+      color: #fff;
+    }
+
+    /* Sections */
+    .section {
+      background: #151026;
+      border: 1px solid #292047;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      page-break-inside: avoid;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #f3e8ff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      border-bottom: 2px solid #3b2d6b;
+      padding-bottom: 8px;
+    }
+
+    .section-icon {
+      background: linear-gradient(135deg, #7c3aed, #c026d3);
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      box-shadow: 0 4px 10px rgba(124, 58, 237, 0.3);
+    }
+
+    .sub-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #c084fc;
+      margin: 12px 0 6px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Callouts */
+    .callout {
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin: 10px 0;
+      font-size: 11px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .callout-info { background: rgba(59, 130, 246, 0.15); border-left: 4px solid #3b82f6; color: #93c5fd; }
+    .callout-warning { background: rgba(245, 158, 11, 0.15); border-left: 4px solid #f59e0b; color: #fde68a; }
+    .callout-success { background: rgba(16, 185, 129, 0.15); border-left: 4px solid #10b981; color: #a7f3d0; }
+    .callout-danger { background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; color: #fca5a5; }
+
+    /* Grids & Cards */
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 8px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+
+    .card {
+      background: #1b1533;
+      border: 1px solid #2e2452;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #e9d5ff;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-desc {
+      color: #94a3b8;
+      font-size: 10.5px;
+    }
+
+    /* Step lists */
+    .step-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .step-item {
+      display: flex;
+      gap: 10px;
+      background: #1c1636;
+      border: 1px solid #2f2557;
+      padding: 10px;
+      border-radius: 8px;
+      align-items: center;
+    }
+
+    .step-num {
+      background: linear-gradient(135deg, #7c3aed, #c026d3);
+      color: white;
+      font-weight: 800;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 11px;
+    }
+
+    .step-content h4 { color: #f1f5f9; font-size: 12px; margin-bottom: 2px; }
+    .step-content p { color: #94a3b8; font-size: 10.5px; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10.5px; }
+    th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #271f45; }
+    th { background: #221a42; color: #c084fc; font-weight: 700; }
+    tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
+
+    /* Code boxes */
+    .code-box {
+      background: #090710;
+      border: 1px solid #3b2d6b;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 10.5px;
+      color: #38bdf8;
+      word-break: break-all;
+    }
+
+    .page-break { page-break-before: always; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 9.5px;
+      font-weight: bold;
+    }
+    .badge-purple { background: #581c87; color: #e9d5ff; }
+    .badge-amber { background: #78350f; color: #fef08a; }
+    .badge-green { background: #064e3b; color: #a7f3d0; }
+    .badge-red { background: #7f1d1d; color: #fecaca; }
+    .badge-blue { background: #1e3a8a; color: #bfdbfe; }
+
+  </style>
+</head>
+<body>
+
+  <!-- PORTADA MAESTRA -->
+  <div class="header-banner">
+    <div class="header-badge">👑 MANUAL MAESTRO OPERATIVO Y DE ADMINISTRACIÓN</div>
+    <div class="header-title">PartyLive App v1.0.0</div>
+    <div class="header-subtitle">Documento Exhaustivo de Operaciones, Suite Administrativa de 35 Centros, Economía, LiveKit WebRTC & Guía Completa de Usuario</div>
+    
+    <div class="meta-grid">
+      <div class="meta-item">
+        <span>Destinatario Principal</span>
+        <strong>Guillo / Administradores</strong>
+      </div>
+      <div class="meta-item">
+        <span>Arquitectura</span>
+        <strong>React Native + LiveKit + Firebase</strong>
+      </div>
+      <div class="meta-item">
+        <span>Módulos Admin</span>
+        <strong>35 Centros Especializados</strong>
+      </div>
+      <div class="meta-item">
+        <span>Fecha de Edición</span>
+        <strong>17 de Agosto, 2026</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 1: INTRODUCCIÓN Y ARQUITECTURA GENERAL DEL SISTEMA -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">🏗️</div>
+      1. Arquitectura General y Componentes del Sistema
+    </div>
+    <p style="color: #cbd5e1; margin-bottom: 8px;">
+      PartyLive App es una plataforma social de alto rendimiento construida con una arquitectura distribuida de tres capas:
+    </p>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title">📱 Cliente Móvil</div>
+        <div class="card-desc">React Native con TypeScript, React Navigation v6, componentes optimizados y soporte nativo para streaming y WebRTC.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🎙️ Servidor LiveKit (Audio/Video)</div>
+        <div class="card-desc">Servidor WebRTC auto-hospedado para transmisión de audio de ultra baja latencia en salas de voz y streaming de video.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔥 Firebase & Backend Node.js</div>
+        <div class="card-desc">Firestore para base de datos NoSQL en tiempo real, Firebase Auth para seguridad y backend Express para validaciones económicas.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 2: INSTALACIÓN Y CONFIGURACIÓN INICIAL -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">📦</div>
+      2. Guía de Instalación del APK y Puesta a Punto
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">📂</div>
+      <div>
+        <strong>Ubicación del Archivo APK en el Servidor/PC de Desarrollo:</strong><br>
+        <code>E:\Chaton\PartyLive.apk</code> (también copiado en <code>C:\Users\Freedom Labs\Downloads\PartyLive-debug.apk</code>).
+      </div>
+    </div>
+
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Instalación en Dispositivo Android</h4>
+          <p>Transferir el archivo APK al teléfono de Guillo, abrir "Mis Archivos", otorgar permiso a "Orígenes Desconocidos" e instalar.</p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Levantar Servidor LiveKit (WebRTC)</h4>
+          <p>Ejecutar Docker con la configuración <code>livekit.yaml</code> mapeando los puertos 7880, 7881 (HTTP/Signal) y 50000-50100/udp (RTP Media).</p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>🌱 Siembra de Datos de Prueba (Seed Test Data)</h4>
+          <p>Al iniciar la app, ve a la pantalla de <strong>Inicio (Home)</strong> y presiona el botón rojo <strong>"Seed Test Data"</strong> ubicado al final. Esto creará automáticamente en Firebase las salas de voz, catálogo de regalos, juegos y misiones diarias para probar de inmediato.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SECCIÓN 3: MODELO DE DATOS EN FIRESTORE -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">🗄️</div>
+      3. Modelo de Datos Firestore (Estructura de Colecciones)
+    </div>
+
+    <p style="color: #cbd5e1; margin-bottom: 8px;">
+      La base de datos en Firestore se estructura de forma modular para garantizar velocidad y escalabilidad masiva:
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Colección</th>
+          <th>Descripción y Propósito</th>
+          <th>Subcolecciones Privadas</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>users</code></td>
+          <td>Perfiles de usuario, nickname, avatar, nivel XP, país e idioma.</td>
+          <td><code>private/wallet</code>, <code>notifications</code></td>
+        </tr>
+        <tr>
+          <td><code>rooms</code></td>
+          <td>Salas de voz activas, título, tema, contraseña y configuración de micrófono.</td>
+          <td><code>seats</code>, <code>messages</code></td>
+        </tr>
+        <tr>
+          <td><code>lives</code></td>
+          <td>Transmisiones de video en vivo, creador, resolución, espectadores.</td>
+          <td><code>viewers</code>, <code>gifts</code></td>
+        </tr>
+        <tr>
+          <td><code>games</code> & <code>gameSessions</code></td>
+          <td>Catálogo de minijuegos (Ludo, Dominó) y sesiones de juego multijugador.</td>
+          <td><code>players</code>, <code>moves</code></td>
+        </tr>
+        <tr>
+          <td><code>wallets</code> & <code>walletTransactions</code></td>
+          <td>Saldos de monedas, diamantes ganados y registros de auditoría de compras.</td>
+          <td><code>history</code></td>
+        </tr>
+        <tr>
+          <td><code>agencies</code> & <code>agencyHosts</code></td>
+          <td>Estructura de agencias de talento, metas mensuales de horas y comisiones.</td>
+          <td><code>hosts</code>, <code>payouts</code></td>
+        </tr>
+        <tr>
+          <td><code>reports</code> & <code>moderationLogs</code></td>
+          <td>Denuncias de usuarios, registros de sanciones, silenciados y baneos globales.</td>
+          <td><code>appeals</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECCIÓN 4: PANTALLAS DE USUARIO Y EXPERIENCIA MÓVIL -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">📱</div>
+      4. Experiencia de Usuario y Navegación Principal (5 Pestañas)
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🏠 1. Pestaña de Inicio (Home)</div>
+        <div class="card-desc">Banners promocionales, estado de Monedas (🪙) y Diamantes (💎), noticias, misiones destacadas, salas populares y botón de Seed Data.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🎙️ 2. Pestaña de Salas (Voice Rooms)</div>
+        <div class="card-desc">Directorio de salas de voz filtrables por categoría (Música, Chat, Latina, Gaming), país e idioma. Botón <code>+</code> para crear tu propia sala.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">📺 3. Pestaña de Lives (Video Streaming)</div>
+        <div class="card-desc">Parrilla de transmisiones de video en tiempo real, batallas PK entre creadores y tabla de clasificación de regaladores.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🎮 4. Pestaña de Juegos (Mini-Games)</div>
+        <div class="card-desc">Salas multijugador de Dominó y Ludo con chat de voz activado, apuestas de monedas y emparejamiento automático.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 8px;">
+      <div class="card-title">👤 5. Pestaña de Perfil, Billetera y Ajustes</div>
+      <div class="card-desc">Información personal, medallas, nivel XP, recarga de monedas, historial de transacciones, chat privado (1 a 1), misiones diarias y centro de soporte.</div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 5: SALAS DE VOZ, ROLES Y KARAOKE -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">🎙️</div>
+      5. Operación de Salas de Voz, Jerarquía de Roles y Karaoke
+    </div>
+
+    <div class="sub-title">Jerarquía de Roles y Permisos de Sala:</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Rol</th>
+          <th>Icono</th>
+          <th>Permisos en la Sala</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong style="color: #fbbf24;">Host (Anfitrión)</strong></td>
+          <td>👑</td>
+          <td>Control total de la sala: bloquear/mutear asientos, asignar moderadores, cambiar contraseña, reproducir música y cerrar la sala.</td>
+        </tr>
+        <tr>
+          <td><strong style="color: #c084fc;">Admin (Moderador)</strong></td>
+          <td>🛡️</td>
+          <td>Silenciar usuarios en micrófonos, aprobar solicitudes para hablar, expulsar usuarios revoltosos.</td>
+        </tr>
+        <tr>
+          <td><strong style="color: #60a5fa;">Speaker (Hablante)</strong></td>
+          <td>🎤</td>
+          <td>Micrófono activo en la parrilla, capacidad para usar el Karaoke y recibir regalos animados.</td>
+        </tr>
+        <tr>
+          <td><strong style="color: #94a3b8;">Listener (Oyente)</strong></td>
+          <td>🎧</td>
+          <td>Audiencia general: enviar regalos visuales, escribir en el chat de texto y pedir subir a micrófono.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-success" style="margin-top: 10px;">
+      <div class="callout-icon">🎵</div>
+      <div>
+        <strong>Sistema de Karaoke Integrado:</strong><br>
+        Los hablantes pueden buscar canciones en el catálogo musical, ponerlas en cola de reproducción y cantar en vivo mientras la pista instrumental suena en alta fidelidad sincronizada para todos los oyentes.
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SECCIÓN 6: ECONOMÍA, REGALOS Y RETIROS DE DINERO -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">💎</div>
+      6. Economía Completa del Sistema (Monedas, Diamantes y Retiros)
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🪙 Monedas Virtuales (Coins)</div>
+        <div class="card-desc">Se compran con dinero real (Google Play Billing / Stripe) o se ganan en misiones. Se usan para regalar a creadores y apostar en minijuegos.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">💎 Diamantes Ganados (Diamonds)</div>
+        <div class="card-desc">Se generan cuando un usuario envía un regalo a un Host. Se acumulan en la billetera del Host y son canjeables por dinero real.</div>
+      </div>
+    </div>
+
+    <div class="sub-title">Flujo de Payouts (Retiro de Fondos para Hosts):</div>
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Solicitud de Retiro por el Host</h4>
+          <p>El creador entra a <code>Perfil → Billetera → Solicitud de Retiro</code> y selecciona su método registrado (Banco, PayPal, Payoneer).</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Verificación en Panel Administrativo</h4>
+          <p>El administrador revisa la solicitud en el módulo de finanzas (CFO Center), verifica las horas de transmisión del Host y aprueba el pago.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 7: MÓDULO DE ADMINISTRACIÓN (SUITE COMPLETA DE 35 CENTROS) -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">🛡️</div>
+      7. Panel de Super-Administración: Los 35 Centros de Control
+    </div>
+
+    <p style="color: #cbd5e1; margin-bottom: 8px;">
+      PartyLive incluye una suite de administración de nivel empresarial integrada por <strong>35 módulos especializados</strong> para gestionar todos los aspectos del negocio:
+    </p>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🏢 1. Admin Control Center</div>
+        <div class="card-desc">Panel maestro con vista general del sistema, usuarios activos, salas en vivo e indicadores clave de rendimiento (KPIs).</div>
+      </div>
+      <div class="card">
+        <div class="card-title">💵 2. Admin CFO Center</div>
+        <div class="card-desc">Gestión financiera global, balance de compras de monedas, diamantes entregados, pagos pendientes a hosts y márgenes de ganancia.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🚀 3. Admin Command Center</div>
+        <div class="card-desc">Monitoreo técnico en tiempo real del estado de los servidores LiveKit, uso de CPU/RAM, sockets WebRTC activos y reconexiones.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🛡️ 4. Admin Safety & Trust Center</div>
+        <div class="card-desc">Auditoría de denuncias por acoso o spam. Aplicación de sanciones: advertencias, silenciamiento, suspensión de billetera o baneo.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">💎 5. Admin Monetization Center</div>
+        <div class="card-desc">Configuración de precios de paquetes de monedas, valor del diamante, catálogo de regalos animaciones 3D y promociones.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🎤 6. Admin Creator Economy Center</div>
+        <div class="card-desc">Gestión de creadores de contenido, contratación de Hosts, metas de transmisión mensuales y cálculo de comisiones.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏬 7. Admin Agency Center</div>
+        <div class="card-desc">Panel para dar de alta agencias de talento, asignar Hosts a agencias y liquidar comisiones institucionales.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🌐 8. Admin Globalization Center</div>
+        <div class="card-desc">Configuración de regiones por país, idioma predeterminado, filtrado de contenido y moderación cultural adaptada.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🎮 9. Admin Gamification Center</div>
+        <div class="card-desc">Ajuste de puntos de experiencia (XP) por nivel, creación de misiones diarias/semanales y entrega de bordes de avatar VIP.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🧭 10. Admin Discovery Center</div>
+        <div class="card-desc">Algoritmo de recomendación para posicionar salas de voz y transmisiones Live en los primeros lugares de la app.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">📊 11. Admin Data Intelligence</div>
+        <div class="card-desc">Analítica avanzada de comportamiento de usuarios, cohortes de retención, tasa de conversión de usuarios gratis a pagadores.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🤖 12. Admin AI Center</div>
+        <div class="card-desc">Herramientas de Inteligencia Artificial para detección automática de lenguaje inapropiado en chats y voz.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚡ 13. Admin Live Operations</div>
+        <div class="card-desc">Creación de eventos especiales en vivo, despacho masivo de notificaciones push y pancartas oficiales en el Home.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">📈 14. Admin Growth & Viral Center</div>
+        <div class="card-desc">Programa de referidos, incentivos por invitar amigos y herramientas de marketing de crecimiento viral.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">💳 15. Admin Subscription & Offer Center</div>
+        <div class="card-desc">Configuración de membresías VIP, pases de batalla y ofertas de paquetes de monedas con tiempo limitado.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">📐 16. Admin UX Conversion Center</div>
+        <div class="card-desc">Optimización de flujos de registro, pasarela de pago e interfaz de usuario para maximizar conversiones.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚙️ 17. Admin Infrastructure Center</div>
+        <div class="card-desc">Supervisión de infraestructura Docker, contenedores LiveKit, bases de datos Firestore y webhooks de pago.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">📜 18. Admin Compliance Center</div>
+        <div class="card-desc">Verificación del cumplimiento de políticas de Google Play Store, GDPR, protección de menores y términos legales.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔍 19. Admin Master Audit Center</div>
+        <div class="card-desc">Registro inalterable de auditoría sobre todas las acciones realizadas por administradores y moderadores en la plataforma.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🎼 20. Admin Music Center</div>
+        <div class="card-desc">Gestión del catálogo de pistas de Karaoke, licencias musicales y orden de popularidad de temas.</div>
+      </div>
+    </div>
+
+    <div class="callout callout-warning" style="margin-top: 10px;">
+      <div class="callout-icon">ℹ️</div>
+      <div>
+        <strong>15 Centros Adicionales Incluidos:</strong><br>
+        El sistema cuenta además con los centros de: <i>QA Center, Launch Center, Production Center, Performance Center, Super Center, Regional Center, Expansion Center, Trust Safety 2, Infrastructure 2, Creator Economy 2, Offer Center, Growth Acquisition, Compliance Launch, Live Engagement y Live Operations.</i>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SECCIÓN 8: GUÍA DE OPERACIÓN PASO A PASO PARA GUILLO & MODERADORES -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">📋</div>
+      8. Guía de Operaciones Paso a Paso (Para Guillo y Administradores)
+    </div>
+
+    <div class="sub-title">1. ¿Cómo moderar y sancionar a un usuario agresivo?</div>
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Recibir la Denuncia</h4>
+          <p>Ingresa a <code>Admin Safety Center</code> para revisar la lista de denuncias reportadas por usuarios en salas o chats.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Evaluar Evidencia</h4>
+          <p>Revisa los logs del mensaje denunciado o el fragmento de voz reportado.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Aplicar Sanción</h4>
+          <p>Selecciona entre <i>Enviar Advertencia</i>, <i>Silenciar en Salas</i>, <i>Bloquear Billetera</i> o <i>Baneo Global de Cuenta</i>.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-title" style="margin-top: 14px;">2. ¿Cómo aprobar un retiro de dinero (Payout) a un Host?</div>
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Abrir CFO Center</h4>
+          <p>Ingresa a <code>Admin CFO Center → Solicitudes de Payout</code>.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Verificar Metas y KYC</h4>
+          <p>Valida que el Host haya cumplido con las horas mínimas de transmisión del mes y que sus datos bancarios coincidan.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Aprobar y Despachar</h4>
+          <p>Presiona <strong>"Aprobar Pago"</strong>. El sistema descontará los diamantes del balance y registrará la transferencia.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 9: CHECKLIST INTEGRAL DE VERIFICACIÓN -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon">✅</div>
+      9. Checklist Maestro de Verificación de Funcionalidades
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Módulo</th>
+          <th>Prueba Operativa Recomendada</th>
+          <th>Criterio de Éxito</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong style="color: #c084fc;">Instalación & Seed</strong></td>
+          <td>Instalar APK y pulsar "Seed Test Data" en el Home.</td>
+          <td>Base de datos poblada con salas, juegos y regalos.</td>
+        </tr>
+        <tr>
+          <td><strong style="color: #c084fc;">Salas de Voz</strong></td>
+          <td>Unirse a una sala, tomar un micrófono libre y hablar.</td>
+          <td>Audio nítido WebRTC via LiveKit Server.</td>
+        </tr>
+        <tr>
+          <td><strong style="color: #c084fc;">Karaoke</strong></td>
+          <td>Seleccionar canción de la lista y cantar con la pista.</td>
+          <td>Pista reproducida de fondo para todos los hablantes.</td>
+        </tr>
+        <tr>
+          <td><strong style="color: #c084fc;">Regalos Animados</strong></td>
+          <td>Enviar un regalo de prueba a un Host en la sala.</td>
+          <td>Efecto en pantalla y diamantes acreditados al Host.</td>
+        </tr>
+        <tr>
+          <td><strong style="color: #c084fc;">Batallas PK</strong></td>
+          <td>Iniciar un desafío 1v1 entre dos creadores en Live.</td>
+          <td>Puntajes calculados según regalos en 5 minutos.</td>
+        </tr>
+        <tr>
+          <td><strong style="color: #c084fc;">Mini-Juegos</strong></td>
+          <td>Abrir una partida de Dominó o Ludo con otro usuario.</td>
+          <td>Fichas y turnos sincronizados en tiempo real.</td>
+        </tr>
+        <tr>
+          <td><strong style="color: #c084fc;">Administración</strong></td>
+          <td>Acceder a Admin Safety Center e inspeccionar un reporte.</td>
+          <td>Muestra datos del usuario y permite aplicar sanción.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="text-align: center; color: #64748b; font-size: 10px; margin-top: 20px; padding-top: 10px; border-top: 1px solid #1e1938;">
+    PartyLive App © 2026 • Manual Maestro de Operaciones, Administración y Guía de Usuario • Documento Oficial Elaborado para Guillo y Administradores
+  </div>
+
+</body>
+</html>

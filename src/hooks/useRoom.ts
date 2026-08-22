@@ -100,6 +100,10 @@ export const useRoom = (roomId: string) => {
     let active = true;
     setLoading(true);
     setError(null);
+    setRoom(null);
+    setMembers([]);
+    setMessages([]);
+    setMicRequests([]);
 
     const initRoom = async () => {
       try {
