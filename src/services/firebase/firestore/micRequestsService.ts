@@ -11,17 +11,18 @@ export const requestMic = async (
   const timestamp = firestore.FieldValue.serverTimestamp();
   const requestId = userProfile.uid; // One active request per user
 
-  const newRequest: MicRequest = {
+  const newRequest: any = {
     id: requestId,
     roomId,
     userId: userProfile.uid,
-    displayName: userProfile.displayName,
-    username: userProfile.username,
-    photoURL: userProfile.photoURL,
+    displayName: userProfile.displayName || 'Usuario',
     status: 'pending',
     createdAt: timestamp,
     updatedAt: timestamp,
   };
+
+  if (userProfile.username) newRequest.username = userProfile.username;
+  if (userProfile.photoURL) newRequest.photoURL = userProfile.photoURL;
 
   await db.collection(getRoomMicRequestsPath(roomId)).doc(requestId).set(newRequest);
   return requestId;

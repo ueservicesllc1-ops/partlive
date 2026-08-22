@@ -209,19 +209,20 @@ export const joinRoom = async (
     const isMutedState = isAlreadyMember ? (memberSnap.data() as RoomMember).isMuted : false;
 
     const timestamp = firestore.FieldValue.serverTimestamp();
-    const newMember: RoomMember = {
+    const newMember: any = {
       id: userProfile.uid,
       roomId,
       userId: userProfile.uid,
-      displayName: userProfile.displayName,
-      username: userProfile.username,
-      photoURL: userProfile.photoURL,
+      displayName: userProfile.displayName || 'Usuario',
       role: roomData.ownerId === userProfile.uid ? 'owner' : (existingRole || 'listener'),
-      seatIndex: existingSeat,
       isMuted: isMutedState,
       joinedAt: isAlreadyMember ? memberSnap.data()?.joinedAt || timestamp : timestamp,
       lastActiveAt: timestamp,
     };
+
+    if (userProfile.username) newMember.username = userProfile.username;
+    if (userProfile.photoURL) newMember.photoURL = userProfile.photoURL;
+    if (existingSeat !== undefined) newMember.seatIndex = existingSeat;
 
     transaction.set(memberRef, newMember);
 
