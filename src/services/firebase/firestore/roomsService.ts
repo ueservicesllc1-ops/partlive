@@ -204,6 +204,9 @@ export const joinRoom = async (
       }
     }
     const isAlreadyMember = memberSnap.exists();
+    const existingRole = isAlreadyMember ? (memberSnap.data() as RoomMember).role : undefined;
+    const existingSeat = isAlreadyMember ? (memberSnap.data() as RoomMember).seatIndex : undefined;
+    const isMutedState = isAlreadyMember ? (memberSnap.data() as RoomMember).isMuted : false;
 
     const timestamp = firestore.FieldValue.serverTimestamp();
     const newMember: RoomMember = {
@@ -213,8 +216,9 @@ export const joinRoom = async (
       displayName: userProfile.displayName,
       username: userProfile.username,
       photoURL: userProfile.photoURL,
-      role: roomData.ownerId === userProfile.uid ? 'owner' : 'listener',
-      isMuted: false,
+      role: roomData.ownerId === userProfile.uid ? 'owner' : (existingRole || 'listener'),
+      seatIndex: existingSeat,
+      isMuted: isMutedState,
       joinedAt: isAlreadyMember ? memberSnap.data()?.joinedAt || timestamp : timestamp,
       lastActiveAt: timestamp,
     };
