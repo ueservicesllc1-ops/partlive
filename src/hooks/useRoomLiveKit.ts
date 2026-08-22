@@ -196,40 +196,44 @@ export const useRoomLiveKit = (
   useEffect(() => {
     const applyMute = async () => {
       const roomInstance = roomRef.current;
-      if (roomInstance && isPublishing) {
-        const shouldMute = currentMember?.isMuted || false;
-        // Fix: isMicrophoneEnabled is the OPPOSITE of muted state
-        // We only apply if the current state does NOT match the desired state
-        if (roomInstance.localParticipant.isMicrophoneEnabled === shouldMute) {
-          // isMicrophoneEnabled === shouldMute means:
-          //   - if shouldMute=true and mic is enabled → need to disable
-          //   - if shouldMute=false and mic is disabled → need to enable
-          await roomInstance.localParticipant.setMicrophoneEnabled(!shouldMute);
-          setLocalMuted(shouldMute);
+      if (roomInstance && roomInstance.localParticipant) {
+        const hasSeat = currentMember?.seatIndex !== undefined;
+        const isPrivileged = ['owner', 'host', 'moderator', 'speaker'].includes(currentUserRole || '');
+        
+        if (hasSeat || isPrivileged) {
+          const shouldMute = currentMember?.isMuted || false;
+          try {
+            if (roomInstance.localParticipant.isMicrophoneEnabled === shouldMute) {
+              await roomInstance.localParticipant.setMicrophoneEnabled(!shouldMute);
+            }
+            setLocalMuted(shouldMute);
+            setIsPublishing(!shouldMute);
+          } catch (err) {
+            console.warn('[LiveKit] Error applying mute state:', err);
+          }
         }
       }
     };
     applyMute();
-  }, [currentMember?.isMuted, isPublishing]);
+  }, [currentMember?.isMuted, currentMember?.seatIndex, currentUserRole]);
 
   // Handle dynamic Role Upgrade/Downgrade (eg. Listener <=> Speaker)
-  // Uses a ref to prevent infinite reconnect loops
   useEffect(() => {
     if (!livekitRoom || connectionState !== ConnectionState.Connected) return;
     if (isReconnectingRef.current) return;
 
     const prevRole = roleFirestoreRef.current;
     const newRole = currentUserRole;
+    const hasSeat = currentMember?.seatIndex !== undefined;
 
-    // Only reconnect when role actually changed
-    if (prevRole === newRole) return;
+    const isPrivileged = ['owner', 'host', 'moderator', 'speaker'].includes(newRole || '') || hasSeat;
+    const wasPrivileged = ['owner', 'host', 'moderator', 'speaker'].includes(prevRole || '');
+
+    if (prevRole === newRole && isPrivileged === wasPrivileged) return;
     roleFirestoreRef.current = newRole;
 
     const handleRoleUpdate = async () => {
-      const isPrivileged = ['owner', 'host', 'moderator', 'speaker'].includes(newRole || '');
-      const wasPrivileged = ['owner', 'host', 'moderator', 'speaker'].includes(prevRole || '');
-
-      // Role went from unprivileged → privileged: reconnect to get publish token
+      // Role went from unprivileged → privileged: reconnect to get publish token & start mic
       if (isPrivileged && !wasPrivileged) {
         isReconnectingRef.current = true;
         setIsReconnecting(true);
@@ -242,11 +246,13 @@ export const useRoomLiveKit = (
         }
       }
       // Role went from privileged → unprivileged: stop mic and reconnect as listener
-      else if (!isPrivileged && wasPrivileged && isPublishing) {
+      else if (!isPrivileged && wasPrivileged) {
         isReconnectingRef.current = true;
         setIsReconnecting(true);
         try {
-          await livekitRoom.localParticipant.setMicrophoneEnabled(false);
+          if (livekitRoom?.localParticipant) {
+            await livekitRoom.localParticipant.setMicrophoneEnabled(false);
+          }
           setIsPublishing(false);
           setCanPublish(false);
           await disconnect();
@@ -260,17 +266,27 @@ export const useRoomLiveKit = (
 
     handleRoleUpdate();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUserRole, connectionState]);
+  }, [currentUserRole, currentMember?.seatIndex, connectionState]);
 
   // Toggle local mute
   const toggleMute = async () => {
     const roomInstance = roomRef.current;
-    if (!roomInstance || !isPublishing) return;
+    if (!roomInstance || !roomInstance.localParticipant) return;
 
     try {
+      const micStatus = await checkDevicePermission('microphone');
+      if (micStatus !== 'granted') {
+        const req = await requestDevicePermission('microphone');
+        if (req !== 'granted') {
+          showPermissionBlockedAlert('Activa el permiso de micrófono para poder hablar.');
+          return;
+        }
+      }
+
       const newMuteState = !localMuted;
       await roomInstance.localParticipant.setMicrophoneEnabled(!newMuteState);
       setLocalMuted(newMuteState);
+      setIsPublishing(!newMuteState);
     } catch (e) {
       console.error('Error toggling mute:', e);
     }

@@ -41,6 +41,7 @@ import { GiftStoreModal } from '../../components/store/GiftStoreModal';
 import { ReportModal } from '../../components/moderation/ReportModal';
 import { useGiftEvents } from '../../hooks/useGiftEvents';
 import { GiftAnimationLayer, GiftReceivedToast, GlobalGiftBanner, TopGiftersPanel } from '../../components/gifts';
+import { RoomShareModal } from '../../components/rooms/RoomShareModal';
 
 export const RoomDetailsScreen = ({ route, navigation }: any) => {
   const { roomId } = route.params || {};
@@ -48,6 +49,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
   
   const [roomMenuVisible, setRoomMenuVisible] = useState(false);
   const [roomReportVisible, setRoomReportVisible] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
   const [micPermissionDenied, setMicPermissionDenied] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -519,6 +521,13 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
             onSeatPress={handleSeatPress}
             maxMics={room.maxMics || 8}
           />
+
+          {/* Connected Room Members & Listeners List */}
+          <RoomMembersList
+            members={enrichedMembers}
+            onMemberPress={handleMemberPress}
+          />
+
           {/* Karaoke/Video Feature */}
           {room.roomType === 'karaoke' && (
             <KaraokePlayer room={room} isPrivileged={isPrivileged} />
@@ -563,16 +572,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
           isPrivileged={isPrivileged}
           onMicPress={handleMicAction}
           onGiftPress={() => setGiftModalVisible(true)}
-          onSharePress={async () => {
-            try {
-              await Share.share({
-                message: `Únete a la sala "${room?.title}" en PartyLive 🎉\nhttps://partylive.app/rooms/${roomId}`,
-                title: room?.title || 'Sala de Voz',
-              });
-            } catch (e: any) {
-              console.warn('Error al compartir sala:', e);
-            }
-          }}
+          onSharePress={() => setShareModalVisible(true)}
           onMorePress={isPrivileged ? () => setAdminPanelVisible(true) : (hasSeat ? handleLowerMic : () => setRoomMenuVisible(true))}
           requestsCount={micRequests.length}
           localMuted={localMuted}
@@ -775,6 +775,16 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
               style={styles.sheetBtn}
               onPress={() => {
                 setRoomMenuVisible(false);
+                setShareModalVisible(true);
+              }}
+            >
+              <Text style={styles.sheetBtnText}>🔗 Compartir e Invitar (WhatsApp / Link)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.sheetBtn}
+              onPress={() => {
+                setRoomMenuVisible(false);
                 navigation.navigate(MAIN_ROUTES.PRIVATE_CONVERSATIONS);
               }}
             >
@@ -799,6 +809,14 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Share / Invite Room Modal */}
+      <RoomShareModal
+        visible={shareModalVisible}
+        onClose={() => setShareModalVisible(false)}
+        room={room}
+        roomId={roomId}
+      />
 
       {/* Report Room Modal */}
       <ReportModal

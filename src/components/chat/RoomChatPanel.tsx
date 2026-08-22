@@ -136,12 +136,12 @@ export const RoomChatPanel: React.FC<RoomChatPanelProps> = ({
       />
 
       {/* Quick Emojis feedback bar */}
-      <EmojiQuickBar onSendEmoji={handleSendEmoji} disabled={disabled || !currentMember} />
+      <EmojiQuickBar onSendEmoji={handleSendEmoji} disabled={disabled || !currentUserId} />
 
       {/* TextInput compose row */}
       <ChatInputBar 
         onSend={handleSendMessage} 
-        disabled={disabled || !currentMember} 
+        disabled={disabled || !currentUserId} 
         text={inputText}
         onChangeText={setInputText}
         onTogglePicker={() => setPickerVisible(prev => !prev)}

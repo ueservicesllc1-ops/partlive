@@ -7,14 +7,15 @@ import { createReport } from './reportsService';
 // 1. Send typical text message
 export const sendRoomMessage = async (
   roomId: string,
-  senderProfile: { uid: string; displayName: string; photoURL?: string; username?: string },
+  senderProfile: { uid: string; displayName?: string; photoURL?: string; username?: string },
   text: string,
   senderRole?: ChatMessage['senderRole']
 ): Promise<string> => {
+  const senderName = senderProfile.displayName || senderProfile.username || 'Usuario';
   const ref = await firestore().collection(getRoomMessagesPath(roomId)).add({
     roomId,
     senderId: senderProfile.uid,
-    senderName: senderProfile.displayName,
+    senderName,
     senderUsername: senderProfile.username || '',
     senderPhotoURL: senderProfile.photoURL || '',
     senderRole: senderRole || 'listener',
@@ -29,14 +30,15 @@ export const sendRoomMessage = async (
 // 2. Send quick reaction emoji
 export const sendRoomEmoji = async (
   roomId: string,
-  senderProfile: { uid: string; displayName: string; photoURL?: string; username?: string },
+  senderProfile: { uid: string; displayName?: string; photoURL?: string; username?: string },
   emoji: string,
   senderRole?: ChatMessage['senderRole']
 ): Promise<string> => {
+  const senderName = senderProfile.displayName || senderProfile.username || 'Usuario';
   const ref = await firestore().collection(getRoomMessagesPath(roomId)).add({
     roomId,
     senderId: senderProfile.uid,
-    senderName: senderProfile.displayName,
+    senderName,
     senderUsername: senderProfile.username || '',
     senderPhotoURL: senderProfile.photoURL || '',
     senderRole: senderRole || 'listener',
@@ -51,14 +53,15 @@ export const sendRoomEmoji = async (
 // 3. Send sticker message
 export const sendRoomSticker = async (
   roomId: string,
-  senderProfile: { uid: string; displayName: string; photoURL?: string; username?: string },
+  senderProfile: { uid: string; displayName?: string; photoURL?: string; username?: string },
   stickerUrl: string,
   senderRole?: ChatMessage['senderRole']
 ): Promise<string> => {
+  const senderName = senderProfile.displayName || senderProfile.username || 'Usuario';
   const ref = await firestore().collection(getRoomMessagesPath(roomId)).add({
     roomId,
     senderId: senderProfile.uid,
-    senderName: senderProfile.displayName,
+    senderName,
     senderUsername: senderProfile.username || '',
     senderPhotoURL: senderProfile.photoURL || '',
     senderRole: senderRole || 'listener',
