@@ -529,8 +529,8 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         <View style={[
           styles.chatFloatingContainer,
           keyboardHeight > 0 && {
-            bottom: keyboardHeight,
-            top: 40,
+            top: Platform.OS === 'ios' ? 40 : 10,
+            bottom: Platform.OS === 'ios' ? keyboardHeight : 0,
           },
         ]}>
           <RoomChatPanel
@@ -573,7 +573,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
               console.warn('Error al compartir sala:', e);
             }
           }}
-          onMorePress={hasSeat ? handleLowerMic : (isPrivileged ? () => setAdminPanelVisible(true) : () => setRoomMenuVisible(true))}
+          onMorePress={isPrivileged ? () => setAdminPanelVisible(true) : (hasSeat ? handleLowerMic : () => setRoomMenuVisible(true))}
           requestsCount={micRequests.length}
           localMuted={localMuted}
         />

@@ -35,25 +35,51 @@ export const cancelMicRequest = async (roomId: string, userId: string): Promise<
 };
 
 export const getPendingMicRequests = async (roomId: string): Promise<MicRequest[]> => {
-  const snap = await firestore()
-    .collection(getRoomMicRequestsPath(roomId))
-    .where('status', '==', 'pending')
-    .orderBy('createdAt', 'asc')
-    .get();
+  try {
+    const snap = await firestore()
+      .collection(getRoomMicRequestsPath(roomId))
+      .get();
 
-  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MicRequest));
+    const list = snap.docs
+      .map(doc => ({ id: doc.id, ...doc.data() } as MicRequest))
+      .filter(r => r.status === 'pending' || !r.status);
+
+    list.sort((a, b) => {
+      const timeA = (a.createdAt as any)?.toMillis ? (a.createdAt as any).toMillis() : ((a.createdAt as any)?.seconds ? (a.createdAt as any).seconds * 1000 : 0);
+      const timeB = (b.createdAt as any)?.toMillis ? (b.createdAt as any).toMillis() : ((b.createdAt as any)?.seconds ? (b.createdAt as any).seconds * 1000 : 0);
+      return timeA - timeB;
+    });
+
+    return list;
+  } catch (err) {
+    console.warn('getPendingMicRequests error:', err);
+    return [];
+  }
 };
 
 export const listenToPendingMicRequests = (roomId: string, callback: (requests: MicRequest[]) => void) => {
   return firestore()
     .collection(getRoomMicRequestsPath(roomId))
-    .where('status', '==', 'pending')
-    .orderBy('createdAt', 'asc')
-    .onSnapshot(snap => {
-      if (snap) {
-        callback(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MicRequest)));
+    .onSnapshot(
+      snap => {
+        if (snap) {
+          const list = snap.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as MicRequest))
+            .filter(r => r.status === 'pending' || !r.status);
+
+          list.sort((a, b) => {
+            const timeA = (a.createdAt as any)?.toMillis ? (a.createdAt as any).toMillis() : ((a.createdAt as any)?.seconds ? (a.createdAt as any).seconds * 1000 : 0);
+            const timeB = (b.createdAt as any)?.toMillis ? (b.createdAt as any).toMillis() : ((b.createdAt as any)?.seconds ? (b.createdAt as any).seconds * 1000 : 0);
+            return timeA - timeB;
+          });
+
+          callback(list);
+        }
+      },
+      error => {
+        console.warn('listenToPendingMicRequests error:', error);
       }
-    });
+    );
 };
 
 export const approveMicRequest = async (
