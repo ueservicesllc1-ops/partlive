@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Share,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, textPresets, spacing } from '../../theme';
@@ -47,6 +49,27 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
   const [roomMenuVisible, setRoomMenuVisible] = useState(false);
   const [roomReportVisible, setRoomReportVisible] = useState(false);
   const [micPermissionDenied, setMicPermissionDenied] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Track keyboard visibility and height for floating chat
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      e => {
+        setKeyboardHeight(e.endCoordinates.height);
+      },
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      },
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Check microphone permission upon entering the room
   useEffect(() => {
@@ -503,7 +526,13 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         </ScrollView>
 
         {/* Real-time Moderable Chat Panel (Floating Layer on top) */}
-        <View style={styles.chatFloatingContainer}>
+        <View style={[
+          styles.chatFloatingContainer,
+          keyboardHeight > 0 && {
+            bottom: keyboardHeight,
+            top: 40,
+          },
+        ]}>
           <RoomChatPanel
             roomId={roomId}
             currentUserId={user?.uid || ''}
@@ -527,26 +556,28 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
       </View>
 
       {/* Tool bar actions */}
-      <RoomActionsBar
-        hasSeat={hasSeat}
-        hasPendingRequest={hasPendingRequest}
-        isPrivileged={isPrivileged}
-        onMicPress={handleMicAction}
-        onGiftPress={() => setGiftModalVisible(true)}
-        onSharePress={async () => {
-          try {
-            await Share.share({
-              message: `Únete a la sala "${room?.title}" en PartyLive 🎉\nhttps://partylive.app/rooms/${roomId}`,
-              title: room?.title || 'Sala de Voz',
-            });
-          } catch (e: any) {
-            console.warn('Error al compartir sala:', e);
-          }
-        }}
-        onMorePress={hasSeat ? handleLowerMic : (isPrivileged ? () => setAdminPanelVisible(true) : () => setRoomMenuVisible(true))}
-        requestsCount={micRequests.length}
-        localMuted={localMuted}
-      />
+      {keyboardHeight === 0 && (
+        <RoomActionsBar
+          hasSeat={hasSeat}
+          hasPendingRequest={hasPendingRequest}
+          isPrivileged={isPrivileged}
+          onMicPress={handleMicAction}
+          onGiftPress={() => setGiftModalVisible(true)}
+          onSharePress={async () => {
+            try {
+              await Share.share({
+                message: `Únete a la sala "${room?.title}" en PartyLive 🎉\nhttps://partylive.app/rooms/${roomId}`,
+                title: room?.title || 'Sala de Voz',
+              });
+            } catch (e: any) {
+              console.warn('Error al compartir sala:', e);
+            }
+          }}
+          onMorePress={hasSeat ? handleLowerMic : (isPrivileged ? () => setAdminPanelVisible(true) : () => setRoomMenuVisible(true))}
+          requestsCount={micRequests.length}
+          localMuted={localMuted}
+        />
+      )}
 
       {/* Modals */}
       {/* 1. Admin/Request list Panel */}

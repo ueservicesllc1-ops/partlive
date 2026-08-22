@@ -47,11 +47,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
   const isNearLimit = text.length > 250;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      style={styles.keyboardView}
-    >
+    <View style={styles.keyboardView}>
       <View style={[styles.container, disabled && styles.disabledContainer]}>
         {/* Toggle Picker Button */}
         <TouchableOpacity
@@ -89,7 +85,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
           <Text style={styles.sendIcon}>🚀</Text>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
