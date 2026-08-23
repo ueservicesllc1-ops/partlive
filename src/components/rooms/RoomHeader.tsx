@@ -7,9 +7,10 @@ interface RoomHeaderProps {
   room: Room;
   onLeavePress: () => void;
   onMenuPress?: () => void;
+  onListenersPress?: () => void;
 }
 
-export const RoomHeader: React.FC<RoomHeaderProps> = ({ room, onLeavePress, onMenuPress }) => {
+export const RoomHeader: React.FC<RoomHeaderProps> = ({ room, onLeavePress, onMenuPress, onListenersPress }) => {
   return (
     <View style={styles.container}>
       {/* Back/Leave Button */}
@@ -26,7 +27,9 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({ room, onLeavePress, onMe
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryText}>{room.category}</Text>
           </View>
-          <Text style={styles.onlineCount}>👥 {room.listenersCount + room.speakersCount} en sala</Text>
+          <TouchableOpacity onPress={onListenersPress} activeOpacity={0.7}>
+            <Text style={styles.onlineCount}>👥 {room.listenersCount + room.speakersCount} en sala</Text>
+          </TouchableOpacity>
         </View>
       </View>
 

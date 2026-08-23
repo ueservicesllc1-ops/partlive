@@ -85,8 +85,8 @@ android {
         applicationId "com.party.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
-        versionName "004"
+        versionCode 6
+        versionName "005"
 
         // Fix: RN 0.85.x + NDK 26 - std::format conflicts with Folly in graphicsConversions.h
         externalNativeBuild {

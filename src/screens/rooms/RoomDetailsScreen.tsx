@@ -50,6 +50,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
   const [roomMenuVisible, setRoomMenuVisible] = useState(false);
   const [roomReportVisible, setRoomReportVisible] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chat' | 'members'>('chat');
   const [micPermissionDenied, setMicPermissionDenied] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -425,7 +426,12 @@ return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#151221" />
 
-      <RoomHeader room={room} onLeavePress={handleLeave} onMenuPress={() => setRoomMenuVisible(true)} />
+      <RoomHeader 
+        room={room} 
+        onLeavePress={handleLeave} 
+        onMenuPress={() => setRoomMenuVisible(true)} 
+        onListenersPress={() => setActiveTab(prev => prev === 'members' ? 'chat' : 'members')}
+      />
 
       {/* Audio Connection Status indicator */}
       <View style={styles.statusIndicator}>
@@ -507,55 +513,73 @@ return (
       )}
 
       <View style={styles.mainContainer}>
-        {/* Upper Section: Seats Grid & Listeners (takes top space cleanly) */}
-        <View style={styles.topSection}>
-          <ScrollView 
-            style={styles.backgroundContent}
-            contentContainerStyle={styles.backgroundContentScroll}
-            showsVerticalScrollIndicator={false}
-          >
-            <MicSeatsGrid
-              members={enrichedMembers}
-              lockedSeats={room.lockedSeats || []}
-              onSeatPress={handleSeatPress}
-              maxMics={room.maxMics || 8}
-            />
+        {/* Upper Section: Seats Grid (fixed & always visible) */}
+        <View style={styles.seatsContainer}>
+          <MicSeatsGrid
+            members={enrichedMembers}
+            lockedSeats={room.lockedSeats || []}
+            onSeatPress={handleSeatPress}
+            maxMics={room.maxMics || 8}
+          />
+          {room.roomType === 'karaoke' && (
+            <KaraokePlayer room={room} isPrivileged={isPrivileged} />
+          )}
+        </View>
 
-            {/* Connected Room Members & Listeners List */}
+        {/* Tab Selector: Chat vs Members */}
+        <View style={styles.tabSelectorRow}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'chat' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('chat')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'chat' && styles.tabButtonTextActive]}>
+              💬 Chat en Vivo ({messages.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'members' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('members')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'members' && styles.tabButtonTextActive]}>
+              👥 Oyentes ({members.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Lower Section: Tab Content */}
+        {activeTab === 'chat' ? (
+          <View style={styles.chatSection}>
+            <RoomChatPanel
+              roomId={roomId}
+              currentUserId={user?.uid || ''}
+              currentMember={currentMember}
+              actorRole={currentUserRole}
+              messages={messages}
+              onSendMessage={sendMessage}
+              onSendEmoji={sendEmoji}
+              onSendSticker={sendSticker}
+              onLoadOlder={loadOlderMessages}
+              onHideMessage={hideMessage}
+              onDeleteMessage={deleteOwnMessage}
+              onReportMessage={async (msgId, reason) => {
+                await reportMessage(msgId, reason);
+              }}
+              onBlockUser={blockUserFromRoom}
+              onKickMember={kickMember}
+              canModerate={isPrivileged}
+            />
+          </View>
+        ) : (
+          <ScrollView style={styles.membersSection} showsVerticalScrollIndicator={false}>
             <RoomMembersList
               members={enrichedMembers}
               onMemberPress={handleMemberPress}
             />
-
-            {/* Karaoke/Video Feature */}
-            {room.roomType === 'karaoke' && (
-              <KaraokePlayer room={room} isPrivileged={isPrivileged} />
-            )}
           </ScrollView>
-        </View>
-
-        {/* Lower Section: Real-time Moderable Chat Panel (flex: 1) */}
-        <View style={styles.chatSection}>
-          <RoomChatPanel
-            roomId={roomId}
-            currentUserId={user?.uid || ''}
-            currentMember={currentMember}
-            actorRole={currentUserRole}
-            messages={messages}
-            onSendMessage={sendMessage}
-            onSendEmoji={sendEmoji}
-            onSendSticker={sendSticker}
-            onLoadOlder={loadOlderMessages}
-            onHideMessage={hideMessage}
-            onDeleteMessage={deleteOwnMessage}
-            onReportMessage={async (msgId, reason) => {
-              await reportMessage(msgId, reason);
-            }}
-            onBlockUser={blockUserFromRoom}
-            onKickMember={kickMember}
-            canModerate={isPrivileged}
-          />
-        </View>
+        )}
       </View>
 
       {/* Tool bar actions */}
@@ -953,20 +977,47 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
   },
-  topSection: {
-    maxHeight: '44%',
+  seatsContainer: {
+    paddingHorizontal: spacing.sm,
+    backgroundColor: '#151221',
   },
-  backgroundContent: {
+  tabSelectorRow: {
+    flexDirection: 'row',
+    backgroundColor: '#1E1B30',
+    borderRadius: 14,
+    marginHorizontal: spacing.md,
+    marginVertical: 6,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: '#2D2845',
+  },
+  tabButton: {
     flex: 1,
-    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 12,
   },
-  backgroundContentScroll: {
-    paddingBottom: spacing.sm,
+  tabButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  tabButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  tabButtonTextActive: {
+    color: '#FFF',
+    fontWeight: 'bold',
   },
   chatSection: {
     flex: 1,
     paddingHorizontal: spacing.sm,
     paddingBottom: 2,
+  },
+  membersSection: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    paddingTop: 4,
   },
   permissionWarningBanner: {
     backgroundColor: colors.error,
