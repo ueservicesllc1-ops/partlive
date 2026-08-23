@@ -50,13 +50,15 @@ export const useRoomLiveKit = (
   // Keep references to prevent loop closures
   const isMutedFirestoreRef = useRef(currentMember?.isMuted || false);
   const roleFirestoreRef = useRef(currentUserRole);
+  const hasSeatInit = currentMember?.seatIndex !== undefined;
+  const isPrivilegedInit = ['owner', 'host', 'moderator', 'speaker'].includes(currentUserRole || '') || hasSeatInit;
+  const prevPrivilegedRef = useRef<boolean>(isPrivilegedInit);
   const isReconnectingRef = useRef(false);
   const roomRef = useRef<Room | null>(null);
 
   useEffect(() => {
     isMutedFirestoreRef.current = currentMember?.isMuted || false;
-    roleFirestoreRef.current = currentUserRole;
-  }, [currentMember, currentUserRole]);
+  }, [currentMember?.isMuted]);
 
   // Connect helper
   const connect = useCallback(async () => {
@@ -69,7 +71,6 @@ export const useRoomLiveKit = (
     try {
       // 1. Get token from backend
       const tokenData = await getLiveKitRoomToken(roomId);
-      setCanPublish(tokenData.canPublish);
 
       // 2. Create LiveKit Room instance with high fidelity audio settings (Karaoke Mode)
       const roomOptions: RoomOptions = {
@@ -121,13 +122,18 @@ export const useRoomLiveKit = (
       setParticipants(Array.from(roomInstance.remoteParticipants.values()));
 
       // 5. If role allows publishing, request mic permission and start audio track
-      if (tokenData.canPublish) {
+      const isPrivilegedUser =
+        ['owner', 'host', 'moderator', 'speaker'].includes(roleFirestoreRef.current || '') ||
+        (currentMember?.seatIndex !== undefined);
+
+      if (tokenData.canPublish || isPrivilegedUser) {
+        setCanPublish(true);
         const micStatus = await checkDevicePermission('microphone');
         if (micStatus === 'granted') {
           const shouldBeMuted = isMutedFirestoreRef.current;
           await roomInstance.localParticipant.setMicrophoneEnabled(!shouldBeMuted);
           setLocalMuted(shouldBeMuted);
-          setIsPublishing(true);
+          setIsPublishing(!shouldBeMuted);
         } else if (micStatus === 'blocked') {
           setError('Micrófono bloqueado en ajustes.');
           showPermissionBlockedAlert(
@@ -139,7 +145,7 @@ export const useRoomLiveKit = (
             const shouldBeMuted = isMutedFirestoreRef.current;
             await roomInstance.localParticipant.setMicrophoneEnabled(!shouldBeMuted);
             setLocalMuted(shouldBeMuted);
-            setIsPublishing(true);
+            setIsPublishing(!shouldBeMuted);
           } else {
             setError('Permiso de micrófono denegado. Solo escuchando.');
             if (reqStatus === 'blocked') {
@@ -149,6 +155,8 @@ export const useRoomLiveKit = (
             }
           }
         }
+      } else {
+        setCanPublish(false);
       }
     } catch (err: any) {
       console.error('LiveKit connection error:', err);
@@ -157,7 +165,7 @@ export const useRoomLiveKit = (
     } finally {
       setConnecting(false);
     }
-  }, [roomId, currentUser, enabled]);
+  }, [roomId, currentUser, enabled, currentMember?.seatIndex]);
 
   // Disconnect helper
   const disconnect = useCallback(async () => {
@@ -219,18 +227,16 @@ export const useRoomLiveKit = (
 
   // Handle dynamic Role Upgrade/Downgrade (eg. Listener <=> Speaker)
   useEffect(() => {
+    const hasSeat = currentMember?.seatIndex !== undefined;
+    const isPrivileged = ['owner', 'host', 'moderator', 'speaker'].includes(currentUserRole || '') || hasSeat;
+    const wasPrivileged = prevPrivilegedRef.current;
+
+    if (isPrivileged === wasPrivileged) return;
+    prevPrivilegedRef.current = isPrivileged;
+    roleFirestoreRef.current = currentUserRole;
+
     if (!livekitRoom || connectionState !== ConnectionState.Connected) return;
     if (isReconnectingRef.current) return;
-
-    const prevRole = roleFirestoreRef.current;
-    const newRole = currentUserRole;
-    const hasSeat = currentMember?.seatIndex !== undefined;
-
-    const isPrivileged = ['owner', 'host', 'moderator', 'speaker'].includes(newRole || '') || hasSeat;
-    const wasPrivileged = ['owner', 'host', 'moderator', 'speaker'].includes(prevRole || '');
-
-    if (prevRole === newRole && isPrivileged === wasPrivileged) return;
-    roleFirestoreRef.current = newRole;
 
     const handleRoleUpdate = async () => {
       // Role went from unprivileged → privileged: reconnect to get publish token & start mic

@@ -144,7 +144,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
       
       <View style={[styles.bubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
         <View style={styles.headerRow}>
-          <Text style={styles.senderName}>{message.senderName}</Text>
+          <Text style={styles.senderName}>{message.senderName || message.senderUsername || 'Usuario'}</Text>
           {getRoleBadge()}
         </View>
         

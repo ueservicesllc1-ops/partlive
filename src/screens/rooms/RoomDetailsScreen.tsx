@@ -421,8 +421,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
     ...m,
     isSpeaking: speakingUids.includes(m.userId),
   }));
-
-  return (
+return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#151221" />
 
@@ -431,7 +430,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
       {/* Audio Connection Status indicator */}
       <View style={styles.statusIndicator}>
         <View style={styles.statusContent}>
-          {lkConnected && canPublish && !localMuted && (
+          {lkConnected && (hasSeat || isPrivileged || canPublish) && !localMuted && (
             <View style={[
               styles.statusPulseDot,
               isLocalSpeaking ? styles.statusPulseDotSpeaking : styles.statusPulseDotActive
@@ -446,7 +445,7 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
               : lkError
               ? `⚠️ Error de audio: ${lkError}`
               : lkConnected
-              ? canPublish
+              ? (hasSeat || isPrivileged || canPublish)
                 ? localMuted
                   ? '🔇 Micrófono silenciado'
                   : isLocalSpeaking
@@ -481,21 +480,21 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         </View>
       )}
 
-      {/* Floating banner: new mic request alert for host/moderator */}
-      {newRequestBanner.visible && isPrivileged && (
+      {/* Mic Request Notification Banner for Hosts/Moderators */}
+      {isPrivileged && newRequestBanner.visible && (
         <TouchableOpacity
           style={styles.micRequestBanner}
+          activeOpacity={0.9}
           onPress={() => {
             setNewRequestBanner(prev => ({ ...prev, visible: false }));
             setAdminPanelVisible(true);
           }}
-          activeOpacity={0.85}
         >
-          <Text style={styles.micRequestBannerEmoji}>🎤</Text>
+          <Text style={styles.micRequestBannerEmoji}>✋</Text>
           <View style={styles.micRequestBannerTextCol}>
-            <Text style={styles.micRequestBannerTitle}>Nueva solicitud de micrófono</Text>
+            <Text style={styles.micRequestBannerTitle}>¡Nueva solicitud de micrófono!</Text>
             <Text style={styles.micRequestBannerSub}>
-              {newRequestBanner.requesterName} quiere subir · Toca para ver
+              {newRequestBanner.requesterName} quiere hablar. Toca aquí para aprobar.
             </Text>
           </View>
           <TouchableOpacity
@@ -507,41 +506,36 @@ export const RoomDetailsScreen = ({ route, navigation }: any) => {
         </TouchableOpacity>
       )}
 
-
       <View style={styles.mainContainer}>
-        {/* Background Content: Seats Grid & Listeners */}
-        <ScrollView 
-          style={styles.backgroundContent}
-          contentContainerStyle={styles.backgroundContentScroll}
-          showsVerticalScrollIndicator={false}
-        >
-          <MicSeatsGrid
-            members={enrichedMembers}
-            lockedSeats={room.lockedSeats || []}
-            onSeatPress={handleSeatPress}
-            maxMics={room.maxMics || 8}
-          />
+        {/* Upper Section: Seats Grid & Listeners (takes top space cleanly) */}
+        <View style={styles.topSection}>
+          <ScrollView 
+            style={styles.backgroundContent}
+            contentContainerStyle={styles.backgroundContentScroll}
+            showsVerticalScrollIndicator={false}
+          >
+            <MicSeatsGrid
+              members={enrichedMembers}
+              lockedSeats={room.lockedSeats || []}
+              onSeatPress={handleSeatPress}
+              maxMics={room.maxMics || 8}
+            />
 
-          {/* Connected Room Members & Listeners List */}
-          <RoomMembersList
-            members={enrichedMembers}
-            onMemberPress={handleMemberPress}
-          />
+            {/* Connected Room Members & Listeners List */}
+            <RoomMembersList
+              members={enrichedMembers}
+              onMemberPress={handleMemberPress}
+            />
 
-          {/* Karaoke/Video Feature */}
-          {room.roomType === 'karaoke' && (
-            <KaraokePlayer room={room} isPrivileged={isPrivileged} />
-          )}
-        </ScrollView>
+            {/* Karaoke/Video Feature */}
+            {room.roomType === 'karaoke' && (
+              <KaraokePlayer room={room} isPrivileged={isPrivileged} />
+            )}
+          </ScrollView>
+        </View>
 
-        {/* Real-time Moderable Chat Panel (Floating Layer on top) */}
-        <View style={[
-          styles.chatFloatingContainer,
-          keyboardHeight > 0 && {
-            top: Platform.OS === 'ios' ? 40 : 10,
-            bottom: Platform.OS === 'ios' ? keyboardHeight : 0,
-          },
-        ]}>
+        {/* Lower Section: Real-time Moderable Chat Panel (flex: 1) */}
+        <View style={styles.chatSection}>
           <RoomChatPanel
             roomId={roomId}
             currentUserId={user?.uid || ''}
@@ -958,23 +952,21 @@ const styles = StyleSheet.create({
   },
   mainContainer: {
     flex: 1,
-    position: 'relative',
+  },
+  topSection: {
+    maxHeight: '44%',
   },
   backgroundContent: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   backgroundContentScroll: {
-    paddingBottom: 400,
+    paddingBottom: spacing.sm,
   },
-  chatFloatingContainer: {
-    position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
-    bottom: 0,
-    top: 210,
-    zIndex: 100,
-    elevation: 10,
+  chatSection: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+    paddingBottom: 2,
   },
   permissionWarningBanner: {
     backgroundColor: colors.error,
